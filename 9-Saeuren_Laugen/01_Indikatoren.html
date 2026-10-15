@@ -2234,16 +2234,46 @@ const area = ph => ph < 6.5 ? 'sauer' : ph <= 7.5 ? 'neutral' : 'alkalisch';
 
 /* ================= VERDÜNNEN ================= */
 (() => {
-  let m = 'richtig', k = 0, run = false;
-  seg($('#vd-seg'), [['richtig', 'Säure ins Wasser'], ['falsch', 'Wasser in die Säure']], v => { m = v; k = 0; run = false; $('#vd-status').textContent = ''; });
-  $('#vd-go').onclick = () => { run = true; k = 0; };
+  let m = 'richtig', k = 0, run = false, drops = [];
+  const ACID = '#e0d27a';
+  const reset = () => { k = 0; drops = []; $('#vd-status').textContent = ''; };
+  seg($('#vd-seg'), [['richtig', 'Säure ins Wasser'], ['falsch', 'Wasser in die Säure']], v => { m = v; run = false; reset(); });
+  $('#vd-go').onclick = () => { run = true; reset(); };
   canvasLoop($('#cv-vd'), 'sicherheit', (ctx, w, h, t, dt) => {
-    if (run && k < 1) { k = Math.min(1, k + dt / 3); if (k >= 1) $('#vd-status').innerHTML = m === 'richtig' ? 'Die Säure verteilt sich im vielen Wasser, die Wärme wird gut aufgenommen. <b>Sicher.</b>' : 'Das Wasser erhitzt sich an der Oberfläche schlagartig bis zum Sieden: <b>Säure spritzt heraus!</b>'; }
-    const bx = w * .35, bw = w * .3, by = h * .35, bh = h * .58;
-    beaker(ctx, bx, by, bw, bh, {level: .55 + .15 * k, fill: m === 'richtig' ? 'water' : '#e8e0a0', alpha: .35});
-    ctx.save(); ctx.translate(bx + bw * .9, by - h * .12); ctx.rotate(-.9 * ease(clamp(k * 3, 0, 1))); tube(ctx, 0, -h * .2, 30, h * .3, {level: .6, fill: m === 'richtig' ? '#e8e0a0' : 'water', alpha: .6}); ctx.restore();
-    if (run && k > .2 && k < .9) { ctx.strokeStyle = alpha(m === 'richtig' ? '#c8b040' : C.water, .8); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx + bw * .75, by - h * .05); ctx.lineTo(bx + bw * .6, by + bh * .3); ctx.stroke(); }
-    if (m === 'falsch' && k > .5) { const r = rng(Math.floor(t * 20)); ctx.fillStyle = '#e8c840'; for (let i = 0; i < 24; i++) { ctx.beginPath(); ctx.arc(bx + bw / 2 + (r() - .5) * bw * 1.6, by - r() * h * .3, 3, 0, 7); ctx.fill(); } label(ctx, '!', bx + bw + 40, by, {size: 40, color: C.bad}); }
+    if (run && k < 1) { k = Math.min(1, k + dt / 4); if (k >= 1) $('#vd-status').innerHTML = m === 'richtig' ? 'Die Säure verteilt sich im vielen Wasser, die Wärme wird gut aufgenommen. <b>Sicher.</b>' : 'Das Wasser erhitzt sich an der Oberfläche schlagartig bis zum Sieden: <b>Säure spritzt heraus!</b>'; }
+    const inTube = m === 'richtig' ? ACID : 'water', inBeaker = m === 'richtig' ? 'water' : ACID;
+    const bx = w * .3, bw = w * .3, by = h * .4, bh = h * .55;
+    const moved = clamp((k - .2) / .65, 0, 1), lvl = .45 + .12 * moved, surf = by + bh - bh * .92 * lvl;
+    beaker(ctx, bx, by, bw, bh, {level: lvl, fill: inBeaker, alpha: .45});
+    // Reagenzglas dreht sich um seine Öffnung, die über dem Becherglas bleibt
+    const px = bx + bw * .6, py = by - h * .12, TW = 28, L = h * .34, tr = TW / 2;
+    const a = lerp(1.35, 2.35, ease(clamp(k / .25, 0, 1))), ca = Math.cos(a), sa = Math.sin(a);
+    const fill = .55 * (1 - moved);
+    if (fill > .01) {
+      // Flüssigkeitsspiegel bleibt waagerecht: Höhe so wählen, dass der Anteil `fill` des Glases darunter liegt
+      const ys = [];
+      for (let i = 0; i < 6; i++) for (let j = 0; j < 50; j++) { const lx = -tr + 2 + (TW - 4) * i / 5, ly = 2 + (L - 4) * j / 49; ys.push(py - lx * sa + ly * ca); }
+      ys.sort((p, q) => q - p); const yS = ys[Math.min(ys.length - 1, Math.floor(fill * ys.length))];
+      const M = ctx.getTransform();
+      ctx.save(); ctx.translate(px, py); ctx.rotate(-a);
+      ctx.beginPath(); ctx.moveTo(-tr + 1.5, 0); ctx.lineTo(-tr + 1.5, L - tr); ctx.arc(0, L - tr, tr - 1.5, Math.PI, 0, true); ctx.lineTo(tr - 1.5, 0); ctx.closePath(); ctx.clip();
+      ctx.setTransform(M); ctx.fillStyle = alpha(col(inTube), .75); ctx.fillRect(0, yS, w, h); ctx.restore();
+    }
+    ctx.save(); ctx.translate(px, py); ctx.rotate(-a); tube(ctx, 0, 0, TW, L); ctx.restore();
+    // Strahl von der Öffnung bis zur Oberfläche
+    const pouring = run && moved > 0 && moved < 1;
+    if (pouring) { ctx.strokeStyle = alpha(col(inTube), .9); ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(px, py + 2); ctx.quadraticCurveTo(px - 3, (py + surf) / 2, px - 4, surf); ctx.stroke(); }
+    if (m === 'richtig' && pouring) { ctx.strokeStyle = alpha(col(ACID), .6); ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { const p = (t * .7 + i / 3) % 1; ctx.beginPath(); ctx.ellipse(px - 4, surf + p * bh * .3, 6 + p * bw * .3, 2 + p * 6, 0, 0, 7); ctx.globalAlpha = 1 - p; ctx.stroke(); ctx.globalAlpha = 1; } }
+    // Falsch: Wasser siedet an der Oberfläche, Säuretropfen spritzen heraus
+    if (m === 'falsch') {
+      if (pouring && moved > .1) for (let n = 0; n < 2; n++) drops.push({x: px - 4 + (Math.random() - .5) * 20, y: surf, vx: (Math.random() - .5) * w * .5, vy: -(h * .5 + Math.random() * h * .55), s: Math.random() < .3});
+      for (const d of drops) { d.vy += h * 2.2 * dt; d.x += d.vx * dt; d.y += d.vy * dt; }
+      drops = drops.filter(d => d.y < h + 10 && !(d.vy > 0 && d.y > surf && d.x > bx && d.x < bx + bw));
+      for (const d of drops) { ctx.fillStyle = d.s ? alpha('#ffffff', .8) : col(ACID); ctx.strokeStyle = alpha(C.ink2, .5); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(d.x, d.y, d.s ? 5 : 3.5, 0, 7); ctx.fill(); ctx.stroke(); }
+      if (moved > .15) label(ctx, 'Säure spritzt!', bx + bw + 20, by + bh * .3, {size: 18, color: C.bad, align: 'left'});
+    }
+    label(ctx, m === 'richtig' ? 'Säure' : 'Wasser', px + Math.sin(a) * L * .5 + 30, py + Math.cos(a) * L * .5, {size: 12, color: C.ink2, align: 'left'});
+    label(ctx, m === 'richtig' ? 'Wasser' : 'Säure', bx + bw / 2, by + bh - 18, {size: 12, color: C.ink2});
   });
 })();
 

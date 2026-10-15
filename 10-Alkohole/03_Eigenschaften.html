@@ -2227,16 +2227,25 @@ const OL_SDP = [65, 78, 97, 118, 138, 157, 176, 195];
   $('#lo-n').oninput = upd; upd();
   canvasLoop($('#cv-lo'), 'loeslich', (ctx, w, h) => {
     const n = +$('#lo-n').value, sol = SOL[n - 1], top = h * .12, th = h * .8, tw = 56;
-    [[w * .22, 'Wasser', C.water, sol >= 100 ? 1 : sol / 10], [w * .52, 'Heptan', '#f2e6b0', n === 1 ? .3 : 1]].forEach(([cx, nm, c, mixf]) => {
-      const sep = mixf < 1, ly = top + th * .25;
-      if (sep) { ctx.fillStyle = alpha('#e8d0f0', .7); ctx.fillRect(cx - tw / 2 + 3, ly, tw - 6, th * .18); ctx.fillStyle = alpha(c, .5); ctx.fillRect(cx - tw / 2 + 3, ly + th * .18, tw - 6, th * .82 - tw / 2); }
-      else { ctx.fillStyle = alpha(mix(c, '#e8d0f0', .4), .55); ctx.fillRect(cx - tw / 2 + 3, ly, tw - 6, th * .75 - tw / 2); }
+    const ALK = '#d8b8e8';
+    // Phasen von unten nach oben; die dichtere Flüssigkeit liegt unten (Wasser > Alkanole > Heptan)
+    const cases = [
+      [w * .22, 'Wasser', sol >= 100 ? [[mix(C.water, ALK, .45), .75]] : [[C.water, .5], [ALK, .25]]],
+      [w * .52, 'Heptan', n === 1 ? [[ALK, .3], ['#f2e6b0', .45]] : [[mix('#f2e6b0', ALK, .45), .75]]]
+    ];
+    cases.forEach(([cx, nm, layers]) => {
+      const sep = layers.length > 1, r = tw / 2;
+      ctx.save(); ctx.beginPath(); ctx.moveTo(cx - r + 2, top); ctx.lineTo(cx - r + 2, top + th - r); ctx.arc(cx, top + th - r, r - 2, Math.PI, 0, true); ctx.lineTo(cx + r - 2, top); ctx.closePath(); ctx.clip();
+      let y = top + th;
+      layers.forEach(([c, f], i) => { const hh = (th - 6) * f; ctx.fillStyle = alpha(col(c), .6); ctx.fillRect(cx - r, y - hh, tw, hh + (i ? 0 : 2)); if (i || !sep) { ctx.strokeStyle = alpha(col(c), 1); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - r, y - hh); ctx.lineTo(cx + r, y - hh); ctx.stroke(); } if (sep && i) { ctx.strokeStyle = alpha(C.ink2, .6); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx - r, y); ctx.lineTo(cx + r, y); ctx.stroke(); } y -= hh; });
+      ctx.restore();
       tube(ctx, cx, top, tw, th, {});
+      if (sep) { const lb = layers.map(([c], i) => i ? (c === ALK ? 'Alkohol' : nm) : (c === ALK ? 'Alkohol' : nm)); let yy = top + th; layers.forEach(([, f], i) => { const hh = (th - 6) * f; label(ctx, lb[i], cx + r + 6, yy - hh / 2 - (i ? 0 : r / 3), {size: 10, color: C.ink2, align: 'left', weight: 400}); yy -= hh; }); }
       label(ctx, '+ ' + nm, cx, top + th + 12, {size: 12});
       label(ctx, sep ? 'zwei Phasen' : 'mischbar', cx, top - 8, {size: 12, color: sep ? C.bad : C.good});
     });
     // Streichholzmodell
-    const sx = w * .74, sy = h * .5, L = 18 * n;
+    const sx = w * .74, sy = h * .5, L = w * .025 * n;
     ctx.fillStyle = '#e8c84a'; roundRect(ctx, sx, sy - 6, L, 12, 6); ctx.fill(); ctx.fillStyle = C.water; ctx.beginPath(); ctx.arc(sx, sy, 14, 0, 7); ctx.fill();
     label(ctx, 'OH', sx, sy, {size: 10, color: '#fff'}); label(ctx, 'hydrophil', sx, sy + 28, {size: 11, color: C.water}); label(ctx, 'lipophil', sx + L / 2 + 10, sy - 22, {size: 11, color: '#b89a20'});
   });

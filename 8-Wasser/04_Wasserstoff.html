@@ -2227,18 +2227,36 @@ function indColor(kind, ph) {
   $('#bz-on').onclick = () => { on = !on; $('#bz-on').textContent = on ? 'Zufuhr stoppen' : 'Wasserstoff zuführen'; $('#bz-status').innerHTML = on ? 'Wasserstoff und Sauerstoff reagieren in der Zelle. Elektrischer Strom treibt den Motor an, aus dem Auspuff tropft <b>Wasser</b>.' : ''; };
   canvasLoop($('#cv-bz'), 'brennstoffzelle', (ctx, w, h, t, dt) => {
     sp = lerp(sp, on ? 1 : 0, .03);
-    const cx = w * .4, cy = h * .5, cw = w * .22, ch = h * .5;
-    ctx.fillStyle = C.surface2; ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; roundRect(ctx, cx - cw / 2, cy - ch / 2, cw, ch, 8); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = alpha(C.accent, .25); ctx.fillRect(cx - 6, cy - ch / 2 + 4, 12, ch - 8);
-    label(ctx, 'Brennstoffzelle', cx, cy + ch / 2 + 16, {size: 12, color: C.ink2});
-    if (on) { for (let i = 0; i < 5; i++) { const p = (t * .6 + i / 5) % 1; drawFormula(ctx, lerp(w * .05, cx - cw / 2, p), cy - ch * .25 + (i % 2) * 14, 7, 'H2'); drawFormula(ctx, lerp(w * .05, cx - cw / 2, p), cy + ch * .25 + (i % 2) * 10, 7, 'O2'); const q = (t * .5 + i / 5) % 1; drawFormula(ctx, cx + cw / 2 + q * w * .1, cy + ch / 2 + q * h * .3, 7, 'H2O'); } }
-    label(ctx, 'H₂ →', w * .05, cy - ch * .4, {align: 'left', size: 13}); label(ctx, 'O₂ (Luft) →', w * .05, cy + ch * .42, {align: 'left', size: 13});
-    // Stromkreis zum Motor
-    const mx = w * .8, my = cy;
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy - ch / 2); ctx.lineTo(cx, h * .08); ctx.lineTo(mx, h * .08); ctx.lineTo(mx, my - 30); ctx.moveTo(mx, my + 30); ctx.lineTo(mx, h * .95); ctx.lineTo(cx + cw / 2 + 10, h * .95); ctx.stroke();
-    ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(mx, my, 30, 0, 7); ctx.fill(); ctx.stroke(); label(ctx, 'M', mx, my, {size: 18});
-    ctx.save(); ctx.translate(mx, my); ctx.rotate(t * 8 * sp); ctx.strokeStyle = C.accent; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(22, 0); ctx.stroke(); ctx.restore();
-    if (on) { ctx.fillStyle = C.electron; for (let i = 0; i < 8; i++) { const p = (t * .4 + i / 8) % 1; ctx.beginPath(); ctx.arc(lerp(cx, mx, p), h * .08, 3, 0, 7); ctx.fill(); } }
+    // Zelle: links Minuspol (Wasserstoff), Mitte Membran, rechts Pluspol (Luftsauerstoff); oben geschlossener Stromkreis über den Motor
+    const cx = w * .5, cy = h * .58, cw = w * .36, ch = h * .44, top = cy - ch / 2, bot = cy + ch / 2;
+    const exL = cx - cw * .2, exR = cx + cw * .2, eTop = top - 10, yT = h * .13, mr = Math.min(26, h * .09);
+    ctx.fillStyle = C.surface2; ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; roundRect(ctx, cx - cw / 2, top, cw, ch, 8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = alpha(C.accent, .25); ctx.fillRect(cx - 5, top + 4, 10, ch - 8);
+    ctx.fillStyle = C.ink2; [exL, exR].forEach(x => ctx.fillRect(x - 4, eTop, 8, ch + 4));
+    label(ctx, '−', exL - 16, top + 16, {size: 20}); label(ctx, '+', exR + 16, top + 16, {size: 20});
+    label(ctx, 'Membran', cx, bot - 12, {size: 11, color: C.ink2, weight: 400});
+    label(ctx, 'Brennstoffzelle', cx, bot + 16, {size: 12, color: C.ink2});
+    // Leitungen: Minuspol → Motor → Pluspol
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(exL, eTop); ctx.lineTo(exL, yT); ctx.lineTo(exR, yT); ctx.lineTo(exR, eTop); ctx.stroke();
+    // Elektronen fließen außen vom Minuspol über den Motor zum Pluspol
+    if (sp > .05) {
+      const seg = [[exL, eTop, exL, yT], [exL, yT, exR, yT], [exR, yT, exR, eTop]], lens = seg.map(([a, b, c, d]) => Math.hypot(c - a, d - b)), tot = lens.reduce((x, y) => x + y);
+      ctx.fillStyle = alpha(C.electron, Math.min(1, sp * 1.5));
+      for (let i = 0; i < 14; i++) { let d = ((t * .25 * sp + i / 14) % 1) * tot, j = 0; while (d > lens[j]) d -= lens[j++]; const [a, b, c, e] = seg[j], f = d / lens[j]; ctx.beginPath(); ctx.arc(lerp(a, c, f), lerp(b, e, f), 3.5, 0, 7); ctx.fill(); }
+    }
+    ctx.fillStyle = C.surface; ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, yT, mr, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.translate(cx, yT); ctx.rotate(t * 8 * sp); ctx.strokeStyle = C.accent; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-mr * .75, 0); ctx.lineTo(mr * .75, 0); ctx.stroke(); ctx.restore();
+    label(ctx, 'M', cx, yT, {size: 18});
+    if (sp > .05) label(ctx, 'Elektronen', exL - 10, yT + 4, {size: 11, color: C.electron, align: 'right'});
+    // Gase strömen von außen an die Elektroden, Wasser tropft unten rechts heraus
+    label(ctx, 'H₂ →', w * .03, cy - ch * .3, {align: 'left', size: 13}); label(ctx, '← O₂ (Luft)', w * .97, cy - ch * .3, {align: 'right', size: 13});
+    if (on) for (let i = 0; i < 5; i++) {
+      const p = (t * .6 + i / 5) % 1, yy = cy - ch * .05 + (i % 2) * 16;
+      drawFormula(ctx, lerp(w * .05, exL - 14, p), yy, 7, 'H2'); drawFormula(ctx, lerp(w * .95, exR + 16, p), yy, 7, 'O2');
+      const q = (t * .5 + i / 5) % 1; drawFormula(ctx, exR + cw * .14 + q * w * .06, bot + q * (h * .99 - bot), 7, 'H2O');
+    }
+    label(ctx, 'Wasser', exR + cw * .14 + w * .1, h * .95, {align: 'left', size: 12, color: C.ink2});
   });
 })();
 

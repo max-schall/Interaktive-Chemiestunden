@@ -2261,23 +2261,46 @@ function indColor(kind, ph) {
   let run = false, items = [], last = 0, cnt = {Fe: 0, Al: 0, Cu: 0, P: 0};
   $('#so-go').onclick = () => { run = !run; $('#so-go').textContent = run ? 'Band stoppen' : 'Band starten'; };
   canvasLoop($('#cv-so'), 'sortier', (ctx, w, h, t, dt) => {
-    const by = h * .45, mx = w * .35, wx = w * .62, end = w * .92;
-    if (run && t - last > .7) { last = t; items.push({k: pick(T)[0], x: w * .03, y: by - 10, vy: 0, st: 'band'}); }
-    // Band
-    ctx.fillStyle = C.ink2; ctx.fillRect(w * .02, by, w * .9, 8);
-    // Magnet
-    ctx.fillStyle = C.bad; ctx.fillRect(mx - 30, by - h * .32, 60, 24); label(ctx, 'Magnet', mx, by - h * .32 - 12, {size: 12, color: C.ink2});
-    ctx.fillStyle = C.electron; ctx.fillRect(wx - 20, by - 4, 40, 16); label(ctx, 'Wirbelstrom', wx, by + 30, {size: 12, color: C.ink2});
-    const bins = [['Fe', mx, by - h * .32 + 30], ['Al/Cu', w * .8, h * .9], ['Rest', end + 10, h * .9]];
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; [[w * .72, 'Al + Cu'], [w * .93, 'Plastik']].forEach(([x, l]) => { ctx.strokeRect(x, h * .78, w * .1, h * .18); label(ctx, l, x + w * .05, h * .99, {size: 11, color: C.ink2}); });
+    // Aufbau: Band von x0 bis wx (Wirbelstrom-Trommel am Bandende), Überbandmagnet trägt Eisen nach links zur Eisen-Kiste
+    const by = h * .45, x0 = w * .3, wx = w * .7, mx = w * .38, mL = w * .12, mR = w * .46, my = by - h * .3, mh = 22, dr = 11;
+    const binTop = h * .72, binBot = h * .93, binY = h * .88;
+    const BIN = {Fe: [w * .06, w * .24, 'Eisen'], P: [w * .6, w * .76, 'Plastik'], AlCu: [w * .8, w * .96, 'Al + Cu']};
+    const binOf = k => k === 'Fe' ? 'Fe' : k === 'P' ? 'P' : 'AlCu';
+    const target = k => { const [l, r] = BIN[binOf(k)]; return [l + 14 + Math.random() * (r - l - 28), binY + Math.random() * (binBot - binY - 10)]; };
+    // Flugbahn als Bogen von (sx, sy) nach (tx, ty), Dauer d, Bogenhöhe hb
+    const fly = (it, d, hb) => { const [tx, ty] = target(it.k); Object.assign(it, {st: 'fly', p: 0, sx: it.x, sy: it.y, tx, ty, d, hb}); };
+    if (run && t - last > .7) { last = t; items.push({k: pick(T)[0], x: x0 + 8, y: by - 10, st: 'band'}); }
+    // Kisten (oben offen)
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+    for (const [l, r, n] of Object.values(BIN)) { ctx.beginPath(); ctx.moveTo(l, binTop); ctx.lineTo(l, binBot); ctx.lineTo(r, binBot); ctx.lineTo(r, binTop); ctx.stroke(); label(ctx, n, (l + r) / 2, h * .975, {size: 12, color: C.ink2}); }
+    // Band mit Umlenkrolle links und Wirbelstrom-Trommel rechts
+    ctx.fillStyle = C.ink2; ctx.fillRect(x0, by, wx - x0, 8);
+    ctx.beginPath(); ctx.arc(x0, by + 4, 6, 0, 7); ctx.fill();
+    ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(wx, by + 4, dr, 0, 7); ctx.fill();
+    ctx.strokeStyle = C.surface; ctx.lineWidth = 2; const ang = run ? t * 8 : 0; ctx.beginPath(); ctx.moveTo(wx + Math.cos(ang) * dr * .7, by + 4 + Math.sin(ang) * dr * .7); ctx.lineTo(wx - Math.cos(ang) * dr * .7, by + 4 - Math.sin(ang) * dr * .7); ctx.stroke();
+    label(ctx, 'Wirbelstrom', wx, by + 32, {size: 12, color: C.ink2});
+    label(ctx, 'Schrott', x0 + 20, by - 26, {size: 12, color: C.ink2});
+    // Überbandmagnet
+    ctx.fillStyle = mix(C.ink2, C.surface, .35); roundRect(ctx, mL, my, mR - mL, mh, mh / 2); ctx.fill();
+    ctx.fillStyle = C.bad; ctx.fillRect(mx - 26, my - 6, 52, mh + 12);
+    label(ctx, 'Magnet', mx, my - 18, {size: 12, color: C.ink2});
+    const hang = my + mh + 9;
     for (const it of items) {
-      if (it.st === 'band') { it.x += dt * w * .12; if (it.k === 'Fe' && Math.abs(it.x - mx) < 12) it.st = 'mag'; if ((it.k === 'Al' || it.k === 'Cu') && it.x > wx) { it.st = 'fly'; it.vy = -140; it.vx = 120; } if (it.x > end - w * .02) { it.st = 'fall'; } }
-      else if (it.st === 'mag') { it.y = Math.max(by - h * .32 + 34, it.y - dt * 200); if (it.y <= by - h * .32 + 34 && !it.c) { it.c = 1; cnt.Fe++; } }
-      else if (it.st === 'fly') { it.vy += 400 * dt; it.x += it.vx * dt; it.y += it.vy * dt; if (it.y > h * .9) { it.y = h * .9; it.st = 'done'; cnt[it.k]++; } }
-      else if (it.st === 'fall') { it.y += dt * 200; it.x += dt * 20; if (it.y > h * .9) { it.y = h * .9; it.st = 'done'; cnt.P++; } }
+      if (it.st === 'band') {
+        it.x += dt * w * .12;
+        if (it.k === 'Fe' && it.x >= mx) it.st = 'lift';
+        else if (it.x >= wx) { it.y = by - 10; fly(it, it.k === 'P' ? .55 : .9, it.k === 'P' ? h * .04 : h * .22); }
+      } else if (it.st === 'lift') { it.y = Math.max(hang, it.y - dt * h * .8); if (it.y <= hang) it.st = 'carry'; }
+      else if (it.st === 'carry') { it.x -= dt * w * .12; if (it.x <= mL + 14) fly(it, .5, 0); }
+      else if (it.st === 'fly') {
+        it.p = Math.min(1, it.p + dt / it.d);
+        it.x = lerp(it.sx, it.tx, it.p); it.y = lerp(it.sy, it.ty, it.p) - it.hb * 4 * it.p * (1 - it.p);
+        if (it.p >= 1) { it.st = 'done'; cnt[it.k]++; }
+      }
       if (it.k === 'P') { ctx.fillStyle = '#e25555'; roundRect(ctx, it.x - 8, it.y - 8, 16, 16, 4); ctx.fill(); } else atomBall(ctx, it.x, it.y, 9, it.k);
     }
-    items = items.filter(it => !(it.st === 'done' && t - last > 0 && items.length > 40 && items.indexOf(it) < 10));
+    // Kisten nicht überlaufen lassen: nur die letzten 12 Teile je Kiste anzeigen
+    const seen = {}; items = items.reverse().filter(it => it.st !== 'done' || (seen[binOf(it.k)] = (seen[binOf(it.k)] || 0) + 1) <= 12).reverse();
     $('#so-status').innerHTML = `Aussortiert: Eisen <b>${cnt.Fe}</b> · Aluminium <b>${cnt.Al}</b> · Kupfer <b>${cnt.Cu}</b> · Plastik <b>${cnt.P}</b>`;
   });
 })();

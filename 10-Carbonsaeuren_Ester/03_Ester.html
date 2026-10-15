@@ -663,8 +663,9 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
     <div class="vis">
       <div class="vis-head"><h3>Teilchenbild</h3></div>
       <div class="eq-line" style="font-size:1rem">CH₃COOH + HO–C₂H₅ <span class="arrow">⇄</span> CH₃COO–C₂H₅ + H₂O</div>
-      <div id="vs-svg" style="display:flex;justify-content:center;align-items:center;gap:.6rem;flex-wrap:wrap;min-height:10rem"></div>
-      <div class="slider"><label for="vs-k">Reaktionsfortschritt</label><input type="range" id="vs-k" min="0" max="2" step="1" value="0"></div>
+      <canvas id="cv-vs" class="wide" aria-label="Essigsäure und Ethanol reagieren zu Ethylacetat und Wasser"></canvas>
+      <div class="slider"><label for="vs-k">Reaktionsfortschritt</label><input type="range" id="vs-k" min="0" max="2" step=".01" value="0"></div>
+      <div class="controls"><button class="btn primary" id="vs-play">▶ Abspielen</button></div>
       <p class="status" id="vs-status"></p>
     </div>
   </div>
@@ -2189,9 +2190,48 @@ const esterName = (s, a) => a[2] + s[2];
 /* ================= VERESTERUNG ================= */
 (() => {
   const st = ['Essigsäure und Ethanol stoßen zusammen (Katalysator: H₂SO₄).', 'Die OH-Gruppe der Säure und das H der Alkohol-OH-Gruppe werden als <b>Wasser</b> abgespalten.', 'Säurerest und Alkylrest verbinden sich über ein O-Atom: <b>Ethylacetat</b> + Wasser.'];
-  const hl = s => { const m = MOL(s), set = new Set(); m.a.forEach((a, i) => { if (a.el === 'O') set.add(i); }); return set; };
-  function draw() { const k = +$('#vs-k').value; $('#vs-status').innerHTML = st[k]; $('#vs-svg').innerHTML = k < 2 ? `${formulaSVG(MOL('CC(=O)O'), 'struktur', {unit: 22, highlight: k ? new Set([3]) : new Set()})}<span class="arrow" style="font-size:1.4rem">+</span>${formulaSVG(MOL('OCC'), 'struktur', {unit: 22, highlight: k ? new Set([0]) : new Set()})}` : `${formulaSVG(MOL('CC(=O)OCC'), 'struktur', {unit: 20, highlight: new Set([3])})}<span class="arrow" style="font-size:1.4rem">+</span><div style="text-align:center"><b class="chem" style="font-size:1.3rem">H₂O</b></div>`; }
-  $('#vs-k').oninput = draw; draw();
+  // Atome: [Element, Lage beim Zusammenstoß (K1), Lage nach der Reaktion (K2)]; vorher (K0) liegen die Moleküle weiter auseinander
+  const A = {
+    C1: ['C', [-3.4, 0], [-3.4, 0]], H1a: ['H', [-4.3, 0], [-4.3, 0]], H1b: ['H', [-3.4, -.9], [-3.4, -.9]], H1c: ['H', [-3.4, .9], [-3.4, .9]],
+    C2: ['C', [-2.4, 0], [-2.4, 0]], O2: ['O', [-2.4, -1], [-2.4, -1]], O3: ['O', [-1.7, .7], [1.5, 1.75]], H3: ['H', [-1.7, 1.55], [.85, 2.25]],
+    O4: ['O', [-.9, -.2], [-1.4, 0]], H4: ['H', [-1.05, .6], [2.15, 2.25]],
+    C5: ['C', [.1, -.2], [-.4, 0]], H5a: ['H', [.1, -1.1], [-.4, -.9]], H5b: ['H', [.1, .7], [-.4, .9]],
+    C6: ['C', [1.1, -.2], [.6, 0]], H6a: ['H', [2, -.2], [1.5, 0]], H6b: ['H', [1.1, -1.1], [.6, -.9]], H6c: ['H', [1.1, .7], [.6, .9]]
+  };
+  const water = new Set(['O3', 'H3', 'H4']);
+  const acid = new Set(['C1', 'H1a', 'H1b', 'H1c', 'C2', 'O2', 'O3', 'H3']);
+  const K0 = id => [A[id][1][0] + (acid.has(id) ? -1.1 : 1.1), A[id][1][1]];
+  const keep = [['C1', 'H1a'], ['C1', 'H1b'], ['C1', 'H1c'], ['C1', 'C2'], ['C2', 'O2', 2], ['O3', 'H3'], ['O4', 'C5'], ['C5', 'H5a'], ['C5', 'H5b'], ['C5', 'C6'], ['C6', 'H6a'], ['C6', 'H6b'], ['C6', 'H6c']];
+  const brk = [['C2', 'O3'], ['O4', 'H4']], form = [['C2', 'O4'], ['O3', 'H4']];
+  let play = false, k = 0;
+  const setK = v => { k = v; $('#vs-k').value = v; $('#vs-status').innerHTML = st[k < .6 ? 0 : k < 1.55 ? 1 : 2]; };
+  const setPlay = v => { play = v; $('#vs-play').textContent = v ? '❚❚ Pause' : '▶ Abspielen'; };
+  $('#vs-k').oninput = () => { setPlay(false); setK(+$('#vs-k').value); };
+  $('#vs-play').onclick = () => { if (!play && k >= 2) setK(0); setPlay(!play); };
+  setK(0);
+  canvasLoop($('#cv-vs'), 'versuch', (ctx, w, h, t, dt) => {
+    if (play) { setK(Math.min(2, k + dt / 3.5)); if (k >= 2) setPlay(false); }
+    const u = Math.min(w / 9.6, h / 4.4), ox = w / 2 + u * 1.1, oy = h * .3;
+    const e1 = ease(clamp(k, 0, 1)), e2 = ease(clamp(k - 1, 0, 1)), wob = 1 - Math.abs(k - 1) * .5;
+    const P = {}; Object.keys(A).forEach((id, i) => { const a = K0(id), b = A[id][1], c = A[id][2]; const wx = water.has(id) ? ease(clamp((k - 1.35) / .65, 0, 1)) : e2, wy = water.has(id) ? ease(clamp((k - 1) / .5, 0, 1)) : e2;   // Wasser erst nach unten, dann zur Seite
+      const x = k < 1 ? lerp(a[0], b[0], e1) : lerp(b[0], c[0], wx), y = k < 1 ? lerp(a[1], b[1], e1) : lerp(b[1], c[1], wy); P[id] = [ox + (x + Math.sin(t * 2.3 + i * 1.7) * .04 * wob) * u, oy + (y + Math.cos(t * 2.1 + i * 2.3) * .04 * wob) * u]; });
+    const bond = (p, q, n = 1, al = 1, c = C.ink2) => { if (al <= 0) return; const [x1, y1] = P[p], [x2, y2] = P[q], d = Math.hypot(x2 - x1, y2 - y1) || 1, nx = -(y2 - y1) / d * 4, ny = (x2 - x1) / d * 4; ctx.strokeStyle = alpha(c, al); ctx.lineWidth = 3; ctx.lineCap = 'round'; for (let j = 0; j < n; j++) { const o = n > 1 ? (j ? 1 : -1) : 0; ctx.beginPath(); ctx.moveTo(x1 + nx * o, y1 + ny * o); ctx.lineTo(x2 + nx * o, y2 + ny * o); ctx.stroke(); } };
+    keep.forEach(([p, q, n]) => bond(p, q, n));
+    const fb = 1 - clamp((k - 1.05) / .35, 0, 1), ff = clamp((k - 1.25) / .35, 0, 1);
+    brk.forEach(([p, q]) => { ctx.setLineDash([5, 4]); bond(p, q, 1, fb); ctx.setLineDash([]); });
+    bond('C2', 'O4', 1, ff, C.accent); bond('O3', 'H4', 1, ff);
+    // Markierung der abgespaltenen Atome
+    const hl = clamp((k - .45) / .3, 0, 1);
+    if (hl > 0) ['O3', 'H3', 'H4'].forEach(id => { ctx.fillStyle = alpha(C.bad, .18 * hl); ctx.beginPath(); ctx.arc(...P[id], u * .45, 0, 7); ctx.fill(); });
+    Object.keys(A).forEach(id => atomBall(ctx, ...P[id], u * (A[id][0] === 'H' ? .2 : .3), A[id][0]));
+    // Beschriftung
+    const nm = (txt, ids, al, c = C.ink2) => { if (al <= 0) return; const xs = ids.map(i => P[i][0]), ys = ids.map(i => P[i][1]); ctx.globalAlpha = al; label(ctx, txt, (Math.min(...xs) + Math.max(...xs)) / 2, Math.max(...ys) + u * .55, {size: 13, color: c}); ctx.globalAlpha = 1; };
+    const a0 = 1 - clamp((k - .3) / .3, 0, 1), a2 = clamp((k - 1.6) / .3, 0, 1);
+    nm('Essigsäure', [...acid], a0); nm('Ethanol', ['O4', 'H4', 'C5', 'C6', 'H6a'], a0);
+    nm('Ethylacetat (Ester)', ['C1', 'H1a', 'C2', 'O4', 'C5', 'C6', 'H6a', 'H6c'], a2); nm('Wasser', ['O3', 'H3', 'H4'], a2, C.bad);
+    if (k > .45 && k < 1.6) { ctx.globalAlpha = Math.min(hl, 1 - clamp((k - 1.3) / .3, 0, 1)); label(ctx, 'wird abgespalten', (P.O3[0] + P.H4[0]) / 2, Math.max(P.H3[1], P.H4[1]) + u * .55, {size: 12, color: C.bad}); ctx.globalAlpha = 1; }
+    if (ff > .5) { ctx.globalAlpha = a2; label(ctx, 'Esterbindung', (P.C2[0] + P.O4[0]) / 2, P.C2[1] + u * .5, {size: 12, color: C.accent}); ctx.globalAlpha = 1; }
+  });
 })();
 
 /* ================= BAUKASTEN ================= */

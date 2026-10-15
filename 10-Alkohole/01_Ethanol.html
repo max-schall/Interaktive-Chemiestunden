@@ -664,7 +664,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
       <div class="vis-head"><h3>Gärung im Zeitraffer</h3><span class="big-num" id="ga-pc"></span></div>
       <canvas id="cv-ga" class="wide" aria-label="Gärgefäß mit Gärröhrchen"></canvas>
       <div class="slider"><label for="ga-t">Zeit <output id="ga-out"></output></label><input type="range" id="ga-t" min="0" max="21" step=".1" value="0"></div>
-      <div class="chkrow"><label><input type="checkbox" id="ga-warm" checked>warm (30 °C)</label></div>
+      <div class="controls"><button class="btn primary" id="ga-play">▶ Abspielen</button><label class="chkrow" style="margin:0"><input type="checkbox" id="ga-warm" checked>warm (30 °C)</label></div>
     </div>
   </div>
 </section>
@@ -2193,49 +2193,132 @@ function indColor(kind, ph) {
 /* ================= Inhalte dieser Stunde ================= */
 
 /* ================= GÄRUNG ================= */
+/* Hohles Glasrohr entlang eines Pfads: dunkle Wand, heller Innenraum */
+function glassPipe(ctx, pts, r) {
+  const path = () => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
+  ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
+  ctx.strokeStyle = C.ink2; ctx.lineWidth = 2 * r + 4.4; path(); ctx.stroke();
+  ctx.strokeStyle = C.surface; ctx.lineWidth = 2 * r; path(); ctx.stroke();
+}
 (() => {
   const curve = (d, warm) => { const k = warm ? .35 : .12; return clamp(14 * (1 - Math.exp(-k * Math.max(0, d - .5))), 0, 14); };
+  let play = false, pd = 0;
   const upd = () => { const d = +$('#ga-t').value; $('#ga-out').textContent = fix(d, 1) + ' Tage'; $('#ga-pc').textContent = fix(curve(d, $('#ga-warm').checked), 1) + ' Vol.-%'; };
-  $('#ga-t').oninput = upd; $('#ga-warm').onchange = upd; upd();
-  canvasLoop($('#cv-ga'), 'gaerung', (ctx, w, h, t) => {
-    const d = +$('#ga-t').value, warm = $('#ga-warm').checked, pc = curve(d, warm), rate = Math.max(0, curve(d + .3, warm) - pc) * 10;
-    const bx = w * .08, bw = w * .3, by = h * .3, bh = h * .62;
-    beaker(ctx, bx, by, bw, bh, {level: .8, fill: mix('#f3e3a0', '#e8d080', pc / 14), alpha: .55, marks: false});
-    ctx.fillStyle = C.ink2; ctx.fillRect(bx + bw * .3, by - 10, bw * .4, 14);
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx + bw / 2, by - 10); ctx.lineTo(bx + bw / 2, h * .1); ctx.stroke();
-    ctx.beginPath(); ctx.arc(bx + bw / 2 + 14, h * .14, 14, Math.PI, 0); ctx.stroke();
-    if (rate > .05) { bubbles(ctx, bx + 10, by + bh * .3, bw - 20, bh * .6, t, Math.round(rate * 10) + 2, C.ink2); const p = (t * rate) % 1; ctx.fillStyle = alpha(C.ink2, .5); ctx.beginPath(); ctx.arc(bx + bw / 2 + 14, h * .14 - p * 10, 4, 0, 7); ctx.fill(); }
-    const r = rng(4); ctx.fillStyle = '#c8a870'; for (let i = 0; i < 30; i++) ctx.fillRect(bx + 8 + r() * (bw - 16), by + bh - 8 - r() * 10, 3, 3);
+  const setPlay = v => { play = v; $('#ga-play').textContent = v ? '❚❚ Pause' : '▶ Abspielen'; };
+  $('#ga-t').oninput = () => { setPlay(false); pd = +$('#ga-t').value; upd(); }; $('#ga-warm').onchange = upd; upd();
+  $('#ga-play').onclick = () => { pd = +$('#ga-t').value; if (!play && pd >= 21) pd = 0; setPlay(!play); };
+  canvasLoop($('#cv-ga'), 'gaerung', (ctx, w, h, t, dt) => {
+    if (play) { pd = Math.min(21, pd + dt * 2.1); $('#ga-t').value = pd; upd(); if (pd >= 21) setPlay(false); }
+    const d = +$('#ga-t').value, warm = $('#ga-warm').checked, pc = curve(d, warm), rate = clamp((curve(d + .3, warm) - pc) * 4, 0, 1);
+    // Gärflasche: Bauch, Schulter, Hals mit Stopfen
+    const cx = w * .22, bw = w * .3, bx = cx - bw / 2, bb = h * .95, bt = h * .5, nw = 14, nTop = h * .34, sh = h * .42;
+    const body = () => { ctx.beginPath(); ctx.moveTo(cx - nw, nTop); ctx.lineTo(cx - nw, sh); ctx.quadraticCurveTo(bx, sh, bx, bt); ctx.lineTo(bx, bb - 12); ctx.quadraticCurveTo(bx, bb, bx + 12, bb); ctx.lineTo(bx + bw - 12, bb); ctx.quadraticCurveTo(bx + bw, bb, bx + bw, bb - 12); ctx.lineTo(bx + bw, bt); ctx.quadraticCurveTo(bx + bw, sh, cx + nw, sh); ctx.lineTo(cx + nw, nTop); };
+    const surf = h * .56;
+    ctx.save(); body(); ctx.clip();
+    ctx.fillStyle = alpha(mix('#f0dc8c', '#e6c870', pc / 14), .6); ctx.fillRect(bx, surf, bw, bb - surf);
+    if (rate > 0) { ctx.fillStyle = alpha('#ffffff', .7 * rate); for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(bx + 10 + i * (bw - 20) / 8, surf, 4 + 3 * Math.sin(t * 3 + i), 0, 7); ctx.fill(); } }   // Schaum
+    // Hefe am Boden
+    const r = rng(4); ctx.fillStyle = '#c4a46a'; for (let i = 0; i < 45; i++) { ctx.beginPath(); ctx.ellipse(bx + 8 + r() * (bw - 16), bb - 4 - r() * 12, 3, 2, r() * 3, 0, 7); ctx.fill(); }
+    // Gasblasen steigen von der Hefe zur Oberfläche
+    ctx.strokeStyle = alpha(C.ink2, .75); ctx.lineWidth = 1.3;
+    for (let i = 0; i < 24; i++) { const ph = r(), sp = .4 + r() * .6, bx0 = bx + 12 + r() * (bw - 24), p = (t * sp * .6 + ph) % 1; if (i >= rate * 24) continue; const y = lerp(bb - 10, surf + 4, p); ctx.beginPath(); ctx.arc(bx0 + Math.sin(t * 3 + i) * 3, y, 2 + p * 2.5, 0, 7); ctx.stroke(); }
+    ctx.restore();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.4; ctx.lineJoin = 'round'; body(); ctx.stroke();
+    ctx.fillStyle = '#9a7650'; roundRect(ctx, cx - nw - 3, nTop - 6, 2 * nw + 6, 20, 3); ctx.fill();
+    // Gärröhrchen: Steigrohr, U-Bogen mit Kalkwasser, offenes Ende
+    const g = w * .035, yTop = h * .1, yU = h * .27, pr = 4;
+    const pts = [[cx, nTop + 12], [cx, yTop], [cx + g, yTop], [cx + g, yU], [cx + 2 * g, yU], [cx + 2 * g, yTop - 4]];
+    glassPipe(ctx, pts, pr);
+    const ul = yU - h * .07, trueb = clamp(pc / 6, 0, 1);
+    ctx.strokeStyle = alpha(mix('#a8cce4', '#e8e4da', trueb), .95); ctx.lineWidth = 2 * pr; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(cx + g, ul); ctx.lineTo(cx + g, yU); ctx.lineTo(cx + 2 * g, yU); ctx.lineTo(cx + 2 * g, ul); ctx.stroke();
+    label(ctx, 'Gärröhrchen', cx + 2 * g + 12, yTop + 4, {size: 12, color: C.ink2, align: 'left'});
+    label(ctx, trueb > .5 ? 'Kalkwasser (trüb)' : 'Kalkwasser', cx + 2 * g + 12, ul + 8, {size: 11, color: C.ink2, align: 'left', weight: 400});
+    // Gasblasen wandern durch das Röhrchen und perlen durch das Kalkwasser
+    if (rate > .02) {
+      const seg = [[cx, nTop + 10, cx, yTop], [cx, yTop, cx + g, yTop], [cx + g, yTop, cx + g, yU], [cx + g, yU, cx + 2 * g, yU], [cx + 2 * g, yU, cx + 2 * g, yTop - 4]];
+      const lens = seg.map(([a, b, c, e]) => Math.hypot(c - a, e - b)), tot = lens.reduce((x, y) => x + y), nb = Math.max(1, Math.round(rate * 5));
+      ctx.fillStyle = alpha(C.ink2, .55);
+      for (let i = 0; i < nb; i++) { let q = ((t * .35 + i / nb) % 1) * tot, j = 0; while (q > lens[j]) q -= lens[j++]; const [a, b, c, e] = seg[j], f = q / lens[j]; ctx.beginPath(); ctx.arc(lerp(a, c, f), lerp(b, e, f), 2.6, 0, 7); ctx.fill(); }
+    }
+    label(ctx, 'Traubenzucker + Hefe', cx, bb - 30, {size: 12, color: C.ink2});
     ctx.save(); ctx.translate(w * .45, 0);
     const A = axes(ctx, w * .55, h, {x: [0, 21], y: [0, 16], xt: [0, 7, 14, 21], yt: [0, 5, 10, 15], xl: 'Tage', yl: 'Ethanol in Vol.-%', pad: {l: 40}});
-    const pts = []; for (let x = 0; x <= d; x += .2) pts.push([A.X(x), A.Y(curve(x, warm))]); polyline(ctx, pts, 'accent', 2.5);
+    const cp = []; for (let x = 0; x <= d; x += .2) cp.push([A.X(x), A.Y(curve(x, warm))]); cp.push([A.X(d), A.Y(pc)]); polyline(ctx, cp, 'accent', 2.5); dotAt(ctx, A.X(d), A.Y(pc), 'accent', 5);
     ctx.restore();
   });
 })();
 
 /* ================= DESTILLATION ================= */
 (() => {
-  let run = false, tt = 0;
+  let run = false, tt = 0, drops = [], lastDrop = 0;
   const T = x => x < 3 ? 20 + x * 20 : x < 8 ? 80 + (x - 3) * 1.6 : Math.min(100, 88 + (x - 8) * 2);
   const conc = x => x < 3 ? 0 : x < 8 ? 80 - (x - 3) * 6 : Math.max(5, 50 - (x - 8) * 8);
   $('#de-go').onclick = () => { run = !run; $('#de-go').textContent = run ? 'Pause' : 'Heizen'; };
-  $('#de-reset').onclick = () => { run = false; tt = 0; $('#de-go').textContent = 'Heizen'; };
+  $('#de-reset').onclick = () => { run = false; tt = 0; drops = []; $('#de-go').textContent = 'Heizen'; };
   canvasLoop($('#cv-de'), 'destillation', (ctx, w, h, t, dt) => {
     if (run) tt = Math.min(14, tt + dt * .8);
-    const temp = T(tt); $('#de-T').textContent = fix(temp, 0) + ' °C';
+    const temp = T(tt), boil = tt >= 3, flow = run && boil && tt < 14, got = clamp((tt - 3) / 11, 0, 1); $('#de-T').textContent = fix(temp, 0) + ' °C';
     $('#de-status').innerHTML = tt < 3 ? 'Wein (12 Vol.-%) wird erwärmt.' : `Destillat: etwa <b>${fix(conc(tt), 0)} Vol.-%</b> Ethanol` + (tt > 8 ? ' – jetzt geht immer mehr Wasser über.' : '');
-    const kx = w * .16, ky = h * .62, kr = h * .2;
-    ctx.fillStyle = alpha('#7a1630', .55); ctx.beginPath(); ctx.arc(kx, ky, kr - 3, .1 * Math.PI, .9 * Math.PI); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.arc(kx, ky, kr, -Math.PI / 2 + .25, -Math.PI / 2 - .25 + 2 * Math.PI); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(kx - 9, ky - kr); ctx.lineTo(kx - 9, ky - kr - h * .12); ctx.moveTo(kx + 9, ky - kr); ctx.lineTo(kx + 9, ky - kr - h * .1); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(kx + 9, ky - kr - h * .1); ctx.lineTo(w * .48, h * .55); ctx.stroke();
-    ctx.fillStyle = alpha(C.water, .2); ctx.save(); ctx.translate(kx + 9, ky - kr - h * .1); ctx.rotate(Math.atan2(h * .55 - (ky - kr - h * .1), w * .48 - kx - 9)); ctx.fillRect(30, -10, w * .2, 20); ctx.strokeRect(30, -10, w * .2, 20); ctx.restore();
-    tube(ctx, w * .5, h * .5, 30, h * .4, {level: clamp((tt - 3) / 11, 0, 1) * .85, fill: '#f6efc8', alpha: .6});
-    ctx.fillStyle = run ? mix(C.ink2, C.hot, .5 + .2 * Math.sin(t * 4)) : C.ink2; roundRect(ctx, kx - kr, ky + kr + 4, 2 * kr, 10, 3); ctx.fill();
+    const W0 = w * .58;
+    // Rundkolben mit Hals, Destillieraufsatz und Seitenarm
+    const kr = Math.min(h * .17, W0 * .16), kx = W0 * .2, ky = h * .7, nr = 7, nTop = ky - kr - h * .2, sy = nTop + h * .05;
+    const E = [W0 * .8, h * .5], ang = Math.atan2(E[1] - sy, E[0] - kx), ar = 5;
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(kx, ky, kr + 2.2, 0, 7); ctx.fill();
+    glassPipe(ctx, [[kx, ky - kr + 4], [kx, nTop]], nr); glassPipe(ctx, [[kx, sy], E, [E[0], E[1] + h * .07]], ar);
+    ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(kx, ky, kr - 0.2, 0, 7); ctx.fill();
+    ctx.strokeStyle = C.surface; ctx.lineWidth = 2 * nr; ctx.beginPath(); ctx.moveTo(kx, ky - kr + 6); ctx.lineTo(kx, sy + 8); ctx.stroke();
+    ctx.lineWidth = 2 * ar; ctx.beginPath(); ctx.moveTo(kx, sy); ctx.lineTo(...E); ctx.lineTo(E[0], E[1] + h * .07); ctx.stroke();
+    // Wein im Kolben: Spiegel sinkt mit der Destillatmenge
+    const ly = ky + kr * (.05 + .3 * got);
+    ctx.save(); ctx.beginPath(); ctx.arc(kx, ky, kr - 1.5, 0, 7); ctx.clip();
+    ctx.fillStyle = alpha('#7a1630', .55); ctx.fillRect(kx - kr, ly, 2 * kr, 2 * kr);
+    if (run && temp > 70) { const rr = rng(9); ctx.strokeStyle = alpha('#ffffff', .8); ctx.lineWidth = 1.3; for (let i = 0; i < 14; i++) { const bx0 = kx - kr * .6 + rr() * kr * 1.2, p = (t * (.6 + rr()) + rr()) % 1; ctx.beginPath(); ctx.arc(bx0, lerp(ky + kr * .85, ly + 3, p), 1.5 + p * 2.5, 0, 7); ctx.stroke(); } }
+    ctx.restore();
+    // Siedesteinchen
+    ctx.fillStyle = C.ink2; [[-.2, .9], [.05, .93], [.25, .88]].forEach(([a, b]) => { ctx.beginPath(); ctx.arc(kx + a * kr, ky + b * kr, 2.5, 0, 7); ctx.fill(); });
+    // Dampf: steigt im Hals auf und strömt durch den Seitenarm
+    if (flow) {
+      const path = [[kx, ly - 4], [kx, sy], E, [E[0], E[1] + h * .07]], lens = [], segs = [];
+      for (let i = 1; i < path.length; i++) { segs.push([path[i - 1], path[i]]); lens.push(Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1])); }
+      const tot = lens.reduce((a, b) => a + b);
+      for (let i = 0; i < 16; i++) { let q = ((t * .25 + i / 16) % 1) * tot, j = 0; while (q > lens[j]) q -= lens[j++]; const [[a, b], [c, e]] = segs[j], f = q / lens[j], cool = j >= 1 && (j > 1 || f > .3); ctx.fillStyle = cool ? alpha('#c8a0b0', .9) : alpha('#d8b8c8', .7); ctx.beginPath(); ctx.arc(lerp(a, c, f), lerp(b, e, f), cool ? 2.6 : 3.2, 0, 7); ctx.fill(); }
+    }
+    // Liebig-Kühler um den Seitenarm
+    const L0 = .3, L1 = .82, len = Math.hypot(E[0] - kx, E[1] - sy), jw = ar + 10;
+    ctx.save(); ctx.translate(kx, sy); ctx.rotate(ang);
+    ctx.fillStyle = alpha(C.water, .3); ctx.fillRect(len * L0, -jw, len * (L1 - L0), 2 * jw);
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.strokeRect(len * L0, -jw, len * (L1 - L0), 2 * jw);
+    ctx.fillStyle = C.ink2; ctx.fillRect(len * L1 - 14, jw, 6, 12); ctx.fillRect(len * L0 + 8, -jw - 12, 6, 12);
+    ctx.restore();
+    const pIn = [kx + Math.cos(ang) * (len * L1 - 11) - Math.sin(ang) * (jw + 16), sy + Math.sin(ang) * (len * L1 - 11) + Math.cos(ang) * (jw + 16)];
+    const pOut = [kx + Math.cos(ang) * (len * L0 + 11) + Math.sin(ang) * (jw + 16), sy + Math.sin(ang) * (len * L0 + 11) - Math.cos(ang) * (jw + 16)];
+    label(ctx, 'Kühlwasser ein', pIn[0], pIn[1] + 8, {size: 10, color: C.water}); label(ctx, 'aus', pOut[0], pOut[1] - 6, {size: 10, color: C.water});
+    label(ctx, 'Kühler', kx + Math.cos(ang) * len * .56 + 30, sy + Math.sin(ang) * len * .56 - 26, {size: 11, color: C.ink2});
+    // Thermometer im Aufsatz: Kugel auf Höhe des Seitenarms
+    const tTop = h * .02, tBot = sy + 6, tw = 6, scale = v => tBot - 8 - (tBot - 8 - tTop - 6) * clamp(v / 110, 0, 1);
+    ctx.fillStyle = '#9a7650'; roundRect(ctx, kx - nr - 3, nTop - 8, 2 * nr + 6, 12, 3); ctx.fill();
+    ctx.fillStyle = C.surface; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.6; roundRect(ctx, kx - tw / 2, tTop, tw, tBot - tTop, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#d0303a'; ctx.beginPath(); ctx.arc(kx, tBot, 4.5, 0, 7); ctx.fill(); ctx.fillRect(kx - 1.5, scale(temp), 3, tBot - scale(temp));
+    ctx.strokeStyle = alpha(C.ink2, .7); ctx.lineWidth = 1; [20, 40, 60, 80, 100].forEach(v => { ctx.beginPath(); ctx.moveTo(kx + tw / 2, scale(v)); ctx.lineTo(kx + tw / 2 + 4, scale(v)); ctx.stroke(); });
+    label(ctx, fix(temp, 0) + ' °C', kx - tw - 6, h * .1, {size: 13, align: 'right', color: '#d0303a'});
+    label(ctx, 'Thermometer', kx - tw - 6, h * .1 + 16, {size: 10, align: 'right', color: C.ink2, weight: 400});
+    // Vorlage (Erlenmeyerkolben) mit Destillat
+    const vx = E[0], vTop = E[1] + h * .1, vB = h * .97, vw = W0 * .1;
+    const fl = () => { ctx.beginPath(); ctx.moveTo(vx - 7, vTop); ctx.lineTo(vx - 7, vTop + h * .1); ctx.lineTo(vx - vw, vB); ctx.lineTo(vx + vw, vB); ctx.lineTo(vx + 7, vTop + h * .1); ctx.lineTo(vx + 7, vTop); };
+    ctx.save(); fl(); ctx.clip(); const vl = vB - (vB - vTop - h * .1) * .7 * got; ctx.fillStyle = alpha('#efe6b8', .85); ctx.fillRect(vx - vw, vl, 2 * vw, vB - vl); ctx.restore();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.lineJoin = 'round'; fl(); ctx.stroke();
+    label(ctx, 'Destillat', vx - vw - 6, vB - 10, {size: 11, color: C.ink2, align: 'right'});
+    // Tropfen fallen aus dem Kühlerende in die Vorlage
+    if (flow && t - lastDrop > .45) { lastDrop = t; drops.push({y: E[1] + h * .07}); }
+    drops = drops.filter(d => (d.y += dt * h * .5) < vl); ctx.fillStyle = '#d8c878'; drops.forEach(d => { ctx.beginPath(); ctx.arc(vx, d.y, 2.6, 0, 7); ctx.fill(); });
+    // Heizpilz
+    ctx.strokeStyle = run ? mix(C.ink2, C.hot, .55 + .2 * Math.sin(t * 4)) : C.ink2; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(kx, ky, kr + 8, .12 * Math.PI, .88 * Math.PI); ctx.stroke();
+    label(ctx, 'Wein', kx, ky + kr * .55, {size: 12, color: '#fff'});
     // Temperaturkurve
-    ctx.save(); ctx.translate(w * .58, 0);
-    const A = axes(ctx, w * .42, h, {x: [0, 14], y: [20, 100], xt: [0, 7, 14], yt: [20, 40, 60, 78, 100], xl: 'Zeit in min', yl: 'Temperatur in °C', pad: {l: 36}});
-    const pts = []; for (let x = 0; x <= tt; x += .1) pts.push([A.X(x), A.Y(T(x))]); polyline(ctx, pts, 'accent', 2.5);
+    ctx.save(); ctx.translate(w * .6, 0);
+    const A = axes(ctx, w * .4, h, {x: [0, 14], y: [20, 100], xt: [0, 7, 14], yt: [20, 40, 60, 78, 100], xl: 'Zeit in min', yl: 'Temperatur in °C', pad: {l: 36}});
+    const cp = []; for (let x = 0; x <= tt; x += .1) cp.push([A.X(x), A.Y(T(x))]); polyline(ctx, cp, 'accent', 2.5);
     ctx.restore();
   });
 })();

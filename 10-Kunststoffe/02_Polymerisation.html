@@ -2169,23 +2169,71 @@ function indColor(kind, ph) {
 
 /* ================= KETTENREAKTION ================= */
 (() => {
-  let state = 'idle', n = 0, acc = 0; const R = rng(4);
-  const mon = Array.from({length: 16}, () => ({x: R(), y: R(), a: R() * 7}));
-  $('#kr-go').onclick = () => { if (state === 'idle') { state = 'grow'; } };
-  $('#kr-stop').onclick = () => { if (state === 'grow') state = 'end'; };
-  $('#kr-reset').onclick = () => { state = 'idle'; n = 0; };
+  // state: idle → init (Starter fliegt zum Kettenanfang) → grow → end (zweites Radikal schließt die Kette)
+  const MAX = 14;
+  let state, n, mon, fly, R1, R2, R = rng(4);
+  function reset() {
+    state = 'idle'; n = 0; fly = null; R = rng(4);
+    mon = Array.from({length: 18}, () => ({x: .1 + R() * .8, y: .55 + R() * .38, vx: (R() - .5) * .08, vy: (R() - .5) * .08, a: R() * 7, va: (R() - .5) * 1.2, st: 'free'}));
+    R1 = {x: .08, y: .8, p: 0}; R2 = {x: .92, y: .9, p: 0};
+  }
+  reset();
+  $('#kr-go').onclick = () => { if (state === 'idle') state = 'init'; };
+  $('#kr-stop').onclick = () => { if (state === 'grow' && !fly) state = 'end'; else if (state === 'grow') state = 'endq'; };
+  $('#kr-reset').onclick = reset;
   canvasLoop($('#cv-kr'), 'kette', (ctx, w, h, t, dt) => {
-    if (state === 'grow') { acc += dt; if (acc > .35) { acc = 0; n = Math.min(14, n + 1); if (n >= 14) state = 'end'; } }
+    const s = w / 17, y0 = h * .26, bl = s * .3;
+    const cpos = j => [s * (1.2 + j * .55), y0 + (j % 2 ? -s * .25 : s * .25)];
+    const r0 = [s * .55, y0];
+    // freie Monomere: Wärmebewegung, Abprallen am Rand des unteren Bereichs
+    for (const m of mon) if (m.st === 'free') {
+      m.vx += (Math.random() - .5) * dt * .2; m.vy += (Math.random() - .5) * dt * .2; m.vx = clamp(m.vx, -.08, .08); m.vy = clamp(m.vy, -.08, .08);
+      m.x += m.vx * dt; m.y += m.vy * dt; m.a += m.va * dt;
+      if (m.x < .06 || m.x > .94) m.vx *= -1; if (m.y < .5 || m.y > .94) m.vy *= -1; m.x = clamp(m.x, .06, .94); m.y = clamp(m.y, .5, .94);
+    }
+    if (state === 'init') { R1.p = Math.min(1, R1.p + dt / .8); if (R1.p >= 1) state = 'grow'; }
+    // nächstes Monomer zum Kettenende holen
+    if (state === 'grow' && !fly && n < MAX) {
+      const [ex, ey] = n ? cpos(2 * n - 1) : r0; let best = null, bd = 1e9;
+      mon.forEach(m => { if (m.st !== 'free') return; const d = Math.hypot(m.x * w - ex, m.y * h - ey); if (d < bd) { bd = d; best = m; } });
+      if (best) { best.st = 'fly'; fly = {m: best, p: 0, sx: best.x * w, sy: best.y * h, sa: best.a, slot: n}; }
+    }
+    if (fly) {
+      fly.p = Math.min(1, fly.p + dt / .75);
+      if (fly.p >= 1) { fly.m.st = 'chain'; n++; fly = null; if (state === 'endq' || n >= MAX) state = 'end'; }
+    }
+    if (state === 'end') R2.p = Math.min(1, R2.p + dt / .8);
     $('#kr-n').textContent = `${n} Monomere`;
-    $('#kr-status').innerHTML = state === 'idle' ? 'Ethen-Moleküle mit C=C-Doppelbindung. Ein Starter (rot) wartet.' : state === 'grow' ? 'Das reaktive Kettenende (•) öffnet die Doppelbindung des nächsten Ethens.' : 'Abbruch: Das Kettenende reagiert ab. Echte Ketten sind Tausende Einheiten lang.';
-    const s = w / 17, y0 = h * .28;
+    $('#kr-status').innerHTML = state === 'idle' ? 'Ethen-Moleküle mit C=C-Doppelbindung bewegen sich frei. Ein Starter-Radikal (R) wartet.' : state === 'init' ? 'Das Starter-Radikal greift ein Ethen-Molekül an.' : state !== 'end' ? 'Das reaktive Kettenende (•) öffnet die Doppelbindung des nächsten Ethens.' : 'Abbruch: Ein zweites Radikal verbindet sich mit dem Kettenende. Echte Ketten sind Tausende Einheiten lang.';
     // Kette
-    for (let i = 0; i < n * 2; i++) { const x = s * (1.2 + i * .55), y = y0 + (i % 2 ? -s * .25 : s * .25); if (i) { ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(s * (1.2 + (i - 1) * .55), y0 + ((i - 1) % 2 ? -s * .25 : s * .25)); ctx.lineTo(x, y); ctx.stroke(); } atomBall(ctx, x, y, s * .2, 'C'); }
-    if (state !== 'idle') { sphere(ctx, s * .55, y0, s * .22, C.bad, 'R', '#fff'); if (n) { ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(s * .7, y0); ctx.lineTo(s * 1.2, y0 + s * .25); ctx.stroke(); } }
-    else sphere(ctx, w * .08, h * .75, s * .22, C.bad, 'R', '#fff');
-    if (state === 'grow' && n) { const ex = s * (1.2 + (n * 2 - 1) * .55); label(ctx, '•', ex + s * .2, y0 - s * .4, {size: 26, color: C.bad}); }
-    // freie Monomere
-    mon.slice(n).forEach((m, i) => { const x = w * (.15 + m.x * .8), y = h * (.5 + m.y * .42); ctx.save(); ctx.translate(x, y); ctx.rotate(m.a + t * .3); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-s * .3, -3); ctx.lineTo(s * .3, -3); ctx.moveTo(-s * .3, 3); ctx.lineTo(s * .3, 3); ctx.stroke(); atomBall(ctx, -s * .3, 0, s * .18, 'C'); atomBall(ctx, s * .3, 0, s * .18, 'C'); ctx.restore(); });
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    const rp = [lerp(R1.x * w, r0[0], ease(R1.p)), lerp(R1.y * h, r0[1], ease(R1.p))];
+    for (let j = 0; j < 2 * n; j++) { const [x, y] = cpos(j), [px, py] = j ? cpos(j - 1) : rp; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke(); }
+    for (let j = 0; j < 2 * n; j++) atomBall(ctx, ...cpos(j), s * .2, 'C');
+    // Monomer im Anflug: bewegt sich zum nächsten Kettenplatz, dreht sich passend, die Doppelbindung klappt auf
+    const drawMon = (x, y, a, dbl, link) => {
+      const dx = Math.cos(a) * bl, dy = Math.sin(a) * bl, nx = -Math.sin(a) * 3, ny = Math.cos(a) * 3;
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(x - dx - nx * (dbl > 0 ? 1 : 0), y - dy - ny * (dbl > 0 ? 1 : 0)); ctx.lineTo(x + dx - nx * (dbl > 0 ? 1 : 0), y + dy - ny * (dbl > 0 ? 1 : 0)); ctx.stroke();
+      if (dbl > 0) { ctx.strokeStyle = alpha(C.ink2, dbl); ctx.beginPath(); ctx.moveTo(x - dx + nx, y - dy + ny); ctx.lineTo(x + dx + nx, y + dy + ny); ctx.stroke(); }
+      if (link) { const [lx, ly, la] = link; ctx.strokeStyle = alpha(C.ink2, la); ctx.lineWidth = 3; ctx.setLineDash(la < 1 ? [4, 4] : []); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x - dx, y - dy); ctx.stroke(); ctx.setLineDash([]); }
+      atomBall(ctx, x - dx, y - dy, s * .18, 'C'); atomBall(ctx, x + dx, y + dy, s * .18, 'C');
+    };
+    if (fly) {
+      const e = ease(fly.p), [c1, c2] = [cpos(2 * fly.slot), cpos(2 * fly.slot + 1)], tx = (c1[0] + c2[0]) / 2, ty = (c1[1] + c2[1]) / 2, ta = Math.atan2(c2[1] - c1[1], c2[0] - c1[0]);
+      let da = ((ta - fly.sa) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
+      const end = fly.slot ? cpos(2 * fly.slot - 1) : rp;
+      drawMon(lerp(fly.sx, tx, e), lerp(fly.sy, ty, e), fly.sa + da * e, 1 - clamp((fly.p - .7) / .3, 0, 1), fly.p > .55 ? [end[0], end[1], clamp((fly.p - .55) / .45, 0, 1)] : null);
+    }
+    mon.forEach(m => { if (m.st === 'free') drawMon(m.x * w, m.y * h, m.a, 1); });
+    // Radikale
+    sphere(ctx, rp[0], rp[1], s * .22, C.bad, 'R', '#fff');
+    if (state === 'end' || R2.p > 0) {
+      const ce = n ? cpos(2 * n - 1) : rp, tgt = cpos(2 * n), q = ease(R2.p), x2 = lerp(R2.x * w, tgt[0], q), y2 = lerp(R2.y * h, tgt[1], q);
+      if (R2.p >= 1) { ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(...ce); ctx.lineTo(x2, y2); ctx.stroke(); atomBall(ctx, ...ce, s * .2, 'C'); }
+      sphere(ctx, x2, y2, s * .22, C.bad, 'R', '#fff');
+    }
+    if ((state === 'grow' || state === 'endq' || state === 'init') && R2.p === 0) { const [ex, ey] = n ? cpos(2 * n - 1) : rp; label(ctx, '•', ex + s * .22, ey - s * .32, {size: 26, color: C.bad}); }
   });
 })();
 

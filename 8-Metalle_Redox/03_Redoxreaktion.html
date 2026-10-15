@@ -2209,18 +2209,32 @@ const ORX = [['Mg', 'Magnesium'], ['Al', 'Aluminium'], ['Zn', 'Zink'], ['Fe', 'E
   $('#ve-reset').onclick = () => { run = false; k = 0; $('#ve-obs').textContent = 'Schwarzes Gemisch aus Kupferoxid und Holzkohle.'; };
   canvasLoop($('#cv-ve'), 'versuch', (ctx, w, h, t, dt) => {
     if (run && k < 1) { k = Math.min(1, k + dt / 8); $('#ve-obs').innerHTML = k < .25 ? 'Das Gemisch wird erhitzt …' : k < .7 ? 'Das Gemisch <b>glüht auf</b>. Gasblasen steigen im Kalkwasser auf.' : 'Das <b>Kalkwasser ist trüb</b>. Im Glas: <b>rotbraune, glänzende Körnchen</b> (Kupfer).'; }
-    const tx = w * .3, top = h * .2, th = h * .5;
-    tube(ctx, tx, top, 36, th, {tilt: -.35});
-    ctx.save(); ctx.translate(tx, top + th / 2); ctx.rotate(-.35); ctx.translate(-tx, -(top + th / 2));
-    const glow = k > .25 && k < .75;
-    const r = rng(1); for (let i = 0; i < 60; i++) { const x = tx - 14 + r() * 28, y = top + th - 6 - r() * th * .3; ctx.fillStyle = k > .7 && r() < .6 ? '#c46a3a' : glow ? mix('#ff7a1a', '#ffd27a', Math.sin(t * 9 + i) * .5 + .5) : '#1c1c1c'; ctx.fillRect(x, y, 3, 3); }
+    // Schräg eingespanntes Reagenzglas: Öffnung nach rechts oben, Boden über dem Brenner
+    const a = .55, sa = Math.sin(a), ca = Math.cos(a), tw = Math.max(34, w * .055), tr = tw / 2, L = h * .5, cx = w * .3, cy = h * .45, top = cy - L / 2;
+    const P = (lx, ly) => [cx + lx * ca - ly * sa, cy + lx * sa + ly * ca];   // lokale Glas-Koordinaten (Ursprung Mitte) → Canvas
+    tube(ctx, cx, top, tw, L, {tilt: a, stopper: true});
+    // Gemisch: dichte Körnchen am Glasboden, auf die Glasinnenseite beschnitten
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+    ctx.beginPath(); ctx.moveTo(-tr + 2.5, L * .18); ctx.lineTo(-tr + 2.5, L / 2 - tr); ctx.arc(0, L / 2 - tr, tr - 2.5, Math.PI, 0, true); ctx.lineTo(tr - 2.5, L * .18); ctx.closePath(); ctx.clip();
+    const glow = k > .25 && k < .75, done = k > .7;
+    ctx.fillStyle = glow ? '#e0561a' : done ? '#5a3a2a' : '#141414'; ctx.fillRect(-tr, L * .18, tw, L);
+    const r = rng(1); for (let i = 0; i < 160; i++) { const x = -tr + r() * tw, y = L * .18 + r() * L * .35, cu = done && r() < .65, s = 3 + r() * 3; ctx.fillStyle = cu ? mix('#b0582a', '#e8945a', r()) : glow ? mix('#ff7a1a', '#ffe08a', Math.sin(t * 9 + i) * .5 + .5) : r() < .5 ? '#2c2c2c' : '#555'; ctx.fillRect(x, y, s, s); }
     ctx.restore();
-    // Gasrohr
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(tx + 10, top - 6); ctx.lineTo(tx + 20, h * .08); ctx.lineTo(w * .72, h * .08); ctx.lineTo(w * .72, h * .78); ctx.stroke();
-    tube(ctx, w * .72, h * .35, 46, h * .58, {level: .6, fill: mix('#dfe9ef', '#ffffff', clamp((k - .3) * 2, 0, 1)), alpha: .7});
-    if (run && k > .25 && k < .95) bubbles(ctx, w * .72 - 12, h * .6, 24, h * .3, t, 8, C.ink2);
-    label(ctx, 'Kalkwasser', w * .72, h * .99 - 4, {size: 12, color: C.ink2});
-    burner(ctx, tx - 10, h * .99, h * .22, t, {on: run && k < .4, size: .8});
+    // Gasableitungsrohr: durch den Stopfen, entlang der Glasachse, dann waagerecht und hinab ins Kalkwasser
+    const kx = w * .74, kTop = h * .38, kH = h * .55, kLvl = .6, kSurf = kTop + kH - (kH - 6) * kLvl;
+    const p0 = P(0, -L / 2 + 8), p1 = P(0, -L / 2 - 14), yTop = h * .1, p2 = [p1[0] + (p1[1] - yTop) * sa / ca, yTop];
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(...p0); ctx.lineTo(...p2); ctx.lineTo(kx, yTop); ctx.lineTo(kx, kTop + kH - 18); ctx.stroke();
+    const trueb = clamp((k - .3) * 2, 0, 1);
+    tube(ctx, kx, kTop, 46, kH, {level: kLvl, fill: mix('#bcd6e6', '#cfc9b8', trueb), alpha: .75 + trueb * .2, stopper: false});
+    if (trueb > 0) { const rr = rng(4); ctx.fillStyle = alpha('#ffffff', .8 * trueb); for (let i = 0; i < 70; i++) { ctx.beginPath(); ctx.arc(kx - 19 + rr() * 38, kSurf + 3 + rr() * (kTop + kH - 30 - kSurf), 1.2 + rr() * 1.5, 0, 7); ctx.fill(); } }   // Trübung: Calciumcarbonat
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(kx, kTop - 4); ctx.lineTo(kx, kTop + kH - 18); ctx.stroke();
+    if (run && k > .25 && k < .95) bubbles(ctx, kx - 12, kSurf, 24, kTop + kH - 20 - kSurf, t, 8, C.ink2);
+    label(ctx, 'Kalkwasser', kx, h * .99 - 4, {size: 12, color: C.ink2});
+    // Brenner direkt unter dem Glasboden; die Flammenspitze berührt das Glas
+    const bot = P(0, L / 2 - tr), lowY = bot[1] + tr, bs = h * .22;
+    label(ctx, 'Kupferoxid + Holzkohle', bot[0] + tr + 12, bot[1] + tr * .6, {size: 12, color: C.ink2, align: 'left'});
+    burner(ctx, bot[0], h * .99, bs, t, {on: run && k < .4, size: clamp((h * .99 - bs * .95 - lowY + 8) / bs, .3, 1.2)});
   });
 })();
 

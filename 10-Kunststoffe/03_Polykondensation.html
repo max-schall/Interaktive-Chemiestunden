@@ -2220,17 +2220,66 @@ function indColor(kind, ph) {
 
 /* ================= NYLON ================= */
 (() => {
-  let run = false, L = 0;
-  $('#ny-go').onclick = () => run = true;
-  $('#ny-reset').onclick = () => { run = false; L = 0; $('#ny-status').textContent = ''; };
+  // L: gezogene Fadenlänge (0–1), N: Anzahl Bausteine in der vergrößerten Kette, hcl: frei werdende HCl-Moleküle
+  let run = false, L = 0, N = 3, hcl = [], rot = 0;
+  $('#ny-go').onclick = () => { run = !run; $('#ny-go').textContent = run ? 'Anhalten' : 'Faden ziehen'; };
+  $('#ny-reset').onclick = () => { run = false; L = 0; N = 3; hcl = []; $('#ny-go').textContent = 'Faden ziehen'; $('#ny-status').textContent = ''; };
+  const HEP = '#f2e6b0', DIA = '#5a8ad8', ACL = '#d8a830';
   canvasLoop($('#cv-ny'), 'nylon', (ctx, w, h, t, dt) => {
-    if (run) { L = Math.min(1, L + dt / 6); $('#ny-status').innerHTML = `Faden: ca. ${fix(L * 3, 1)} m – er entsteht ständig neu an der Grenzfläche.`; }
-    const bx = w * .1, bw = w * .3, by = h * .45, bh = h * .5;
-    ctx.fillStyle = alpha('#f2e6b0', .6); ctx.fillRect(bx, by + bh * .15, bw, bh * .35); ctx.fillStyle = alpha(C.water, .35); ctx.fillRect(bx, by + bh * .5, bw, bh * .5);
-    beaker(ctx, bx, by, bw, bh, {level: 0, marks: false});
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx + 4, by + bh * .5); ctx.lineTo(bx + bw - 4, by + bh * .5); ctx.stroke();
-    label(ctx, 'Adipinsäuredichlorid (in Heptan)', bx + bw + 10, by + bh * .3, {align: 'left', size: 11}); label(ctx, 'Hexandiamin (in Wasser)', bx + bw + 10, by + bh * .75, {align: 'left', size: 11});
-    if (L > 0) { const sx = bx + bw / 2, sy = by + bh * .5, rx = w * .55 + Math.cos(t * 3) * w * .08, ry = h * .15 + Math.sin(t * 3) * h * .06; ctx.strokeStyle = '#f4f2ec'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx, h * .1, rx, ry); ctx.stroke(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(rx - 40, ry); ctx.lineTo(rx + 40, ry); ctx.stroke(); ctx.strokeStyle = '#f4f2ec'; ctx.lineWidth = 2; for (let i = 0; i < L * 30; i++) { ctx.beginPath(); ctx.ellipse(rx, ry, 30 - i * .3, 10, 0, 0, 7); ctx.stroke(); } }
+    const sp = run && L < 1 ? 1 : 0;
+    if (sp) { L = Math.min(1, L + dt / 14); N += dt * 1.6; rot += dt * 2.5; $('#ny-status').innerHTML = `Faden: ca. ${fix(L * 3, 1)} m – er entsteht ständig neu an der Grenzfläche.`; if (L >= 1) { run = false; $('#ny-go').textContent = 'Faden ziehen'; } }
+    // ---- Becherglas ----
+    const bx = w * .05, bw = w * .3, by = h * .42, bh = h * .52, surf = by + bh * .2, yi = by + bh * .55, sx = bx + bw * .74;
+    beaker(ctx, bx, by, bw, bh, {level: (by + bh - yi) / (bh * .92), fill: C.water, alpha: .35, marks: false});
+    ctx.fillStyle = alpha(HEP, .7); ctx.fillRect(bx + 2, surf, bw - 4, yi - surf);
+    ctx.strokeStyle = alpha('#e8e4da', .95); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bx + 3, yi); ctx.lineTo(bx + bw - 3, yi); ctx.stroke();   // Nylonfilm an der Grenzfläche
+    const lx = bx + 8, lo = {size: 10, color: C.ink2, weight: 400, align: 'left'};
+    label(ctx, 'Adipinsäure-', lx, (surf + yi) / 2 - 14, lo); label(ctx, 'dichlorid', lx, (surf + yi) / 2, lo); label(ctx, '(in Heptan)', lx, (surf + yi) / 2 + 14, lo);
+    label(ctx, 'Hexandiamin', lx, (yi + by + bh) / 2 - 7, lo); label(ctx, '(in Wasser)', lx, (yi + by + bh) / 2 + 7, lo);
+    // ---- Glasstab, auf den der Faden gewickelt wird ----
+    const rr = 5 + L * 16, spY = h * .12, spX = sx + rr;
+    if (L > 0 || run) {
+      // Film wird zur Spitze hochgezogen, Faden läuft senkrecht zum Stab
+      ctx.fillStyle = alpha('#f4f2ec', .95); ctx.beginPath(); ctx.moveTo(sx - 16, yi); ctx.lineTo(sx + 16, yi); ctx.lineTo(sx + 1.5, yi - 16); ctx.lineTo(sx - 1.5, yi - 16); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = alpha(C.ink2, .35); ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(sx, yi - 12); ctx.lineTo(sx, spY); ctx.stroke();
+      ctx.strokeStyle = '#f4f2ec'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, yi - 12); ctx.lineTo(sx, spY); ctx.stroke();
+      ctx.strokeStyle = alpha(C.ink2, .5); ctx.lineWidth = 1.5; ctx.setLineDash([3, 9]); ctx.lineDashOffset = rot * 12; ctx.beginPath(); ctx.moveTo(sx, yi - 12); ctx.lineTo(sx, spY); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    }
+    ctx.fillStyle = '#f4f2ec'; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(spX, spY, rr, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = alpha(C.ink2, .3); ctx.lineWidth = 1; for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.arc(spX, spY, rr * i / 4, 0, 7); ctx.stroke(); }
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(spX, spY); ctx.lineTo(spX + Math.cos(rot) * rr, spY + Math.sin(rot) * rr); ctx.stroke();
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(spX, spY, 3, 0, 7); ctx.fill();
+    label(ctx, 'Glasstab', spX - rr - 8, spY - 6, {size: 10, color: C.ink2, align: 'right', weight: 400}); label(ctx, '(dreht sich)', spX - rr - 8, spY + 7, {size: 10, color: C.ink2, align: 'right', weight: 400});
+    // Lupe: Rahmen um die Grenzfläche und Verbindungslinien zum Ausschnitt
+    const ix0 = w * .45, ix1 = w * .98, iy0 = h * .04, iy1 = h * .96, iyi = (iy0 + iy1) / 2 + h * .08;
+    ctx.strokeStyle = alpha(C.ink2, .4); ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.strokeRect(sx - 22, yi - 22, 44, 44); ctx.beginPath(); ctx.moveTo(sx + 22, yi - 22); ctx.lineTo(ix0, iy0); ctx.moveTo(sx + 22, yi + 22); ctx.lineTo(ix0, iy1); ctx.stroke(); ctx.setLineDash([]);
+    // ---- Vergrößerung der Grenzfläche ----
+    ctx.save(); ctx.beginPath(); roundRect(ctx, ix0, iy0, ix1 - ix0, iy1 - iy0, 10); ctx.clip();
+    ctx.fillStyle = alpha(HEP, .45); ctx.fillRect(ix0, iy0, ix1 - ix0, iyi - iy0); ctx.fillStyle = alpha(C.water, .22); ctx.fillRect(ix0, iyi, ix1 - ix0, iy1 - iyi);
+    ctx.strokeStyle = alpha(C.ink2, .35); ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(ix0, iyi); ctx.lineTo(ix1, iyi); ctx.stroke(); ctx.setLineDash([]);
+    const cx = (ix0 + ix1) / 2, uh = h * .1, uw = 13;
+    // Bausteine: gerade Nummern Diamin (von unten), ungerade Säurechlorid (von oben)
+    const unit = (x, y, k, ang = 0, al = 1) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha = al; ctx.fillStyle = k % 2 ? ACL : DIA; roundRect(ctx, -uw / 2, -uh / 2 + 3, uw, uh - 6, 6); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1; };
+    // freie Moleküle in ihren Schichten (Wärmebewegung)
+    const r = rng(7);
+    for (let i = 0; i < 16; i++) { const top = i % 2, x = ix0 + 20 + r() * (ix1 - ix0 - 40), y = top ? iy0 + 20 + r() * (iyi - iy0 - 50) : iyi + 30 + r() * (iy1 - iyi - 50), ph = r() * 7; if (Math.abs(x - cx) < 30) continue; unit(x + Math.sin(t * .8 + ph) * 8, y + Math.cos(t * .7 + ph) * 6, top, ph + t * .3); }
+    // Kette: wächst an der Grenzfläche und wird nach oben herausgezogen
+    const whole = Math.floor(N), fr = N - whole;
+    for (let k = 0; k < whole; k++) { const y = iyi - (N - k - .5) * uh; if (y < iy0 - uh) continue; unit(cx, y, k); if (k) { ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(cx, y + uh / 2, 4, 0, 7); ctx.fill(); } }
+    // der nächste Baustein schwimmt von der Seite zur Grenzfläche
+    { const k = whole, top = k % 2, side = (k % 4 < 2 ? -1 : 1), sx0 = cx + side * (ix1 - ix0) * .32, sy0 = top ? iyi - uh * 1.6 : iyi + uh * 1.6, e = ease(fr), ty = iyi - (N - k - .5) * uh;
+      unit(lerp(sx0, cx, e), lerp(sy0, ty, e), k, (1 - e) * side * 1.2);
+      if (fr > .92 && sp && !hcl.some(q => q.k === k)) hcl.push({k, x: cx, y: iyi - (N - k) * uh, vx: side * w * .06, a: 1}); }
+    hcl = hcl.filter(q => (q.a -= dt * .5) > 0);
+    hcl.forEach(q => { q.x += q.vx * dt; q.y -= dt * h * .02; ctx.globalAlpha = q.a; drawFormula(ctx, q.x + Math.sign(q.vx) * 20, q.y, 6, 'HCl'); label(ctx, 'HCl', q.x + Math.sign(q.vx) * 20, q.y + 16, {size: 10, color: C.ink2}); ctx.globalAlpha = 1; });
+    ctx.restore();
+    ctx.strokeStyle = alpha(C.ink2, .6); ctx.lineWidth = 1.5; ctx.beginPath(); roundRect(ctx, ix0, iy0, ix1 - ix0, iy1 - iy0, 10); ctx.stroke();
+    // Legende
+    const lg = [[DIA, 'Hexandiamin'], [ACL, 'Adipinsäuredichlorid'], [C.bad, 'Amidbindung']];
+    ctx.fillStyle = alpha(C.surface, .85); roundRect(ctx, ix0 + 6, iy1 - 14 - 2 * 16 - 10, 128, 3 * 16 + 4, 6); ctx.fill();
+    lg.forEach(([c, txt], i) => { const ly = iy1 - 14 - (2 - i) * 16; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(ix0 + 14, ly, 5, 0, 7); ctx.fill(); label(ctx, txt, ix0 + 24, ly, {size: 10, color: C.ink2, align: 'left', weight: 400}); });
+    label(ctx, 'Grenzfläche vergrößert', ix0 + 10, iy0 + 14, {size: 11, color: C.ink2, align: 'left'});
   });
 })();
 

@@ -2225,9 +2225,15 @@ const pHtit = (V, Vs, cs, cl) => { const nA = cs * Vs, nB = cl * V, vt = (Vs + V
     ctx.beginPath(); ctx.moveTo(bx, by + bh); ctx.lineTo(bx, by + bh + 20); ctx.stroke();
     if (drop > 0) { ctx.fillStyle = C.water; ctx.beginPath(); ctx.arc(bx, by + bh + 26 + (1 - drop) * 30, 3, 0, 7); ctx.fill(); }
     // Erlenmeyerkolben
-    const ex = bx, ey = h * .78, ew = w * .16;
-    ctx.fillStyle = alpha(indColor(ind, ph), ind === 'pp' && ph < 8.2 ? .25 : .8); ctx.beginPath(); ctx.moveTo(ex - ew * .25, ey); ctx.lineTo(ex + ew * .25, ey); ctx.lineTo(ex + ew * .5, h * .97); ctx.lineTo(ex - ew * .5, h * .97); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(ex - 8, h * .68); ctx.lineTo(ex - 8, ey - 6); ctx.lineTo(ex - ew * .55, h * .97); ctx.lineTo(ex + ew * .55, h * .97); ctx.lineTo(ex + 8, ey - 6); ctx.lineTo(ex + 8, h * .68); ctx.stroke();
+    const ex = bx, ey = h * .78, ew = w * .16, nk = 8, nTop = h * .68, fb = h * .97, half = ew * .55;
+    const flask = (inset) => { ctx.beginPath(); ctx.moveTo(ex - nk + inset, nTop); ctx.lineTo(ex - nk + inset, ey - 6); ctx.lineTo(ex - half + inset * 1.6, fb - inset); ctx.lineTo(ex + half - inset * 1.6, fb - inset); ctx.lineTo(ex + nk - inset, ey - 6); ctx.lineTo(ex + nk - inset, nTop); };
+    // Lösung: füllt den Kolben bis knapp unter die Hälfte, steigt mit zugegebener Lauge leicht an
+    const ly = fb - (fb - ey) * (.55 + .2 * V / 40);
+    ctx.save(); flask(1.5); ctx.closePath(); ctx.clip();
+    ctx.fillStyle = alpha(indColor(ind, ph), ind === 'pp' && ph < 8.2 ? .25 : .8); ctx.fillRect(ex - half - 2, ly, half * 2 + 4, fb - ly + 2);
+    ctx.strokeStyle = alpha(indColor(ind, ph), .9); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ex - half, ly); ctx.lineTo(ex + half, ly); ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.lineJoin = 'round'; flask(0); ctx.stroke();
     // Kurve
     ctx.save(); ctx.translate(w * .34, 0);
     const A = axes(ctx, w * .66, h, {x: [0, 40], y: [0, 14], xt: [0, 10, 20, 30, 40], yt: [0, 2, 4, 6, 7, 8, 10, 12, 14], xl: 'V(Natronlauge) in ml', yl: 'pH', pad: {l: 40}});
