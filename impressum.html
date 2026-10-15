@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Impressum – Interaktive Chemiestunden</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#F2F5F9; --surface:#FFFFFF; --ink:#121D2B; --ink-2:#4B5A6D; --line:#CBD4E0; --accent:#2453C4;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  font-size:clamp(16px, 0.5vw + 12px, 20px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0D131B; --surface:#151D28; --ink:#E8EDF4; --ink-2:#A2AEBE; --line:#2C394A; --accent:#7AA2FF; color-scheme:dark;}
+}
+:root[data-theme="dark"]{--bg:#0D131B; --surface:#151D28; --ink:#E8EDF4; --ink-2:#A2AEBE; --line:#2C394A; --accent:#7AA2FF; color-scheme:dark;}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);line-height:1.6}
+main{max-width:720px;margin:0 auto;padding:clamp(28px,6vw,64px) 16px 72px}
+.back{font-family:var(--f-mono);font-size:.85rem;color:var(--accent);text-decoration:none}
+.back:hover{text-decoration:underline}
+h1{font-family:var(--f-display);font-weight:800;font-stretch:118%;font-size:clamp(2rem,6vw,3rem);line-height:1.05;margin:.6em 0 .8em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 24px}
+.card p{margin:0}
+.card p + p{margin-top:1em}
+.label{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← Startseite</a>
+  <h1>Impressum</h1>
+  <div class="card">
+    <p class="label">Angaben gemäß § 5 DDG und § 18 Abs. 1 MStV</p>
+    <p>Max Schall<br>
+       c/o Gemeinschaftsschule Weil im Schönbuch<br>
+       In der Röte 92<br>
+       71093 Weil im Schönbuch</p>
+    <p>E-Mail: <a href="mailto:schall@schule-weil.de">schall@schule-weil.de</a></p>
+  </div>
+</main>
+</body>
+</html>
