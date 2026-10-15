@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interaktive Chemiestunden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+:root{--bg:#F2F5F9;--surface:#FFFFFF;--ink:#121D2B;--ink-2:#4B5A6D;--line:#CBD4E0;--accent:#2453C4;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;--f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;}
+@media (prefers-color-scheme: dark){:root{--bg:#0D131B;--surface:#151D28;--ink:#E8EDF4;--ink-2:#A2AEBE;--line:#2C394A;--accent:#7AA2FF;color-scheme:dark;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);line-height:1.5}
+main{max-width:960px;margin:0 auto;padding:48px 16px 64px}
+h1{font-family:var(--f-display);font-weight:800;font-stretch:115%;font-size:clamp(2rem,5vw,3.2rem);margin:0 0 .3em;line-height:1.05}
+.lead{color:var(--ink-2);margin:0 0 2.5em;max-width:60ch}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.3rem;margin:2em 0 .7em;color:var(--accent)}
+ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+a{display:flex;flex-direction:column;gap:2px;padding:16px 18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;color:inherit;text-decoration:none;transition:border-color .15s,transform .15s}
+a:hover,a:focus-visible{border-color:var(--accent);transform:translateY(-2px)}
+.t{font-weight:700} .n{color:var(--ink-2);font-size:.9em}
+</style>
+</head>
+<body>
+<main>
+<h1>Interaktive Chemiestunden</h1>
+<p class="lead">Interaktive Präsentationen für den Chemieunterricht der Klassen 8 bis 10. Thema wählen, dann die einzelne Stunde öffnen – läuft direkt im Browser.</p>
+<section><h2>Klasse 8</h2><ul><li><a href="8-Chemische_Reaktion/00_Uebersicht.html"><span class="t">Die chemische Reaktion</span><span class="n">7 Stunden</span></a></li><li><a href="8-Luft/00_Uebersicht.html"><span class="t">Luft</span><span class="n">5 Stunden</span></a></li><li><a href="8-Metalle_Redox/00_Uebersicht.html"><span class="t">Metalle und Redoxreaktionen</span><span class="n">6 Stunden</span></a></li><li><a href="8-Stoffe/00_Uebersicht.html"><span class="t">Stoffe im Alltag</span><span class="n">6 Stunden</span></a></li><li><a href="8-Wasser/00_Uebersicht.html"><span class="t">Wasser</span><span class="n">5 Stunden</span></a></li></ul></section>
+<section><h2>Klasse 9</h2><ul><li><a href="9-Atombau/00_Uebersicht.html"><span class="t">Atombau und Periodensystem</span><span class="n">7 Stunden</span></a></li><li><a href="9-Molekuele/00_Uebersicht.html"><span class="t">Moleküle und Elektronenpaarbindung</span><span class="n">6 Stunden</span></a></li><li><a href="9-Salze/00_Uebersicht.html"><span class="t">Salze und Ionenbindung</span><span class="n">6 Stunden</span></a></li><li><a href="9-Saeuren_Laugen/00_Uebersicht.html"><span class="t">Säuren und Laugen</span><span class="n">6 Stunden</span></a></li></ul></section>
+<section><h2>Klasse 10</h2><ul><li><a href="10-Alkohole/00_Uebersicht.html"><span class="t">Alkohole</span><span class="n">6 Stunden</span></a></li><li><a href="10-Carbonsaeuren_Ester/00_Uebersicht.html"><span class="t">Carbonsäuren und Ester</span><span class="n">5 Stunden</span></a></li><li><a href="10-Kohlenwasserstoffe/00_Uebersicht.html"><span class="t">Kohlenwasserstoffe</span><span class="n">8 Stunden</span></a></li><li><a href="10-Kunststoffe/00_Uebersicht.html"><span class="t">Kunststoffe</span><span class="n">5 Stunden</span></a></li></ul></section>
+</main>
+</body>
+</html>

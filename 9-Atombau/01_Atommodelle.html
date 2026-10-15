@@ -1,0 +1,1400 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Atommodelle im Wandel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: feste Zeitstrahl-Leiste oben, eine Station pro Bildschirm (Text links, Experiment rechts), Blätter-Leiste unten – gebaut für Beamer & Presenter */
+:root{
+  --bg:#F2F5F9; --surface:#FFFFFF; --surface-2:#E6EBF2; --ink:#121D2B; --ink-2:#4B5A6D; --line:#CBD4E0;
+  --accent:#2453C4; --accent-ink:#FFFFFF;
+  --electron:#2563EB; --proton:#D63E2B; --neutron:#7D8898; --gold:#C9952A; --good:#1C8A4C; --bad:#C2392B;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --radius:14px;
+  font-size:clamp(16px, 0.75vw + 9px, 22px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D131B; --surface:#151D28; --surface-2:#1E2836; --ink:#E8EDF4; --ink-2:#A2AEBE; --line:#2C394A;
+    --accent:#7AA2FF; --accent-ink:#0D131B;
+    --electron:#5C8DFF; --proton:#FF6B55; --neutron:#9AA6B6; --gold:#E3B24B; --good:#3DC47D; --bad:#FF6D5E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D131B; --surface:#151D28; --surface-2:#1E2836; --ink:#E8EDF4; --ink-2:#A2AEBE; --line:#2C394A;
+  --accent:#7AA2FF; --accent-ink:#0D131B;
+  --electron:#5C8DFF; --proton:#FF6B55; --neutron:#9AA6B6; --gold:#E3B24B; --good:#3DC47D; --bad:#FF6D5E;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1rem;line-height:1.55}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.app{min-height:100vh;display:flex;flex-direction:column}
+
+/* ---------- Kopfleiste mit Zeitstrahl ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:1rem;padding:.5rem 16px}
+.brand{flex:none;display:flex;flex-direction:column;line-height:1.15}
+.brand b{font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:1.05rem;letter-spacing:-.01em}
+.brand span{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.tl-scroll{flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin}
+.tl{list-style:none;margin:0 auto;padding:0;display:flex;align-items:flex-start;width:max-content}
+.tl li{position:relative;display:flex}
+.tl li.m::before{content:"";position:absolute;left:0;right:0;top:calc(.25rem + 17px);height:3px;background:var(--line);z-index:0}
+.tl li.m.first::before{left:50%}
+.tl li.m.last::before{right:50%}
+.tl li.m.done::before{background:var(--accent)}
+.tl li.m.half::before{background:linear-gradient(90deg,var(--accent) 50%,var(--line) 50%)}
+.tl li.m.first.half::before{background:var(--line)}
+.tl-stop{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:.1rem;background:none;border:0;cursor:pointer;padding:.25rem .55rem;color:var(--ink-2);min-width:4.6rem}
+.tl-stop .dot{width:37px;height:37px;border-radius:50%;background:var(--surface);border:2px solid var(--line);display:grid;place-items:center;transition:border-color .2s, transform .2s}
+.tl-stop .dot svg{width:25px;height:25px}
+.tl-stop .yr{font-family:var(--f-mono);font-size:.66rem;line-height:1.2;white-space:nowrap}
+.tl-stop .nm{font-size:.78rem;font-weight:700;line-height:1.2;white-space:nowrap}
+.tl-stop:hover .dot{border-color:var(--ink-2)}
+.tl-stop[aria-current="step"]{color:var(--ink)}
+.tl-stop[aria-current="step"] .dot{border-color:var(--accent);border-width:3px;transform:scale(1.12);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+.tl li.gap{align-self:flex-start;padding-top:calc(.25rem + 9px)}
+.tl li.gap span{display:block;position:relative;z-index:1;font-family:var(--f-mono);font-size:.62rem;color:var(--ink-2);background:var(--bg);padding:.1rem .4rem;border:1px dashed var(--line);border-radius:99px;white-space:nowrap}
+.tl li.gap::before{content:"";position:absolute;left:0;right:0;top:calc(.25rem + 17px);border-top:3px dotted var(--line)}
+.tl li.gap.done::before{border-top-color:var(--accent)}
+.tl li.sep{width:1px;background:var(--line);margin:.4rem .7rem;align-self:stretch}
+.tl-pill{align-self:center;margin-top:.35rem;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.3rem .8rem;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-2);white-space:nowrap;margin-inline:.15rem}
+.tl-pill:hover{border-color:var(--ink-2)}
+.tl-pill[aria-current="step"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.icon-btn{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.4rem .7rem;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-2)}
+.icon-btn:hover{color:var(--ink);border-color:var(--ink-2)}
+
+/* ---------- Bühne ---------- */
+main{flex:1;padding:clamp(1rem,2.6vw,2.4rem) clamp(16px,4vw,3.5rem)}
+.station{max-width:1440px;margin-inline:auto;animation:enter .35s ease-out}
+@keyframes enter{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.station{animation:none}}
+.model{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(1.5rem,3.2vw,3.2rem);align-items:start}
+@media (max-width:920px){.model{grid-template-columns:minmax(0,1fr)}}
+.txt{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.eyebrow{margin:0;font-family:var(--f-mono);font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.05}
+h1{font-size:clamp(2.3rem,5.2vw,4.4rem);font-stretch:122%;font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(2rem,4.2vw,3.5rem);font-stretch:122%;font-weight:800;letter-spacing:-.02em}
+h3{font-size:1.25rem;font-stretch:112%;font-weight:700}
+.who{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .8rem}
+.who .life{font-family:var(--f-mono);font-size:.8rem;color:var(--ink-2)}
+.modelname{display:inline-flex;align-items:center;gap:.5rem;align-self:flex-start;font-family:var(--f-display);font-stretch:110%;font-weight:700;font-size:1.05rem;color:var(--accent);border:2px solid currentColor;border-radius:99px;padding:.15rem .8rem}
+.lead{font-size:1.22rem;line-height:1.45;margin:0;max-width:34em}
+.facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55rem;max-width:38em}
+.facts li{position:relative;padding-left:1.4rem}
+.facts li::before{content:"";position:absolute;left:.2rem;top:.6em;width:.5rem;height:.5rem;border-radius:50%;background:var(--ink-2)}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+@media (max-width:560px){.pair{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.8rem 1rem;min-width:0}
+.box p{margin:.35rem 0 0}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;border-radius:6px;padding:.1rem .45rem}
+.tag.new{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.tag.lim{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.tag.info{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+blockquote{margin:0;padding:.2rem 0 .2rem 1rem;border-left:3px solid var(--line);font-style:italic;color:var(--ink-2);max-width:36em}
+blockquote cite{display:block;font-style:normal;font-family:var(--f-mono);font-size:.75rem;margin-top:.3rem}
+.fun{font-size:.92rem;color:var(--ink-2);margin:0}
+.fun b{color:var(--ink)}
+
+/* Experiment-Fläche */
+.vis{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem;display:flex;flex-direction:column;gap:.75rem;min-width:0}
+.vis-head{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+.vis-head h3{font-size:1.02rem}
+.vis canvas{display:block;width:100%;max-width:100%;aspect-ratio:4/3;border-radius:10px;background:var(--surface)}
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:.5rem .95rem;font-weight:700;cursor:pointer;font-size:.92rem;line-height:1.2}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--surface);padding:.45rem .8rem;cursor:pointer;font-weight:700;font-size:.88rem;color:var(--ink-2)}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.status{margin:0;font-size:.95rem;min-height:2.9em}
+.status b{font-family:var(--f-mono);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem 1rem;font-size:.82rem;color:var(--ink-2);margin:0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:.35rem}
+.sw{width:.85rem;height:.85rem;border-radius:50%;display:inline-block;flex:none}
+.sw.p{background:var(--proton)} .sw.n{background:var(--neutron)} .sw.e{background:var(--electron)} .sw.g{background:var(--gold)}
+.sw.pos{background:color-mix(in srgb,var(--proton) 30%,transparent);border:1.5px solid var(--proton)}
+.note{font-size:.8rem;color:var(--ink-2);margin:0}
+
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.meter{background:var(--surface-2);border-radius:10px;padding:.45rem .6rem;min-width:0}
+.meter span{display:block;font-size:.74rem;color:var(--ink-2);line-height:1.2}
+.meter b{font-family:var(--f-mono);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.meter small{font-family:var(--f-mono);color:var(--ink-2);font-size:.75rem;margin-left:.3rem}
+
+.dalton-sym{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:0;padding:0;list-style:none}
+.dalton-sym li{display:flex;flex-direction:column;align-items:center;gap:.2rem;font-size:.75rem;color:var(--ink-2)}
+.dalton-sym svg{width:34px;height:34px;color:var(--ink)}
+
+.flame{display:inline-flex;align-items:center;gap:.5rem;font-weight:700}
+.flame i{width:1.1rem;height:1.1rem;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;display:inline-block}
+
+/* ---------- Start ---------- */
+.start{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(1.5rem,4vw,4rem);align-items:center}
+@media (max-width:920px){.start{grid-template-columns:minmax(0,1fr)}}
+.start .txt{gap:1.2rem}
+.teaser{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem;max-width:34em}
+.teaser p{margin:.3rem 0 0}
+.preview{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.preview button{width:100%;display:grid;grid-template-columns:3.2rem 6.5rem minmax(0,1fr);align-items:center;gap:.9rem;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.55rem .9rem;cursor:pointer}
+.preview button:hover{border-color:var(--ink-2)}
+.preview svg{width:3.2rem;height:3.2rem}
+.preview .y{font-family:var(--f-mono);font-size:.85rem;color:var(--ink-2)}
+.preview .n{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.preview .n b{font-family:var(--f-display);font-stretch:112%;font-size:1.12rem}
+.preview .n span{font-size:.88rem;color:var(--ink-2)}
+@media (max-width:460px){.preview button{grid-template-columns:2.6rem minmax(0,1fr)}.preview .y{display:none}.preview svg{width:2.6rem;height:2.6rem}}
+
+/* ---------- Vergleich ---------- */
+.section-head{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.4rem;max-width:58em}
+.section-head p{margin:0}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+table.cmp{border-collapse:collapse;width:100%;min-width:760px}
+.cmp th,.cmp td{padding:.6rem .75rem;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.cmp thead th{vertical-align:bottom}
+.cmp thead th svg{width:3rem;height:3rem;display:block;margin:0 auto .3rem}
+.cmp thead th .y{display:block;font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);font-weight:400}
+.cmp thead th .nm{font-family:var(--f-display);font-stretch:112%;font-size:1.05rem}
+.cmp tbody th{text-align:left;font-weight:700;font-size:.92rem;width:13rem}
+.cmp tbody tr:last-child th,.cmp tbody tr:last-child td{border-bottom:0}
+.cmp tbody tr:hover{background:var(--surface-2)}
+.cmp td{font-size:.92rem}
+.yes,.no{font-family:var(--f-mono);font-weight:600;font-size:1.25rem}
+.yes{color:var(--good)} .no{color:var(--bad)}
+.cmp.quiz td.q{cursor:pointer}
+.cmp.quiz td.q:not(.shown) > *{visibility:hidden}
+.cmp.quiz td.q:not(.shown){background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,transparent 6px 12px)}
+.cmp.quiz td.q:not(.shown)::after{content:"?";font-family:var(--f-mono);font-weight:600;color:var(--ink-2)}
+.cmp.quiz td.q:not(.shown){position:relative}
+.cmp.quiz td.q:not(.shown)::after{position:absolute;inset:0;display:grid;place-items:center}
+.cmp-tools{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem;align-items:center}
+.takeaway{margin-top:1.4rem;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:820px){.takeaway{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- Bohr im Detail ---------- */
+.particles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin-bottom:1.4rem}
+@media (max-width:820px){.particles{grid-template-columns:minmax(0,1fr)}}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:.2rem .9rem;align-items:start}
+.pcard .ball{grid-row:span 2;width:3.4rem;height:3.4rem;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--f-mono);font-weight:600;font-size:1.5rem;box-shadow:inset -6px -8px 14px rgba(0,0,0,.22), inset 5px 6px 10px rgba(255,255,255,.28)}
+.pcard .ball.p{background:var(--proton)} .pcard .ball.n{background:var(--neutron)} .pcard .ball.e{background:var(--electron);width:2.6rem;height:2.6rem;margin:.4rem}
+.pcard h3{align-self:center}
+.pcard h3 small{font-family:var(--f-mono);font-weight:400;font-size:.85rem;color:var(--ink-2);margin-left:.3rem}
+.pcard dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.15rem .7rem;font-size:.9rem}
+.pcard dt{color:var(--ink-2)}
+.pcard dd{margin:0;font-weight:700}
+.pcard .say{grid-column:1 / -1;margin:.5rem 0 0;font-size:.88rem;color:var(--ink-2);border-top:1px solid var(--line);padding-top:.5rem}
+
+.kit{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.kit{grid-template-columns:minmax(0,1fr)}}
+.kit .vis canvas{aspect-ratio:1/1;max-height:72vh;width:auto;max-width:100%;margin-inline:auto}
+.kit-panel{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.chips{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:.3rem}
+@media (max-width:480px){.chips{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.chips button{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:.25rem 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.chips button small{font-family:var(--f-mono);font-size:.6rem;color:var(--ink-2)}
+.chips button b{font-size:.95rem}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips button[aria-pressed="true"] small{color:var(--bg)}
+.ctrs{display:flex;flex-direction:column;gap:.45rem}
+.ctr{display:grid;grid-template-columns:1.1rem minmax(0,1fr) 2.6rem 3rem 2.6rem;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.4rem .6rem}
+.ctr span.l{font-weight:700}
+.ctr span.l small{display:block;font-weight:400;font-size:.75rem;color:var(--ink-2)}
+.ctr button{height:2.4rem;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);font-size:1.3rem;font-weight:700;cursor:pointer;line-height:1}
+.ctr button:hover{border-color:var(--ink-2)}
+.ctr output{font-family:var(--f-mono);font-weight:600;font-size:1.4rem;text-align:center;font-variant-numeric:tabular-nums}
+.readout{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.9rem 1.2rem;align-items:center}
+.nuc{font-family:var(--f-mono);font-size:2.6rem;font-weight:600;display:inline-flex;align-items:center;line-height:1}
+.nuc .ms{display:inline-flex;flex-direction:column;align-items:flex-end;font-size:.95rem;line-height:1.15;margin-right:.15rem}
+.nuc .q{font-size:1rem;align-self:flex-start;margin-left:.1rem;color:var(--accent)}
+.readout .nm{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:1.3rem;line-height:1.15}
+.readout .sub{font-size:.88rem;color:var(--ink-2)}
+.readout dl{grid-column:1 / -1;margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem}
+.readout dl div{background:var(--surface-2);border-radius:8px;padding:.35rem .5rem;min-width:0}
+.readout dt{font-size:.72rem;color:var(--ink-2)}
+.readout dd{margin:0;font-family:var(--f-mono);font-weight:600;font-size:1.05rem}
+.shellrow{grid-column:1 / -1;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;font-size:.88rem}
+.shellrow .sh{font-family:var(--f-mono);border:1.5px solid var(--line);border-radius:8px;padding:.15rem .5rem}
+.shellrow .sh b{color:var(--electron)}
+.charge{grid-column:1 / -1;margin:0;font-weight:700}
+.charge.ion{color:var(--accent)}
+.merke{background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--radius);padding:.9rem 1.1rem}
+.merke ul{margin:.5rem 0 0;padding-left:1.1rem;display:flex;flex-direction:column;gap:.3rem}
+.merke .eq{font-family:var(--f-mono);font-weight:600}
+
+/* ---------- Übungen ---------- */
+.pse-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.7rem}
+.pse{display:grid;grid-template-columns:1.4rem repeat(18,minmax(2.35rem,1fr));gap:3px;min-width:860px}
+.pse .lab{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-2);display:grid;place-items:center}
+.pse .el{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:.12rem .2rem .18rem;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;min-width:0;text-align:left}
+.pse .el .z{font-family:var(--f-mono);font-size:.6rem;color:var(--ink-2)}
+.pse .el .s{font-weight:700;font-size:.98rem;align-self:center}
+.pse .el.tm{background:var(--surface-2)}
+.pse .el.f{background:var(--surface-2);border-style:dashed}
+.pse .el:hover{border-color:var(--ink)}
+.pse .el.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pse .el.sel .z{color:var(--bg)}
+.pse .el.found{box-shadow:inset 0 0 0 2px var(--good)}
+.pse .ph{grid-column:span 1;font-family:var(--f-mono);font-size:.58rem;color:var(--ink-2);border:1px dashed var(--line);border-radius:5px;display:grid;place-items:center;text-align:center}
+.pse-bottom{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.8rem;margin-top:.8rem}
+@media (max-width:820px){.pse-bottom{grid-template-columns:minmax(0,1fr)}}
+.pse-info{display:flex;gap:1rem;align-items:center}
+.bigcell{flex:none;width:5.6rem;height:5.6rem;border:2px solid var(--ink);border-radius:10px;display:flex;flex-direction:column;justify-content:space-between;padding:.3rem .45rem;background:var(--surface)}
+.bigcell .z{font-family:var(--f-mono);font-size:.9rem;font-weight:600}
+.bigcell .s{font-size:2rem;font-weight:700;align-self:center;line-height:1}
+.bigcell .n{font-size:.62rem;text-align:center;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pse-info p{margin:0}
+.tasks-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.8rem;margin:1.6rem 0 .9rem}
+.score{font-family:var(--f-mono);font-size:1rem}
+.score b{font-size:1.3rem}
+.tasks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:1100px){.tasks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.tasks{grid-template-columns:minmax(0,1fr)}}
+.task{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:flex;flex-direction:column;gap:.7rem;min-width:0}
+.task.ok{border-color:var(--good)}
+.task header{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+.task header span{font-family:var(--f-mono);font-size:.72rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.task h3{font-size:1.4rem}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.fields label{display:flex;flex-direction:column;gap:.2rem;font-size:.85rem;font-weight:700;color:var(--ink-2)}
+.fields label i{font-style:normal;display:inline-flex;align-items:center;gap:.3rem}
+input[type=number]{font:inherit;font-family:var(--f-mono);font-size:1.25rem;font-weight:600;width:100%;padding:.35rem .5rem;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{opacity:.4}
+input.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 10%,var(--bg))}
+input.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--bg))}
+details.pro{border-top:1px dashed var(--line);padding-top:.5rem}
+details.pro summary{cursor:pointer;font-size:.86rem;font-weight:700;color:var(--accent)}
+.shells-in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem;margin-top:.5rem}
+.shells-in label{display:flex;flex-direction:column;align-items:center;font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);gap:.15rem}
+.shells-in input{font-size:1.05rem;text-align:center;padding:.25rem}
+.task .actions{display:flex;gap:.45rem;flex-wrap:wrap}
+.task .actions .btn{padding:.4rem .75rem;font-size:.85rem}
+.fb{margin:0;font-size:.88rem;min-height:1.4em}
+.fb.ok{color:var(--good);font-weight:700}
+.fb.err{color:var(--bad)}
+.tip{margin-top:.6rem}
+.bonus{margin-top:1.2rem;display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;align-items:center}
+.bonus .found{font-family:var(--f-mono);font-weight:600}
+
+/* ---------- Blätter-Leiste ---------- */
+.pager{position:sticky;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.5rem 16px calc(.5rem + env(safe-area-inset-bottom,0px))}
+.pager .btn{min-width:0;max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pager .mid{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);text-align:center}
+@media (max-width:620px){.pager .mid .keys{display:none}.brand span{display:none}}
+
+/* ---------- Navigation der Unterrichtsreihe ---------- */
+a.icon-btn{text-decoration:none;display:inline-flex;align-items:center}
+a.btn{text-decoration:none;display:inline-block;color:inherit}
+a.btn.primary{color:var(--accent-ink)}
+.next-lesson{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;margin-top:1.4rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1.1rem}
+.next-lesson p{margin:0}
+</style>
+</head>
+<body data-next="{&quot;href&quot;: &quot;02_Atombau.html&quot;, &quot;label&quot;: &quot;Stunde 2: Atombau&quot;}">
+<div class="app">
+<header class="top">
+  <div class="brand"><b>Atommodelle</b><span>Stunde 1 · Klasse 9</span></div>
+  <nav class="tl-scroll" aria-label="Zeitstrahl">
+    <ol class="tl" id="tl">
+      <li><button class="tl-pill" data-go="start">Start</button></li>
+      <li class="sep" aria-hidden="true"></li>
+      <li class="m first"><button class="tl-stop" data-go="demokrit"><span class="dot" data-icon="demokrit"></span><span class="yr">~400 v. Chr.</span><span class="nm">Demokrit</span></button></li>
+      <li class="gap" aria-hidden="true"><span>≈ 2200 Jahre</span></li>
+      <li class="m"><button class="tl-stop" data-go="dalton"><span class="dot" data-icon="dalton"></span><span class="yr">1803</span><span class="nm">Dalton</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="thomson"><span class="dot" data-icon="thomson"></span><span class="yr">1904</span><span class="nm">Thomson</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="rutherford"><span class="dot" data-icon="rutherford"></span><span class="yr">1911</span><span class="nm">Rutherford</span></button></li>
+      <li class="m last"><button class="tl-stop" data-go="bohr"><span class="dot" data-icon="bohr"></span><span class="yr">1913</span><span class="nm">Bohr</span></button></li>
+      <li class="sep" aria-hidden="true"></li>
+      <li><button class="tl-pill" data-go="vergleich">Vergleich</button></li>
+      <li><button class="tl-pill" data-go="bohr-detail">Bohr im Detail</button></li>
+      <li><button class="tl-pill" data-go="uebungen">Übungen</button></li>
+    </ol>
+  </nav>
+  <a class="icon-btn" href="00_Uebersicht.html" title="Zur Übersicht der Reihe">Übersicht</a>
+  <button class="icon-btn" id="fs" title="Vollbild (F)">Vollbild</button>
+</header>
+
+<main id="stage">
+
+<!-- ================= START ================= -->
+<section class="station" id="start">
+  <div class="start">
+    <div class="txt">
+      <p class="eyebrow">Eine Zeitreise in 5 Stationen</p>
+      <h1>Wie sieht ein Atom aus?</h1>
+      <p class="lead">Niemand hat je ein Atom mit bloßem Auge gesehen. Trotzdem wissen wir heute ziemlich genau, wie es aufgebaut ist. Dieses Wissen ist über mehr als 2000 Jahre gewachsen – mit jedem neuen Experiment hat sich das Bild vom Atom verändert.</p>
+      <div class="teaser">
+        <span class="tag info">Was ist ein Modell?</span>
+        <p>Ein Modell ist eine vereinfachte Vorstellung der Wirklichkeit. Es erklärt bestimmte Beobachtungen. Passt eine neue Beobachtung nicht mehr dazu, wird das Modell verbessert oder ersetzt.</p>
+      </div>
+      <div class="teaser">
+        <span class="tag info">Gedankenexperiment</span>
+        <p>Du hast ein Stück Gold und ein unendlich scharfes Messer. Wie oft kannst du es halbieren? Geht das immer weiter?</p>
+      </div>
+      <div class="controls"><button class="btn primary" data-go="demokrit">Zeitreise starten →</button></div>
+    </div>
+    <ol class="preview" aria-label="Die fünf Atommodelle">
+      <li><button data-go="demokrit"><span data-icon="demokrit"></span><span class="y">~400 v. Chr.</span><span class="n"><b>Demokrit</b><span>Die Idee vom unteilbaren Teilchen</span></span></button></li>
+      <li><button data-go="dalton"><span data-icon="dalton"></span><span class="y">1803</span><span class="n"><b>Dalton</b><span>Kugelmodell</span></span></button></li>
+      <li><button data-go="thomson"><span data-icon="thomson"></span><span class="y">1904</span><span class="n"><b>Thomson</b><span>Rosinenkuchenmodell</span></span></button></li>
+      <li><button data-go="rutherford"><span data-icon="rutherford"></span><span class="y">1911</span><span class="n"><b>Rutherford</b><span>Kern-Hülle-Modell</span></span></button></li>
+      <li><button data-go="bohr"><span data-icon="bohr"></span><span class="y">1913</span><span class="n"><b>Bohr</b><span>Schalenmodell</span></span></button></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= DEMOKRIT ================= -->
+<section class="station" id="demokrit" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">ca. 400 v. Chr. · Abdera, Griechenland</p>
+      <div class="who"><h2>Demokrit</h2><span class="life">ca. 460 – 370 v. Chr. · Philosoph</span></div>
+      <span class="modelname">Die Idee vom Atom</span>
+      <p class="lead">Teilt man einen Stoff immer weiter, kommt man irgendwann zu kleinsten Teilchen, die sich nicht mehr teilen lassen.</p>
+      <ul class="facts">
+        <li>Diese kleinsten Teilchen nannte er <b>átomos</b> – griechisch für „unteilbar“.</li>
+        <li>Atome unterscheiden sich in Form und Größe und sind ständig in Bewegung.</li>
+        <li>Zwischen den Atomen ist <b>leerer Raum</b>.</li>
+        <li>Die Idee entstand durch reines Nachdenken, zusammen mit seinem Lehrer Leukipp – ohne ein einziges Experiment.</li>
+      </ul>
+      <blockquote>„Nur scheinbar ist Süßes süß, Bitteres bitter, Warmes warm, Kaltes kalt. In Wahrheit gibt es nur Atome und leeren Raum.“<cite>— Demokrit</cite></blockquote>
+      <div class="pair">
+        <div class="box"><span class="tag new">Neu</span><p>Zum ersten Mal die Idee, dass alle Stoffe aus kleinsten Teilchen bestehen.</p></div>
+        <div class="box"><span class="tag lim">Grenze</span><p>Keine Beweise. Der berühmte Aristoteles lehnte die Idee ab, sie geriet für rund 2000 Jahre fast in Vergessenheit.</p></div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Gedankenexperiment: Gold halbieren</h3></div>
+      <canvas id="cv-demo" aria-label="Ein Stück Blattgold, das immer weiter halbiert wird"></canvas>
+      <div class="controls">
+        <button class="btn primary" id="demo-cut">Halbieren</button>
+        <button class="btn" id="demo-cut10">10× halbieren</button>
+        <button class="btn" id="demo-reset">Neues Stück</button>
+      </div>
+      <p class="status" id="demo-status" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DALTON ================= -->
+<section class="station" id="dalton" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">1803 · Manchester, England</p>
+      <div class="who"><h2>John Dalton</h2><span class="life">1766 – 1844 · Lehrer &amp; Naturforscher</span></div>
+      <span class="modelname">Kugelmodell</span>
+      <p class="lead">Atome sind winzige, massive Kugeln. Jedes Element hat seine eigene Atomsorte.</p>
+      <ul class="facts">
+        <li>Alle Atome eines Elements sind <b>gleich</b> (gleiche Masse, gleiche Größe).</li>
+        <li>Atome verschiedener Elemente unterscheiden sich in Masse und Größe.</li>
+        <li>Atome sind unteilbar. Sie können weder erzeugt noch vernichtet werden.</li>
+        <li>Bei einer chemischen Reaktion werden Atome nur <b>neu angeordnet</b> und verbinden sich in festen Zahlenverhältnissen.</li>
+      </ul>
+      <div>
+        <p class="note" style="margin-bottom:.4rem">Daltons eigene Zeichen für die Atomsorten:</p>
+        <ul class="dalton-sym">
+          <li><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="20" cy="20" r="3.2" fill="currentColor"/></svg>Wasserstoff</li>
+          <li><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>Sauerstoff</li>
+          <li><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="currentColor"/></svg>Kohlenstoff</li>
+          <li><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2.5"/><line x1="20" y1="5" x2="20" y2="35" stroke="currentColor" stroke-width="2.5"/></svg>Stickstoff</li>
+          <li><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2.5"/><line x1="20" y1="5" x2="20" y2="35" stroke="currentColor" stroke-width="2.5"/><line x1="5" y1="20" x2="35" y2="20" stroke="currentColor" stroke-width="2.5"/></svg>Schwefel</li>
+        </ul>
+      </div>
+      <div class="pair">
+        <div class="box"><span class="tag new">Neu</span><p>Das erste Atommodell, das auf Messungen beruht. Es erklärt, warum die Masse bei Reaktionen erhalten bleibt.</p></div>
+        <div class="box"><span class="tag lim">Grenze</span><p>Erklärt nicht, woher elektrische Ladungen kommen. Und: Atome sind doch teilbar (siehe Thomson).</p></div>
+      </div>
+      <p class="fun"><b>Übrigens:</b> Dalton hielt Wasser für „HO“, also ein Wasserstoff- und ein Sauerstoffatom. Heute wissen wir: H₂O.</p>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Reaktion: Atome werden umgeordnet</h3></div>
+      <canvas id="cv-dalton" aria-label="Wasserstoff und Sauerstoff reagieren zu Wasser"></canvas>
+      <div class="controls">
+        <button class="btn primary" id="dalton-play">Reaktion ablaufen lassen</button>
+      </div>
+      <p class="status" id="dalton-status">Vorher: <b>4</b> Wasserstoff-Atome und <b>2</b> Sauerstoff-Atome.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= THOMSON ================= -->
+<section class="station" id="thomson" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">1897 Elektron · 1904 Modell · Cambridge, England</p>
+      <div class="who"><h2>Joseph John Thomson</h2><span class="life">1856 – 1940 · Physiker</span></div>
+      <span class="modelname">Rosinenkuchenmodell</span>
+      <p class="lead">Das Atom ist eine positiv geladene Kugel. Darin stecken die negativ geladenen Elektronen wie Rosinen in einem Kuchen.</p>
+      <ul class="facts">
+        <li>Bei Versuchen mit Kathodenstrahlen entdeckte Thomson 1897 das <b>Elektron</b>: ein winziges, negativ geladenes Teilchen, rund 2000-mal leichter als das leichteste Atom.</li>
+        <li>Elektronen lassen sich aus Atomen herauslösen. Atome sind also <b>teilbar</b>!</li>
+        <li>Positive und negative Ladungen gleichen sich aus: Nach außen ist das Atom neutral.</li>
+        <li>Die Masse ist gleichmäßig über die ganze Kugel verteilt.</li>
+      </ul>
+      <div class="pair">
+        <div class="box"><span class="tag new">Neu</span><p>Atome bestehen aus noch kleineren, elektrisch geladenen Teilchen.</p></div>
+        <div class="box"><span class="tag lim">Grenze</span><p>Kann das Ergebnis von Rutherfords Streuversuch nicht erklären.</p></div>
+      </div>
+      <p class="fun"><b>Auf Englisch</b> heißt es „plum pudding model“, Pflaumenpudding-Modell.</p>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Ein Elektron herauslösen</h3></div>
+      <canvas id="cv-thomson" aria-label="Thomsons Atommodell: positive Kugel mit Elektronen"></canvas>
+      <ul class="legend"><li><i class="sw pos"></i>positiv geladene Masse („Teig“)</li><li><i class="sw e"></i>Elektron, negativ („Rosine“)</li></ul>
+      <div class="controls">
+        <button class="btn primary" id="th-out">Elektron herauslösen</button>
+        <button class="btn" id="th-reset">Zurücksetzen</button>
+      </div>
+      <p class="status" id="th-status" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RUTHERFORD ================= -->
+<section class="station" id="rutherford" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">1909 Versuch · 1911 Modell · Manchester, England</p>
+      <div class="who"><h2>Ernest Rutherford</h2><span class="life">1871 – 1937 · Physiker aus Neuseeland</span></div>
+      <span class="modelname">Kern-Hülle-Modell</span>
+      <p class="lead">Fast die ganze Masse eines Atoms steckt in einem winzigen, positiv geladenen <b>Kern</b>. Drumherum ist fast nur leerer Raum.</p>
+      <ul class="facts">
+        <li><b>Streuversuch</b> (mit Hans Geiger und Ernest Marsden): Positiv geladene α-Teilchen werden auf eine hauchdünne Goldfolie geschossen.</li>
+        <li>Fast alle fliegen ungehindert hindurch. Einige werden abgelenkt. Ganz wenige (etwa 1 von 8000) prallen zurück.</li>
+        <li><b>Folgerung:</b> Im Atom gibt es einen winzigen, schweren, positiven <b>Atomkern</b>. Die Elektronen bewegen sich in der fast leeren <b>Atomhülle</b>.</li>
+        <li>Wäre der Kern so groß wie ein Stecknadelkopf (1 mm), wäre das ganze Atom so groß wie ein Fußballstadion.</li>
+      </ul>
+      <blockquote>„Es war so unglaublich, als hätte man eine Granate auf ein Stück Seidenpapier abgefeuert, und sie wäre zurückgekommen und hätte einen getroffen.“<cite>— Rutherford über das Ergebnis</cite></blockquote>
+      <div class="pair">
+        <div class="box"><span class="tag new">Neu</span><p>Das Atom hat einen Kern und eine Hülle. 1919 weist Rutherford im Kern das <b>Proton</b> nach.</p></div>
+        <div class="box"><span class="tag lim">Grenze</span><p>Wo genau sind die Elektronen? Kreisende Elektronen müssten Energie verlieren und in den Kern stürzen. Dann wären Atome nicht stabil.</p></div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Streuversuch an Goldfolie</h3></div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Ansicht">
+          <button data-rmode="erw" aria-pressed="false">Erwartung (Thomson)</button>
+          <button data-rmode="beob" aria-pressed="true">Beobachtung</button>
+          <button data-rmode="modell" aria-pressed="false">Rutherfords Modell</button>
+        </div>
+      </div>
+      <canvas id="cv-ruth" aria-label="Simulation des Rutherford'schen Streuversuchs"></canvas>
+      <ul class="legend" id="r-legend"><li><i class="sw p"></i>α-Teilchen (positiv)</li><li><i class="sw g"></i>Gold-Atomkern</li><li>gestrichelt: Atomhülle (fast leer)</li></ul>
+      <div class="meters" id="r-meters">
+        <div class="meter"><span>fliegen durch</span><b id="r-d">0</b><small id="r-dp"></small></div>
+        <div class="meter"><span>werden abgelenkt</span><b id="r-a">0</b><small id="r-ap"></small></div>
+        <div class="meter"><span>prallen zurück</span><b id="r-z">0</b><small id="r-zp"></small></div>
+      </div>
+      <div class="controls" id="r-ctrl">
+        <button class="btn" id="r-pause">Pause</button>
+        <button class="btn" id="r-reset">Zähler zurücksetzen</button>
+      </div>
+      <p class="note" id="r-note">Die Simulation übertreibt die Ablenkung, damit man sie sieht. Im echten Versuch prallte nur etwa jedes 8000. Teilchen zurück.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BOHR ================= -->
+<section class="station" id="bohr" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">1913 · Kopenhagen, Dänemark · Nobelpreis 1922</p>
+      <div class="who"><h2>Niels Bohr</h2><span class="life">1885 – 1962 · Physiker</span></div>
+      <span class="modelname">Schalenmodell</span>
+      <p class="lead">Die Elektronen bewegen sich nur auf ganz bestimmten Bahnen, den <b>Schalen</b>, um den Kern. Jede Schale gehört zu einer bestimmten Energie.</p>
+      <ul class="facts">
+        <li>Die Schalen heißen von innen nach außen <b>K, L, M, N</b> …</li>
+        <li>Jede Schale fasst nur eine bestimmte Zahl an Elektronen: K höchstens 2, L höchstens 8, M höchstens 8 (bei den ersten 20 Elementen).</li>
+        <li>Die inneren Schalen werden zuerst besetzt.</li>
+        <li>Bekommt ein Elektron Energie (z. B. in einer Flamme), springt es auf eine äußere Schale. Fällt es zurück, gibt es die Energie als <b>Licht</b> ab. So entsteht die <b>Flammenfärbung</b>.</li>
+      </ul>
+      <div class="pair">
+        <div class="box"><span class="tag new">Neu</span><p>Elektronen haben feste Energiestufen. Das erklärt, warum Atome stabil sind und bestimmte Lichtfarben aussenden.</p></div>
+        <div class="box"><span class="tag lim">Grenze</span><p>Exakt berechnen lässt sich damit nur das Wasserstoffatom. Heute nutzt man zusätzlich das Orbitalmodell.</p></div>
+      </div>
+      <p class="fun"><b>Wichtig:</b> Das <b>Neutron</b> kannte Bohr 1913 noch nicht. Es wurde erst 1932 von James Chadwick entdeckt. Heute zeichnen wir es im Kern mit ein.</p>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Flammenfärbung im Schalenmodell</h3></div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Element">
+          <button data-bel="Li" aria-pressed="false">Lithium</button>
+          <button data-bel="Na" aria-pressed="true">Natrium</button>
+          <button data-bel="K" aria-pressed="false">Kalium</button>
+        </div>
+      </div>
+      <canvas id="cv-bohr" aria-label="Bohr'sches Atommodell mit Elektronensprung"></canvas>
+      <ul class="legend"><li><i class="sw p"></i>Proton</li><li><i class="sw n"></i>Neutron</li><li><i class="sw e"></i>Elektron</li></ul>
+      <div class="controls">
+        <button class="btn primary" id="b-excite">Energie zuführen (erhitzen)</button>
+        <label class="note" style="display:flex;gap:.4rem;align-items:center"><input type="checkbox" id="b-loop"> Dauerhaft in der Flamme</label>
+      </div>
+      <p class="status" id="b-status" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VERGLEICH ================= -->
+<section class="station" id="vergleich" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Rückblick</p>
+    <h2>Die Modelle im Vergleich</h2>
+    <p class="lead">Kein Modell war einfach „falsch“. Jedes erklärte die Beobachtungen seiner Zeit. Erst neue Experimente zeigten seine Grenzen.</p>
+  </div>
+  <div class="table-wrap">
+    <table class="cmp" id="cmp">
+      <thead>
+        <tr>
+          <th scope="col"></th>
+          <th scope="col"><span data-icon="demokrit"></span><span class="nm">Demokrit</span><span class="y">~400 v. Chr.</span></th>
+          <th scope="col"><span data-icon="dalton"></span><span class="nm">Dalton</span><span class="y">1803</span></th>
+          <th scope="col"><span data-icon="thomson"></span><span class="nm">Thomson</span><span class="y">1904</span></th>
+          <th scope="col"><span data-icon="rutherford"></span><span class="nm">Rutherford</span><span class="y">1911</span></th>
+          <th scope="col"><span data-icon="bohr"></span><span class="nm">Bohr</span><span class="y">1913</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Name des Modells</th><td class="q"><span>Teilchen&shy;vorstellung</span></td><td class="q"><span>Kugelmodell</span></td><td class="q"><span>Rosinen&shy;kuchenmodell</span></td><td class="q"><span>Kern-Hülle-Modell</span></td><td class="q"><span>Schalenmodell</span></td></tr>
+        <tr><th scope="row">Grundlage</th><td class="q"><span>Nachdenken</span></td><td class="q"><span>Massen&shy;messungen bei Reaktionen</span></td><td class="q"><span>Kathoden&shy;strahlen</span></td><td class="q"><span>Streuversuch mit Goldfolie</span></td><td class="q"><span>Licht&shy;farben der Atome</span></td></tr>
+        <tr><th scope="row">Atom ist unteilbar</th><td class="q"><span class="yes">✓</span></td><td class="q"><span class="yes">✓</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td></tr>
+        <tr><th scope="row">Elektronen</th><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="yes">✓</span></td><td class="q"><span class="yes">✓</span></td><td class="q"><span class="yes">✓</span></td></tr>
+        <tr><th scope="row">Atomkern</th><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="yes">✓</span></td><td class="q"><span class="yes">✓</span></td></tr>
+        <tr><th scope="row">Atom innen fast leer</th><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="yes">✓</span></td><td class="q"><span class="yes">✓</span></td></tr>
+        <tr><th scope="row">Elektronen auf Schalen</th><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="no">✗</span></td><td class="q"><span class="yes">✓</span></td></tr>
+        <tr><th scope="row">Konnte nicht erklären …</th><td class="q"><span>… gar nichts beweisen</span></td><td class="q"><span>… elektrische Ladungen</span></td><td class="q"><span>… die zurück&shy;prallenden α-Teilchen</span></td><td class="q"><span>… warum Atome stabil sind</span></td><td class="q"><span>… Atome mit vielen Elektronen genau</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="cmp-tools">
+    <button class="btn" id="quiz-toggle">Quiz-Modus: Felder verdecken</button>
+    <span class="note" id="quiz-hint" hidden>Klicke auf ein Feld, um es aufzudecken.</span>
+  </div>
+  <div class="takeaway">
+    <div class="box"><span class="tag info">Teilbar?</span><p>Von Demokrit bis Dalton galt das Atom als unteilbar. Seit Thomson weiß man: Es besteht aus noch kleineren Teilchen.</p></div>
+    <div class="box"><span class="tag info">Kern</span><p>Rutherford fand heraus: Fast die ganze Masse sitzt in einem winzigen Kern. Das Atom ist innen fast leer.</p></div>
+    <div class="box"><span class="tag info">Ordnung</span><p>Bohr ordnete die Elektronen auf Schalen mit festen Energien. Mit diesem Modell arbeiten wir weiter.</p></div>
+  </div>
+</section>
+
+<!-- ================= BOHR IM DETAIL ================= -->
+<section class="station" id="bohr-detail" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Das Bohr'sche Atommodell im Detail</p>
+    <h2>Woraus besteht ein Atom?</h2>
+    <p class="lead">Drei Sorten von Elementarteilchen bauen alle Atome auf. Protonen und Neutronen sitzen im Kern, die Elektronen verteilen sich auf die Schalen der Hülle.</p>
+  </div>
+  <div class="particles">
+    <div class="pcard"><span class="ball p">+</span><h3>Proton <small>p⁺</small></h3>
+      <dl><dt>Ladung</dt><dd>+1 (positiv)</dd><dt>Masse</dt><dd>≈ 1 u</dd><dt>Ort</dt><dd>Atomkern</dd><dt>Entdeckt</dt><dd>1919, Rutherford</dd></dl>
+      <p class="say">Die Zahl der Protonen legt fest, um welches Element es sich handelt.</p></div>
+    <div class="pcard"><span class="ball n">0</span><h3>Neutron <small>n</small></h3>
+      <dl><dt>Ladung</dt><dd>0 (neutral)</dd><dt>Masse</dt><dd>≈ 1 u</dd><dt>Ort</dt><dd>Atomkern</dd><dt>Entdeckt</dt><dd>1932, Chadwick</dd></dl>
+      <p class="say">Neutronen tragen zur Masse bei und halten den Kern mit zusammen.</p></div>
+    <div class="pcard"><span class="ball e">−</span><h3>Elektron <small>e⁻</small></h3>
+      <dl><dt>Ladung</dt><dd>−1 (negativ)</dd><dt>Masse</dt><dd>≈ 1/1836 u</dd><dt>Ort</dt><dd>Atomhülle (Schalen)</dd><dt>Entdeckt</dt><dd>1897, Thomson</dd></dl>
+      <p class="say">Elektronen sind fast masselos. Sie bestimmen, wie ein Atom chemisch reagiert.</p></div>
+  </div>
+
+  <div class="kit">
+    <div class="vis">
+      <div class="vis-head"><h3>Atom-Baukasten</h3><span class="note">Nicht maßstabsgetreu: Der echte Kern wäre 10 000- bis 100 000-mal kleiner als das Atom.</span></div>
+      <canvas id="cv-kit" aria-label="Bohr'sches Modell des gewählten Atoms"></canvas>
+      <ul class="legend"><li><i class="sw p"></i>Proton</li><li><i class="sw n"></i>Neutron</li><li><i class="sw e"></i>Elektron</li></ul>
+    </div>
+    <div class="kit-panel">
+      <div>
+        <p class="note" style="margin-bottom:.4rem">Element wählen (Ordnungszahl 1 bis 20):</p>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="ctrs">
+        <div class="ctr"><i class="sw p"></i><span class="l">Protonen<small>im Kern</small></span><button data-k="p" data-d="-1" aria-label="Proton entfernen">−</button><output id="o-p"></output><button data-k="p" data-d="1" aria-label="Proton hinzufügen">+</button></div>
+        <div class="ctr"><i class="sw n"></i><span class="l">Neutronen<small>im Kern</small></span><button data-k="n" data-d="-1" aria-label="Neutron entfernen">−</button><output id="o-n"></output><button data-k="n" data-d="1" aria-label="Neutron hinzufügen">+</button></div>
+        <div class="ctr"><i class="sw e"></i><span class="l">Elektronen<small>in der Hülle</small></span><button data-k="e" data-d="-1" aria-label="Elektron entfernen">−</button><output id="o-e"></output><button data-k="e" data-d="1" aria-label="Elektron hinzufügen">+</button></div>
+      </div>
+      <div class="readout" id="readout" aria-live="polite"></div>
+      <div class="merke">
+        <h3>Merke</h3>
+        <ul>
+          <li><span class="eq">Ordnungszahl = Protonenzahl = Elektronenzahl</span><br><span class="note">(im ungeladenen Atom)</span></li>
+          <li><span class="eq">Massenzahl = Protonen + Neutronen</span></li>
+          <li>Schalen von innen nach außen: <b>K</b> (max. 2), <b>L</b> (max. 8), <b>M</b> (max. 8*), <b>N</b> … <br><span class="note">* bei den ersten 20 Elementen</span></li>
+          <li>Periode im Periodensystem = Anzahl der Schalen. Hauptgruppe = Anzahl der Elektronen auf der äußersten Schale.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ÜBUNGEN ================= -->
+<section class="station" id="uebungen" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Jetzt seid ihr dran</p>
+    <h2>Ablesen im Periodensystem</h2>
+    <p class="lead">Sucht jedes Element im Periodensystem. Wie viele Protonen und wie viele Elektronen hat ein ungeladenes Atom davon?</p>
+  </div>
+  <div class="pse-wrap"><div class="pse" id="pse" role="group" aria-label="Periodensystem der Elemente"></div></div>
+  <div class="pse-bottom">
+    <div class="box pse-info" id="pse-info"></div>
+    <div class="box">
+      <span class="tag info">Hilfe</span>
+      <p>Die kleine Zahl links oben in jedem Feld ist die <b>Ordnungszahl</b>.</p>
+      <button class="btn tip" id="tip-btn">Tipp anzeigen</button>
+      <p id="tip" hidden><b>Ordnungszahl = Anzahl der Protonen = Anzahl der Elektronen</b> (im ungeladenen Atom).</p>
+    </div>
+  </div>
+  <div class="tasks-head">
+    <div class="score" id="score"></div>
+    <div class="controls">
+      <button class="btn" id="check-all">Alle prüfen</button>
+      <button class="btn primary" id="new-tasks">Neue Aufgaben</button>
+    </div>
+  </div>
+  <div class="tasks" id="tasks"></div>
+  <div class="box bonus">
+    <span class="tag info">Bonus</span>
+    <span>Zwei Elemente im Periodensystem sind nach Forschern aus unserer Zeitreise benannt. Findet ihr sie? Klickt sie an.</span>
+    <span class="found" id="bonus-found">0 / 2 gefunden</span>
+  </div>
+  <div class="next-lesson"><p><b>Nächste Stunde:</b> Wie groß und wie schwer ist ein Atom? Kern und Hülle in Zahlen.</p><a class="btn primary" href="02_Atombau.html">Zu Stunde 2 →</a></div>
+</section>
+
+</main>
+
+<footer class="pager">
+  <button class="btn" id="prev">←</button>
+  <div class="mid"><span id="pos"></span><span class="keys"> · Pfeiltasten ← → oder Presenter</span></div>
+  <button class="btn primary" id="next">→</button>
+</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const MONO = '"IBM Plex Mono", ui-monospace, monospace';
+const SANS = '"Atkinson Hyperlegible", system-ui, sans-serif';
+
+/* ---------------- Farben aus den Tokens ---------------- */
+const C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  ['bg','surface','surface-2','ink','ink-2','line','accent','electron','proton','neutron','gold','good','bad']
+    .forEach(k => C[k.replace('-2','2')] = cs.getPropertyValue('--' + k).trim() || '#888888');
+}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
+function rgb(h) { h = h.replace('#',''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function alpha(h, a) { return `rgba(${rgb(h).join(',')},${a})`; }
+function mix(a, b, t) { const A = rgb(a), B = rgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; }
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+const fmt = (v, d = 3) => v.toLocaleString('de-DE', {maximumSignificantDigits: d});
+
+function setup(cv) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return {ctx, w, h};
+}
+function sphere(ctx, x, y, r, col, label, lc, stroke) {
+  const g = ctx.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+  g.addColorStop(0, mix(col, '#ffffff', .45)); g.addColorStop(1, col);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+  if (label) {
+    ctx.fillStyle = lc || '#fff'; ctx.font = `700 ${Math.max(9, r * .95)}px ${MONO}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + r * .06);
+  }
+}
+function sign(ctx, x, y, r, plus) {
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.4, r * .22); ctx.lineCap = 'round';
+  const s = r * .48; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y);
+  if (plus) { ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); }
+  ctx.stroke();
+}
+
+/* ---------------- Mini-Icons ---------------- */
+const ICONS = {
+  demokrit: `<svg viewBox="0 0 24 24"><circle cx="7" cy="8" r="4" style="fill:var(--ink-2)"/><rect x="13" y="4" width="7" height="7" rx="1.5" transform="rotate(14 16.5 7.5)" style="fill:var(--ink-2)"/><path d="M6 20 L10 13 L14 20Z" style="fill:var(--ink-2)"/><circle cx="18.5" cy="17" r="3" style="fill:var(--ink-2)"/></svg>`,
+  dalton: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" style="fill:var(--neutron)"/><circle cx="9" cy="8.5" r="3" style="fill:#fff;opacity:.45"/></svg>`,
+  thomson: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" style="fill:var(--proton);fill-opacity:.28;stroke:var(--proton);stroke-width:1.2"/><circle cx="8" cy="9" r="1.9" style="fill:var(--electron)"/><circle cx="15" cy="8" r="1.9" style="fill:var(--electron)"/><circle cx="12" cy="13" r="1.9" style="fill:var(--electron)"/><circle cx="7.5" cy="15.5" r="1.9" style="fill:var(--electron)"/><circle cx="16" cy="16" r="1.9" style="fill:var(--electron)"/></svg>`,
+  rutherford: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" style="fill:none;stroke:var(--ink-2);stroke-width:1.1;stroke-dasharray:2 2"/><circle cx="12" cy="12" r="1.8" style="fill:var(--proton)"/><circle cx="5.5" cy="9" r="1.6" style="fill:var(--electron)"/><circle cx="17" cy="6.5" r="1.6" style="fill:var(--electron)"/><circle cx="15.5" cy="18" r="1.6" style="fill:var(--electron)"/></svg>`,
+  bohr: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" style="fill:none;stroke:var(--ink-2);stroke-width:1.1"/><circle cx="12" cy="12" r="10.3" style="fill:none;stroke:var(--ink-2);stroke-width:1.1"/><circle cx="12" cy="12" r="2.6" style="fill:var(--proton)"/><circle cx="12" cy="6" r="1.6" style="fill:var(--electron)"/><circle cx="12" cy="18" r="1.6" style="fill:var(--electron)"/><circle cx="1.7" cy="12" r="1.6" style="fill:var(--electron)"/><circle cx="22.3" cy="12" r="1.6" style="fill:var(--electron)"/><circle cx="19.3" cy="4.7" r="1.6" style="fill:var(--electron)"/></svg>`
+};
+$$('[data-icon]').forEach(el => el.innerHTML = ICONS[el.dataset.icon]);
+
+/* ---------------- Navigation ---------------- */
+const STATIONS = ['start','demokrit','dalton','thomson','rutherford','bohr','vergleich','bohr-detail','uebungen'];
+const LABEL = {start:'Start', demokrit:'Demokrit', dalton:'Dalton', thomson:'Thomson', rutherford:'Rutherford', bohr:'Bohr', vergleich:'Vergleich', 'bohr-detail':'Bohr im Detail', uebungen:'Übungen'};
+const NEXT_LESSON = document.body.dataset.next ? JSON.parse(document.body.dataset.next) : null;
+const MODELS = ['demokrit','dalton','thomson','rutherford','bohr'];
+let cur = 0;
+function go(id) { const i = STATIONS.indexOf(id); if (i >= 0 && i !== cur) { cur = i; render(true); } }
+function render(scroll) {
+  const id = STATIONS[cur];
+  $$('.station').forEach(s => s.hidden = s.id !== id);
+  $$('[data-go]', $('#tl')).forEach(b => b.dataset.go === id ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
+  // Fortschritt auf dem Zeitstrahl
+  const mi = MODELS.indexOf(id), reached = mi >= 0 ? mi : (cur > STATIONS.indexOf('bohr') ? 5 : -1);
+  $$('#tl li.m').forEach((li, i) => {
+    li.classList.toggle('done', i < reached || (reached === 5));
+    li.classList.toggle('half', i === reached && reached < 5);
+  });
+  $('#tl li.gap').classList.toggle('done', reached >= 1);
+  const prev = STATIONS[cur - 1], next = STATIONS[cur + 1];
+  $('#prev').textContent = prev ? '← ' + LABEL[prev] : '←';
+  $('#prev').disabled = !prev;
+  if (next) { $('#next').textContent = LABEL[next] + ' →'; $('#next').disabled = false; }
+  else if (NEXT_LESSON) { $('#next').textContent = NEXT_LESSON.label + ' →'; $('#next').disabled = false; }
+  else { $('#next').textContent = '→'; $('#next').disabled = true; }
+  $('#pos').textContent = `${cur + 1} / ${STATIONS.length}`;
+  try { history.replaceState(null, '', '#' + id); } catch (e) {}
+  if (scroll) {
+    window.scrollTo({top: 0});
+    const b = $(`#tl [data-go="${id}"]`);
+    if (b) { const sc = $('.tl-scroll'); sc.scrollLeft = b.offsetLeft - sc.clientWidth / 2 + b.offsetWidth / 2; }
+  }
+  lastT = performance.now();
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+$('#prev').onclick = () => { if (cur > 0) { cur--; render(true); } };
+$('#next').onclick = () => {
+  if (cur < STATIONS.length - 1) { cur++; render(true); }
+  else if (NEXT_LESSON) location.href = NEXT_LESSON.href;
+};
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, select, textarea') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (['ArrowRight','PageDown'].includes(e.key)) { e.preventDefault(); if (cur < STATIONS.length - 1) $('#next').click(); }
+  else if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); $('#prev').click(); }
+  else if (e.key === 'f' || e.key === 'F') toggleFs();
+});
+function toggleFs() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+}
+$('#fs').onclick = toggleFs;
+document.addEventListener('fullscreenchange', () => $('#fs').textContent = document.fullscreenElement ? 'Vollbild beenden' : 'Vollbild');
+
+/* ---------------- Render-Schleife ---------------- */
+const visuals = [];
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  const id = STATIONS[cur];
+  for (const v of visuals) if (v.station === id) v.tick(dt, now / 1000);
+  requestAnimationFrame(frame);
+}
+
+/* ================= DEMOKRIT: Gold halbieren ================= */
+(() => {
+  const cv = $('#cv-demo'), MAX = 50, ATOM = 2.9e-10;
+  const D = {n: 0, anim: null, queue: 0};
+  const len = n => 1e-2 * Math.pow(2, -n / 2);
+  function rect(w, h, n) {
+    const W0 = Math.min(w * .62, h * .8), land = n % 2 === 0;
+    const pw = land ? W0 : W0 / Math.SQRT2, ph = land ? W0 / Math.SQRT2 : W0;
+    return {x: (w - pw) / 2, y: (h - ph) / 2, w: pw, h: ph, land, W0};
+  }
+  function size(m) {
+    if (m >= 1e-3) return fmt(m * 1e3) + ' mm';
+    if (m >= 1e-6) return fmt(m * 1e6) + ' µm';
+    return fmt(m * 1e9) + ' nm';
+  }
+  function msg(n) {
+    const L = len(n);
+    if (n >= MAX) return 'Schluss! Übrig ist ein einzelnes <b>Goldatom</b> (≈ 0,3 nm). Demokrit: átomos, unteilbar.';
+    if (L < 3e-9) return 'Nur noch wenige Atome breit. Man sieht die einzelnen Goldatome!';
+    if (L < 1e-7) return 'So klein wie ein Virus.';
+    if (L < 1e-6) return 'Kleiner als ein Bakterium.';
+    if (L < 1e-5) return 'So klein wie eine Blutzelle. Nur noch im Mikroskop sichtbar.';
+    if (L < 1e-4) return 'So dünn wie ein Haar.';
+    if (L < 1e-3) return 'Mit bloßem Auge kaum noch zu erkennen.';
+    if (n === 0) return 'Ein Stück Blattgold, 1 cm breit. Was passiert, wenn wir es immer weiter halbieren?';
+    return 'Noch gut zu sehen.';
+  }
+  function status() {
+    const n = D.n;
+    $('#demo-status').innerHTML = `Halbierungen: <b>${n}</b> · Breite: <b>${n >= MAX ? '≈ 0,3 nm' : size(len(n))}</b><br>${msg(n)}`;
+    const busy = n + D.queue + (D.anim ? 1 : 0) >= MAX;
+    $('#demo-cut').disabled = busy; $('#demo-cut10').disabled = busy;
+  }
+  function piece(ctx, r, pxm) {
+    const g = ctx.createLinearGradient(r.x, r.y, r.x + r.w, r.y + r.h);
+    g.addColorStop(0, mix(C.gold, '#ffffff', .35)); g.addColorStop(.55, C.gold); g.addColorStop(1, mix(C.gold, '#000000', .2));
+    ctx.fillStyle = g; ctx.fillRect(r.x, r.y, r.w, r.h);
+    const d = pxm * ATOM;
+    if (d > 7) {
+      ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+      ctx.fillStyle = mix(C.gold, '#000000', .45); ctx.fillRect(r.x, r.y, r.w, r.h);
+      const dy = d * .866;
+      for (let j = 0, y = r.y + d / 2; y < r.y + r.h + d; j++, y += dy) {
+        for (let x = r.x + d / 2 + (j % 2) * d / 2; x < r.x + r.w + d; x += d) {
+          ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(x, y, d * .47, 0, 7); ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc(x - d * .14, y - d * .15, d * .16, 0, 7); ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+    ctx.strokeStyle = mix(C.gold, '#000000', .35); ctx.lineWidth = 1.5; ctx.strokeRect(r.x, r.y, r.w, r.h);
+  }
+  visuals.push({station: 'demokrit', tick(dt) {
+    const {ctx, w, h} = setup(cv);
+    if (D.n >= MAX && !D.anim) {
+      const R = Math.min(w, h) * .3;
+      sphere(ctx, w / 2, h / 2, R, C.gold, 'Au', '#3a2a05');
+      ctx.fillStyle = C.ink2; ctx.font = `600 ${Math.max(12, R * .14)}px ${SANS}`; ctx.textAlign = 'center';
+      ctx.fillText('ein Goldatom: átomos', w / 2, h / 2 + R + Math.max(18, R * .22));
+      return;
+    }
+    if (!D.anim && D.queue > 0) { D.anim = {a: 0, dur: D.queue > 1 ? .32 : .9}; D.queue--; }
+    const r = rect(w, h, D.n), pxm = r.W0 / len(D.n);
+    if (!D.anim) { piece(ctx, r, pxm); return; }
+    D.anim.a += dt / (RM.matches ? .15 : D.anim.dur);
+    const a = Math.min(1, D.anim.a);
+    const keep = r.land ? {x: r.x, y: r.y, w: r.w / 2, h: r.h} : {x: r.x, y: r.y, w: r.w, h: r.h / 2};
+    const other = r.land ? {x: r.x + r.w / 2, y: r.y, w: r.w / 2, h: r.h} : {x: r.x, y: r.y + r.h / 2, w: r.w, h: r.h / 2};
+    if (a < .3) {
+      piece(ctx, r, pxm);
+      const f = a / .3; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath();
+      if (r.land) { ctx.moveTo(r.x + r.w / 2, r.y - 8); ctx.lineTo(r.x + r.w / 2, r.y - 8 + (r.h + 16) * f); }
+      else { ctx.moveTo(r.x - 8, r.y + r.h / 2); ctx.lineTo(r.x - 8 + (r.w + 16) * f, r.y + r.h / 2); }
+      ctx.stroke();
+    } else if (a < .6) {
+      const f = ease((a - .3) / .3);
+      piece(ctx, keep, pxm);
+      ctx.globalAlpha = 1 - f;
+      piece(ctx, {x: other.x + (r.land ? f * w * .25 : 0), y: other.y + (r.land ? 0 : f * h * .2), w: other.w, h: other.h}, pxm);
+      ctx.globalAlpha = 1;
+    } else {
+      const f = ease((a - .6) / .4), T = rect(w, h, D.n + 1);
+      const cr = {x: lerp(keep.x, T.x, f), y: lerp(keep.y, T.y, f), w: lerp(keep.w, T.w, f), h: lerp(keep.h, T.h, f)};
+      piece(ctx, cr, pxm * Math.pow(Math.SQRT2, f));
+    }
+    if (D.anim.a >= 1) { D.anim = null; D.n++; status(); }
+  }});
+  $('#demo-cut').onclick = () => { if (D.n + D.queue + (D.anim ? 1 : 0) < MAX) D.queue++; status(); };
+  $('#demo-cut10').onclick = () => { const left = MAX - D.n - D.queue - (D.anim ? 1 : 0); D.queue += Math.max(0, Math.min(10, left)); status(); };
+  $('#demo-reset').onclick = () => { D.n = 0; D.queue = 0; D.anim = null; status(); };
+  status();
+})();
+
+/* ================= DALTON: Reaktion ================= */
+(() => {
+  const cv = $('#cv-dalton');
+  const COL = {H: ['#EEF1F6', '#1B2430', 17], O: ['#E0483B', '#ffffff', 25]};
+  const atoms = [
+    {el: 'H', s: [70, 82], e: [106, 158]}, {el: 'H', s: [102, 82], e: [154, 158]},
+    {el: 'H', s: [70, 178], e: [246, 158]}, {el: 'H', s: [102, 178], e: [294, 158]},
+    {el: 'O', s: [262, 130], e: [130, 132]}, {el: 'O', s: [306, 130], e: [270, 132]}
+  ];
+  let t = 0, dir = 0;
+  visuals.push({station: 'dalton', tick(dt) {
+    const {ctx, w, h} = setup(cv);
+    t = clamp(t + (dir ? 1 : -1) * dt * (RM.matches ? 5 : .55), 0, 1);
+    const s = Math.min(w / 400, h / 280), ox = (w - 400 * s) / 2, oy = (h - 280 * s) / 2;
+    const f = ease(t);
+    const pos = atoms.map((a, i) => {
+      const lift = Math.sin(Math.PI * f) * (a.el === 'H' ? (i < 2 ? -30 : 30) : 0);
+      return {a, x: ox + lerp(a.s[0], a.e[0], f) * s, y: oy + (lerp(a.s[1], a.e[1], f) + lift) * s};
+    }).sort((p, q) => p.y - q.y);
+    for (const p of pos) { const c = COL[p.a.el]; sphere(ctx, p.x, p.y, c[2] * s, c[0], p.a.el, c[1], alpha(C.ink, .3)); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = C.ink; ctx.font = `700 ${Math.max(13, 17 * s)}px ${SANS}`;
+    const y1 = oy + 252 * s;
+    ctx.globalAlpha = 1 - f;
+    ctx.fillText('Wasserstoff', ox + 86 * s, y1); ctx.fillText('+', ox + 190 * s, y1); ctx.fillText('Sauerstoff', ox + 284 * s, y1);
+    ctx.globalAlpha = f;
+    ctx.fillText('Wasser', ox + 130 * s, y1); ctx.fillText('Wasser', ox + 270 * s, y1);
+    ctx.globalAlpha = 1;
+  }});
+  $('#dalton-play').onclick = () => {
+    dir = 1 - dir;
+    $('#dalton-play').textContent = dir ? 'Zurück zum Anfang' : 'Reaktion ablaufen lassen';
+    $('#dalton-status').innerHTML = dir
+      ? 'Nachher: immer noch <b>4</b> Wasserstoff-Atome und <b>2</b> Sauerstoff-Atome. Kein Atom ist verschwunden, keins ist neu dazugekommen.'
+      : 'Vorher: <b>4</b> Wasserstoff-Atome und <b>2</b> Sauerstoff-Atome.';
+  };
+})();
+
+/* ================= THOMSON ================= */
+(() => {
+  const cv = $('#cv-thomson'), r = rng(7);
+  const plus = Array.from({length: 26}, () => { const a = r() * 6.283, d = Math.sqrt(r()) * .86; return [Math.cos(a) * d, Math.sin(a) * d]; });
+  const home = [[-.45,-.35],[.1,-.55],[.5,-.2],[-.15,.05],[.35,.35],[-.5,.3],[.05,.62],[-.1,-.2]];
+  let el = home.map(p => ({x: p[0], y: p[1], f: 0, out: false}));
+  function status() {
+    const k = el.filter(e => e.out).length;
+    $('#th-status').innerHTML = k === 0
+      ? 'Ladung des Atoms: <b>0</b>. Plus und Minus gleichen sich aus, das Atom ist neutral.'
+      : `${k} Elektron${k > 1 ? 'en' : ''} entfernt. Ladung des Rests: <b>+${k}</b>. Das Atom ist jetzt positiv geladen. Es war also <b>teilbar</b>!`;
+    $('#th-out').disabled = k >= el.length;
+  }
+  visuals.push({station: 'thomson', tick(dt, t) {
+    const {ctx, w, h} = setup(cv);
+    const R = Math.min(w, h) * .4, cx = w * .45, cy = h / 2;
+    const g = ctx.createRadialGradient(cx - R * .3, cy - R * .35, R * .1, cx, cy, R);
+    g.addColorStop(0, alpha(C.proton, .14)); g.addColorStop(1, alpha(C.proton, .32));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+    ctx.strokeStyle = alpha(C.proton, .7); ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = alpha(C.proton, .75); ctx.lineWidth = Math.max(1.5, R * .012); ctx.lineCap = 'round';
+    const ps = R * .045;
+    for (const p of plus) { const x = cx + p[0] * R, y = cy + p[1] * R; ctx.beginPath(); ctx.moveTo(x - ps, y); ctx.lineTo(x + ps, y); ctx.moveTo(x, y - ps); ctx.lineTo(x, y + ps); ctx.stroke(); }
+    const er = Math.max(6, R * .075);
+    el.forEach((e, i) => {
+      let x = cx + e.x * R, y = cy + e.y * R;
+      if (!RM.matches) { x += Math.sin(t * 3 + i * 1.7) * R * .012; y += Math.cos(t * 2.6 + i) * R * .012; }
+      if (e.out) {
+        e.f = Math.min(1, e.f + dt / (RM.matches ? .2 : 1.3));
+        if (e.f >= 1) return;
+        const f = ease(e.f); x = lerp(x, w + 30, f); y = lerp(y, y - h * .15, f);
+      }
+      ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, er, 0, 7); ctx.fill();
+      sign(ctx, x, y, er, false);
+    });
+  }});
+  $('#th-out').onclick = () => { const e = el.find(e => !e.out); if (e) { e.out = true; e.f = 0; } status(); };
+  $('#th-reset').onclick = () => { el = home.map(p => ({x: p[0], y: p[1], f: 0, out: false})); status(); };
+  status();
+})();
+
+/* ================= RUTHERFORD: Streuversuch ================= */
+(() => {
+  const cv = $('#cv-ruth');
+  const S = {mode: 'beob', parts: [], acc: 0, n: {d: 0, a: 0, z: 0}, run: true};
+  const shown = {d: -1, a: -1, z: -1};
+  const orbit = Array.from({length: 7}, (_, i) => ({a: .55 + i * .06, b: .25 + (i % 3) * .12, rot: i * .9, ph: i * 1.3, sp: .5 + (i % 4) * .18}));
+  function nuclei(w, h) {
+    const sp = Math.max(48, Math.min(w, h) * .2), cs = sp * .866, x0 = w * .56 - cs;
+    const list = [];
+    for (let c = 0; c < 3; c++) for (let y = (c % 2) * sp / 2 - sp; y < h + sp; y += sp) list.push({x: x0 + c * cs, y});
+    return {list, sp};
+  }
+  function meters() {
+    const tot = S.n.d + S.n.a + S.n.z;
+    for (const k of ['d', 'a', 'z']) {
+      if (shown[k] === S.n[k]) continue;
+      shown[k] = S.n[k];
+      $('#r-' + k).textContent = S.n[k];
+    }
+    for (const k of ['d', 'a', 'z']) $('#r-' + k + 'p').textContent = tot ? fmt(100 * S.n[k] / tot, 2) + ' %' : '';
+  }
+  function model(ctx, w, h, t) {
+    const cx = w / 2, cy = h / 2, R = Math.min(w, h) * .4;
+    ctx.setLineDash([5, 6]); ctx.strokeStyle = alpha(C.ink2, .6); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = alpha(C.electron, .05); ctx.fill();
+    for (const o of orbit) {
+      const a = (RM.matches ? 0 : t) * o.sp + o.ph;
+      const ex = Math.cos(a) * o.a * R, ey = Math.sin(a) * o.b * R * 1.6;
+      const x = cx + ex * Math.cos(o.rot) - ey * Math.sin(o.rot), y = cy + ex * Math.sin(o.rot) + ey * Math.cos(o.rot);
+      const er = Math.max(5, R * .04);
+      ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, er, 0, 7); ctx.fill(); sign(ctx, x, y, er, false);
+    }
+    sphere(ctx, cx, cy, Math.max(4, R * .025), C.proton);
+    ctx.font = `700 ${Math.max(12, R * .07)}px ${SANS}`; ctx.fillStyle = C.ink; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx + 6, cy + 6); ctx.lineTo(cx + R * .35, cy + R * .55); ctx.stroke();
+    ctx.textAlign = 'left'; ctx.fillText('Atomkern: winzig, positiv,', cx + R * .37, cy + R * .58);
+    ctx.fillText('fast die ganze Masse', cx + R * .37, cy + R * .58 + Math.max(15, R * .09));
+    ctx.textAlign = 'center'; ctx.fillStyle = C.ink2;
+    ctx.fillText('Atomhülle mit Elektronen, sonst leer', cx, cy - R - Math.max(14, R * .08));
+  }
+  visuals.push({station: 'rutherford', tick(dt, t) {
+    const {ctx, w, h} = setup(cv);
+    if (S.mode === 'modell') { model(ctx, w, h, t); return; }
+    const {list, sp} = nuclei(w, h);
+    const v = w * .34, rmin = Math.max(3, sp * .05), K = v * v * rmin / 2, eps2 = (rmin * .5) ** 2;
+    if (S.run) {
+      S.acc += dt;
+      while (S.acc > .085) { S.acc -= .085; if (S.parts.length < 90) S.parts.push({x: -4, y: Math.random() * h, vx: v, vy: 0, tr: []}); }
+      const steps = Math.ceil(dt / .001), hs = dt / steps;
+      const fx0 = list[0].x - sp * .5, fx1 = list[list.length - 1].x + sp * .5;
+      for (const p of S.parts) {
+        for (let s = 0; s < steps; s++) {
+          let ax = 0, ay = 0;
+          if (S.mode === 'beob') {
+            for (const n of list) {
+              const dx = p.x - n.x, dy = p.y - n.y, r2 = dx * dx + dy * dy;
+              if (r2 > sp * sp) continue;
+              const re = r2 + eps2, k = K / (re * Math.sqrt(re)); ax += dx * k; ay += dy * k;
+            }
+          }
+          p.vx += ax * hs; p.vy += ay * hs; p.x += p.vx * hs; p.y += p.vy * hs;
+        }
+        if (S.mode === 'erw' && p.x > fx0 && p.x < fx1) p.vy += (Math.random() - .5) * v * .02;
+        p.tr.push(p.x, p.y); if (p.tr.length > 70) p.tr.splice(0, 2);
+        if (p.x < -8 || p.x > w + 8 || p.y < -8 || p.y > h + 8) {
+          p.dead = true;
+          const ang = Math.abs(Math.atan2(p.vy, p.vx)) * 180 / Math.PI;
+          if (p.x < -8 || ang > 90) S.n.z++; else if (ang > 8) S.n.a++; else S.n.d++;
+        }
+      }
+      S.parts = S.parts.filter(p => !p.dead);
+    }
+    // Folie und Atome
+    const fx0 = list[0].x - sp * .5, fx1 = list[list.length - 1].x + sp * .5;
+    ctx.fillStyle = alpha(C.gold, .1); ctx.fillRect(fx0, 0, fx1 - fx0, h);
+    for (const n of list) {
+      if (S.mode === 'beob') {
+        ctx.setLineDash([3, 4]); ctx.strokeStyle = alpha(C.ink2, .35); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(n.x, n.y, sp * .48, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+        sphere(ctx, n.x, n.y, rmin * 1.15, C.gold);
+      } else {
+        ctx.fillStyle = alpha(C.proton, .17); ctx.beginPath(); ctx.arc(n.x, n.y, sp * .48, 0, 7); ctx.fill();
+        ctx.fillStyle = C.electron;
+        for (let k = 0; k < 4; k++) { const a = k * 1.7 + n.y * .01; ctx.beginPath(); ctx.arc(n.x + Math.cos(a) * sp * .26, n.y + Math.sin(a) * sp * .26, 2.4, 0, 7); ctx.fill(); }
+      }
+    }
+    // Teilchen
+    for (const p of S.parts) {
+      ctx.strokeStyle = alpha(C.proton, .35); ctx.lineWidth = 1.6; ctx.beginPath();
+      for (let i = 0; i < p.tr.length; i += 2) i ? ctx.lineTo(p.tr[i], p.tr[i + 1]) : ctx.moveTo(p.tr[i], p.tr[i + 1]);
+      ctx.stroke();
+      ctx.fillStyle = C.proton; ctx.beginPath(); ctx.arc(p.x, p.y, 3.4, 0, 7); ctx.fill();
+    }
+    ctx.font = `700 ${Math.max(11, w * .022)}px ${SANS}`; ctx.textBaseline = 'top';
+    ctx.fillStyle = C.ink2; ctx.textAlign = 'left'; ctx.fillText('α-Teilchen →', 8, 8);
+    ctx.textAlign = 'center'; ctx.fillStyle = C.ink;
+    const lbl = 'Goldfolie (stark vergrößert)', lw = ctx.measureText(lbl).width;
+    ctx.fillStyle = alpha(C.surface.length === 7 ? C.surface : '#ffffff', .85); ctx.fillRect((fx0 + fx1) / 2 - lw / 2 - 6, 4, lw + 12, Math.max(11, w * .022) + 8);
+    ctx.fillStyle = C.ink; ctx.fillText(lbl, (fx0 + fx1) / 2, 8);
+    meters();
+  }});
+  $$('[data-rmode]').forEach(b => b.onclick = () => {
+    S.mode = b.dataset.rmode; S.parts = []; S.n = {d: 0, a: 0, z: 0};
+    $$('[data-rmode]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    const m = S.mode === 'modell';
+    $('#r-meters').hidden = m; $('#r-ctrl').hidden = m; $('#r-legend').hidden = m;
+    $('#r-note').textContent = S.mode === 'erw'
+      ? 'Erwartung nach Thomson: Die Ladung ist im Atom gleichmäßig verteilt. Nichts kann die schnellen α-Teilchen stark ablenken. Alle sollten fast geradeaus durchfliegen.'
+      : S.mode === 'beob'
+        ? 'Die Simulation übertreibt die Ablenkung, damit man sie sieht. Im echten Versuch prallte nur etwa jedes 8000. Teilchen zurück.'
+        : 'Rutherfords Erklärung: Ein winziger positiver Kern stößt die α-Teilchen ab, die ihm zu nahe kommen. Alle anderen fliegen durch den leeren Raum.';
+  });
+  $('#r-pause').onclick = () => { S.run = !S.run; $('#r-pause').textContent = S.run ? 'Pause' : 'Weiter'; };
+  $('#r-reset').onclick = () => { S.n = {d: 0, a: 0, z: 0}; };
+})();
+
+/* ================= Gemeinsam: Bohr-Atom zeichnen ================= */
+const SHELL_R = [.42, .62, .81, 1.0, 1.19], SHELL_N = ['K', 'L', 'M', 'N', 'O'];
+function shellsFor(e) { const out = []; let r = e; for (const c of [2, 8, 8, 99]) { if (r <= 0) break; const k = Math.min(c, r); out.push(k); r -= k; } return out; }
+function drawNucleus(ctx, cx, cy, rn, p, n) {
+  const N = p + n, pts = [];
+  for (let i = 0; i < N; i++) {
+    const r = rn * 1.02 * Math.sqrt(i), a = i * 2.399963;
+    const isP = Math.floor((i + 1) * p / N) > Math.floor(i * p / N);
+    pts.push({x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), isP});
+  }
+  for (let i = N - 1; i >= 0; i--) {
+    const q = pts[i]; sphere(ctx, q.x, q.y, rn, q.isP ? C.proton : C.neutron, null, null, alpha('#000000', .18));
+    if (q.isP && rn > 5) sign(ctx, q.x, q.y, rn * .8, true);
+  }
+}
+function drawAtom(ctx, cx, cy, R, o) {
+  const shells = o.shells, S = shells.length;
+  const fs = Math.max(11, R * .065);
+  ctx.lineWidth = 1.5;
+  for (let s = 0; s < S; s++) {
+    const r = R * SHELL_R[s];
+    ctx.strokeStyle = alpha(C.ink2, .45); ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+  }
+  if (o.excite > 0 && S) {
+    ctx.setLineDash([5, 6]); ctx.strokeStyle = alpha(C.ink2, .45 * Math.min(1, o.excite * 3));
+    ctx.beginPath(); ctx.arc(cx, cy, R * SHELL_R[S], 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.font = `600 ${fs}px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let s = 0; s < S; s++) {
+    const r = R * SHELL_R[s], a = -Math.PI * .75;
+    const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+    ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(x, y, fs * .85, 0, 7); ctx.fill();
+    ctx.fillStyle = C.ink2; ctx.fillText(SHELL_N[s], x, y + 1);
+  }
+  drawNucleus(ctx, cx, cy, R * .046, o.p, o.n);
+  const er = Math.max(4.5, R * .042);
+  let ex = null;
+  for (let s = 0; s < S; s++) {
+    const k = shells[s], a0 = o.t * (.9 / (s + 1)) + s * .7;
+    for (let j = 0; j < k; j++) {
+      const ang = a0 + Math.PI * 2 * j / k + (s === 0 ? Math.PI / 2 : 0);
+      let r = R * SHELL_R[s];
+      const isEx = o.excite > 0 && s === S - 1 && j === k - 1;
+      if (isEx) r = lerp(R * SHELL_R[s], R * SHELL_R[s + 1], o.excite);
+      const x = cx + r * Math.cos(ang), y = cy + r * Math.sin(ang);
+      if (isEx) ex = {x, y, ang};
+      ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, er, 0, 7); ctx.fill();
+      sign(ctx, x, y, er, false);
+    }
+  }
+  return ex;
+}
+
+/* ================= BOHR: Flammenfärbung ================= */
+(() => {
+  const cv = $('#cv-bohr');
+  const EL = {
+    Li: {name: 'Lithium', p: 3, n: 4, col: '#E3204F', farbe: 'karminrot', nm: '671 nm'},
+    Na: {name: 'Natrium', p: 11, n: 12, col: '#FFC21A', farbe: 'gelb', nm: '589 nm'},
+    K: {name: 'Kalium', p: 19, n: 20, col: '#A066F0', farbe: 'violett', nm: '≈ 404 nm'}
+  };
+  const B = {el: 'Na', phase: 'idle', pt: 0, f: 0, rot: 0, photons: [], glow: 0};
+  function status(txt) {
+    const e = EL[B.el], sh = shellsFor(e.p);
+    $('#b-status').innerHTML = txt || `<b>${e.name}</b>: ${e.p} Protonen, ${e.n} Neutronen, ${e.p} Elektronen. Schalen: ${sh.map((k, i) => SHELL_N[i] + ' ' + k).join(' · ')}.<br><span class="flame"><i style="background:${e.col}"></i>Flammenfärbung: ${e.farbe}</span>`;
+  }
+  function excite() { if (B.phase === 'idle') { B.phase = 'up'; B.pt = 0; $('#b-excite').disabled = true; status('Energie wird zugeführt: Das äußerste Elektron springt auf eine <b>höhere Schale</b> …'); } }
+  visuals.push({station: 'bohr', tick(dt) {
+    const {ctx, w, h} = setup(cv);
+    const e = EL[B.el], R = Math.min(w, h) * .4, cx = w / 2, cy = h / 2;
+    if (!RM.matches) B.rot += dt;
+    B.pt += dt;
+    if (B.phase === 'up') { B.f = ease(Math.min(1, B.pt / .5)); if (B.pt > .5) { B.phase = 'hold'; B.pt = 0; } }
+    else if (B.phase === 'hold') { if (B.pt > .8) { B.phase = 'down'; B.pt = 0; status('… hält es dort nicht lange aus und <b>fällt zurück</b> …'); } }
+    else if (B.phase === 'down') {
+      B.f = 1 - ease(Math.min(1, B.pt / .3));
+      if (B.pt > .3) { B.phase = 'idle'; B.pt = 0; B.f = 0; B.emit = true; }
+    } else if ($('#b-loop').checked && B.pt > .7) excite();
+    if (B.glow > 0) {
+      const g = ctx.createRadialGradient(cx, cy, R * .1, cx, cy, R * 1.25);
+      g.addColorStop(0, alpha(e.col, .32 * B.glow)); g.addColorStop(1, alpha(e.col, 0));
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); B.glow = Math.max(0, B.glow - dt * .8);
+    }
+    const ex = drawAtom(ctx, cx, cy, R, {p: e.p, n: e.n, shells: shellsFor(e.p), t: B.rot, excite: B.f});
+    if (B.emit) {
+      B.emit = false;
+      const sh = shellsFor(e.p), s = sh.length - 1, a0 = B.rot * (.9 / (s + 1)) + s * .7 + Math.PI * 2 * (sh[s] - 1) / sh[s] + (s === 0 ? Math.PI / 2 : 0);
+      const r = R * SHELL_R[s];
+      B.photons.push({x: cx + r * Math.cos(a0), y: cy + r * Math.sin(a0), a: a0, d: 0});
+      B.glow = 1;
+      status(`… dabei wird die Energie als <b>Licht</b> abgegeben.<br><span class="flame"><i style="background:${e.col}"></i>${e.name} leuchtet ${e.farbe} (${e.nm})</span>`);
+      $('#b-excite').disabled = false;
+    }
+    for (const ph of B.photons) {
+      ph.d += dt * Math.max(w, h) * .45;
+      const L = Math.min(70, R * .35), ux = Math.cos(ph.a), uy = Math.sin(ph.a);
+      ctx.strokeStyle = e.col; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let i = 0; i <= 30; i++) {
+        const s = ph.d + L * i / 30, amp = Math.sin(Math.PI * i / 30) * 7 * Math.sin(i * 1.2);
+        const x = ph.x + ux * s - uy * amp, y = ph.y + uy * s + ux * amp;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    }
+    B.photons = B.photons.filter(p => p.d < Math.max(w, h));
+  }});
+  $('#b-excite').onclick = excite;
+  $$('[data-bel]').forEach(b => b.onclick = () => {
+    B.el = b.dataset.bel; B.phase = 'idle'; B.f = 0; B.photons = []; B.glow = 0; $('#b-excite').disabled = false;
+    $$('[data-bel]').forEach(x => x.setAttribute('aria-pressed', x === b)); status();
+  });
+  status();
+})();
+
+/* ================= Periodensystem-Daten ================= */
+const PSE_RAW = 'H Wasserstoff|He Helium|Li Lithium|Be Beryllium|B Bor|C Kohlenstoff|N Stickstoff|O Sauerstoff|F Fluor|Ne Neon|Na Natrium|Mg Magnesium|Al Aluminium|Si Silicium|P Phosphor|S Schwefel|Cl Chlor|Ar Argon|K Kalium|Ca Calcium|Sc Scandium|Ti Titan|V Vanadium|Cr Chrom|Mn Mangan|Fe Eisen|Co Cobalt|Ni Nickel|Cu Kupfer|Zn Zink|Ga Gallium|Ge Germanium|As Arsen|Se Selen|Br Brom|Kr Krypton|Rb Rubidium|Sr Strontium|Y Yttrium|Zr Zirconium|Nb Niob|Mo Molybdän|Tc Technetium|Ru Ruthenium|Rh Rhodium|Pd Palladium|Ag Silber|Cd Cadmium|In Indium|Sn Zinn|Sb Antimon|Te Tellur|I Iod|Xe Xenon|Cs Caesium|Ba Barium|La Lanthan|Ce Cer|Pr Praseodym|Nd Neodym|Pm Promethium|Sm Samarium|Eu Europium|Gd Gadolinium|Tb Terbium|Dy Dysprosium|Ho Holmium|Er Erbium|Tm Thulium|Yb Ytterbium|Lu Lutetium|Hf Hafnium|Ta Tantal|W Wolfram|Re Rhenium|Os Osmium|Ir Iridium|Pt Platin|Au Gold|Hg Quecksilber|Tl Thallium|Pb Blei|Bi Bismut|Po Polonium|At Astat|Rn Radon|Fr Francium|Ra Radium|Ac Actinium|Th Thorium|Pa Protactinium|U Uran|Np Neptunium|Pu Plutonium|Am Americium|Cm Curium|Bk Berkelium|Cf Californium|Es Einsteinium|Fm Fermium|Md Mendelevium|No Nobelium|Lr Lawrencium|Rf Rutherfordium|Db Dubnium|Sg Seaborgium|Bh Bohrium|Hs Hassium|Mt Meitnerium|Ds Darmstadtium|Rg Roentgenium|Cn Copernicium|Nh Nihonium|Fl Flerovium|Mc Moscovium|Lv Livermorium|Ts Tenness|Og Oganesson';
+const ELS = PSE_RAW.split('|').map((s, i) => { const [sym, ...nm] = s.split(' '); return {z: i + 1, sym, name: nm.join(' ')}; });
+function place(z) {
+  const per = z <= 2 ? 1 : z <= 10 ? 2 : z <= 18 ? 3 : z <= 36 ? 4 : z <= 54 ? 5 : z <= 86 ? 6 : 7;
+  if (z === 1) return {per, col: 1, row: 1};
+  if (z === 2) return {per, col: 18, row: 1};
+  if (per <= 3) { const st = per === 2 ? 3 : 11, i = z - st; return {per, col: i < 2 ? i + 1 : i + 11, row: per}; }
+  if (per <= 5) { const st = per === 4 ? 19 : 37; return {per, col: z - st + 1, row: per}; }
+  const st = per === 6 ? 55 : 87, i = z - st;
+  if (i < 2) return {per, col: i + 1, row: per};
+  if (i <= 16) return {per, col: i + 1, row: per === 6 ? 9 : 10, f: true};
+  return {per, col: i - 14 + 1, row: per};
+}
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+function hauptgruppe(col) { if (col <= 2) return col; if (col >= 13) return col - 10; return 0; }
+const NEUTRONS = [0, 0, 2, 4, 5, 6, 6, 7, 8, 10, 10, 12, 12, 14, 14, 16, 16, 18, 22, 20, 20];
+
+/* ================= BAUKASTEN ================= */
+(() => {
+  const cv = $('#cv-kit');
+  const K = {p: 8, n: 8, e: 8, rot: 0};
+  const chips = $('#chips');
+  chips.innerHTML = ELS.slice(0, 20).map(e => `<button data-z="${e.z}" title="${e.name}"><small>${e.z}</small><b>${e.sym}</b></button>`).join('');
+  chips.onclick = ev => { const b = ev.target.closest('[data-z]'); if (!b) return; const z = +b.dataset.z; K.p = z; K.e = z; K.n = NEUTRONS[z]; update(); };
+  $$('.ctr button').forEach(b => b.onclick = () => {
+    const k = b.dataset.k, d = +b.dataset.d, lim = {p: [1, 20], n: [0, 30], e: [0, 20]}[k];
+    K[k] = clamp(K[k] + d, lim[0], lim[1]); update();
+  });
+  function update() {
+    const el = ELS[K.p - 1], A = K.p + K.n, q = K.p - K.e, sh = shellsFor(K.e);
+    $('#o-p').textContent = K.p; $('#o-n').textContent = K.n; $('#o-e').textContent = K.e;
+    $$('#chips button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.z === K.p && K.e === K.p));
+    const qs = q === 0 ? '' : (Math.abs(q) > 1 ? Math.abs(q) : '') + (q > 0 ? '+' : '−');
+    const iso = K.n !== NEUTRONS[K.p] ? ` <span class="tag info">Isotop</span>` : '';
+    const chargeTxt = q === 0
+      ? 'Ladung 0: ungeladenes Atom. Gleich viele Protonen wie Elektronen.'
+      : q > 0 ? `Ladung +${q}: positiv geladenes Ion. Es fehlen ${q} Elektron${q > 1 ? 'en' : ''}.`
+        : `Ladung −${-q}: negativ geladenes Ion. ${-q} Elektron${-q > 1 ? 'en' : ''} zu viel.`;
+    $('#readout').innerHTML = `
+      <span class="nuc" aria-label="${el.sym}, Massenzahl ${A}, Ordnungszahl ${K.p}"><span class="ms"><span>${A}</span><span>${K.p}</span></span>${el.sym}${qs ? `<span class="q">${qs}</span>` : ''}</span>
+      <div><div class="nm">${el.name}-${A}${iso}</div><div class="sub">Die ${K.p} Protonen machen es zu ${el.name}.</div></div>
+      <dl>
+        <div><dt>Ordnungszahl</dt><dd>${K.p}</dd></div>
+        <div><dt>Massenzahl</dt><dd>${A}</dd></div>
+        <div><dt>Schalen</dt><dd>${sh.length}</dd></div>
+        <div><dt>Außenelektronen</dt><dd>${sh.length ? sh[sh.length - 1] : 0}</dd></div>
+      </dl>
+      <div class="shellrow">Elektronen auf den Schalen: ${sh.length ? sh.map((k, i) => `<span class="sh">${SHELL_N[i]}: <b>${k}</b></span>`).join('') : '<span class="note">keine</span>'}</div>
+      <p class="charge ${q ? 'ion' : ''}">${chargeTxt}</p>`;
+  }
+  visuals.push({station: 'bohr-detail', tick(dt) {
+    const {ctx, w, h} = setup(cv);
+    if (!RM.matches) K.rot += dt * .8;
+    drawAtom(ctx, w / 2, h / 2, Math.min(w, h) * .47, {p: K.p, n: K.n, shells: shellsFor(K.e), t: K.rot, excite: 0});
+  }});
+  update();
+})();
+
+/* ================= VERGLEICH: Quiz ================= */
+(() => {
+  const t = $('#cmp');
+  $('#quiz-toggle').onclick = () => {
+    const on = !t.classList.contains('quiz');
+    t.classList.toggle('quiz', on);
+    $$('td.q', t).forEach(td => td.classList.remove('shown'));
+    $('#quiz-toggle').textContent = on ? 'Alles aufdecken' : 'Quiz-Modus: Felder verdecken';
+    $('#quiz-hint').hidden = !on;
+  };
+  t.addEventListener('click', e => { const td = e.target.closest('td.q'); if (td && t.classList.contains('quiz')) td.classList.toggle('shown'); });
+})();
+
+/* ================= ÜBUNGEN ================= */
+(() => {
+  const pse = $('#pse');
+  let html = '<span></span>';
+  for (let c = 1; c <= 18; c++) { const hg = hauptgruppe(c); html += `<span class="lab" style="grid-row:1;grid-column:${c + 1}">${hg ? ROMAN[hg - 1] : ''}</span>`; }
+  for (let p = 1; p <= 7; p++) html += `<span class="lab" style="grid-row:${p + 1};grid-column:1">${p}</span>`;
+  html += `<span class="ph" style="grid-row:7;grid-column:4">57–71</span><span class="ph" style="grid-row:8;grid-column:4">89–103</span>`;
+  html += `<span style="grid-row:9;grid-column:1 / -1;height:.5rem"></span>`;
+  for (const e of ELS) {
+    const pl = place(e.z), tm = !pl.f && pl.col >= 3 && pl.col <= 12;
+    html += `<button class="el${tm ? ' tm' : ''}${pl.f ? ' f' : ''}" data-z="${e.z}" style="grid-row:${pl.row + 1};grid-column:${pl.col + 1}" aria-label="${e.name}, Ordnungszahl ${e.z}" title="${e.name}"><span class="z">${e.z}</span><span class="s">${e.sym}</span></button>`;
+  }
+  pse.innerHTML = html;
+  const found = new Set();
+  function info(z) {
+    const e = ELS[z - 1], pl = place(z), hg = hauptgruppe(pl.col);
+    let extra = '';
+    if (z === 104) extra = '<p><span class="tag new">Gefunden</span> Benannt nach <b>Ernest Rutherford</b>!</p>';
+    if (z === 107) extra = '<p><span class="tag new">Gefunden</span> Benannt nach <b>Niels Bohr</b>!</p>';
+    $('#pse-info').innerHTML = `<div class="bigcell"><span class="z">${e.z}</span><span class="s">${e.sym}</span><span class="n">${e.name}</span></div>
+      <div><p><b>${e.name}</b></p><p>Ordnungszahl <b>${e.z}</b> · Periode ${pl.per}${pl.f ? ' · ' + (pl.per === 6 ? 'Lanthanoide' : 'Actinoide') : hg ? ' · Hauptgruppe ' + ROMAN[hg - 1] : ' · Nebengruppe'}</p>${extra}</div>`;
+  }
+  pse.addEventListener('click', ev => {
+    const b = ev.target.closest('.el'); if (!b) return;
+    $$('.el.sel', pse).forEach(x => x.classList.remove('sel')); b.classList.add('sel');
+    const z = +b.dataset.z; info(z);
+    if (z === 104 || z === 107) { found.add(z); b.classList.add('found'); $('#bonus-found').textContent = `${found.size} / 2 gefunden`; }
+  });
+  $('#pse-info').innerHTML = '<p class="note">Klicke auf ein Element im Periodensystem, um es hier groß zu sehen.</p>';
+  $('#tip-btn').onclick = () => { const t = $('#tip'); t.hidden = !t.hidden; $('#tip-btn').textContent = t.hidden ? 'Tipp anzeigen' : 'Tipp ausblenden'; };
+
+  const SMALL = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+  const BIG = [26, 29, 30, 47, 50, 53, 79, 80, 82, 35, 28, 24];
+  let tasks = [];
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  function newTasks() {
+    tasks = [...shuffle(SMALL.slice()).slice(0, 4), ...shuffle(BIG.slice()).slice(0, 2)];
+    tasks = shuffle(tasks).map(z => ({z, ok: false}));
+    $('#tasks').innerHTML = tasks.map((t, i) => {
+      const e = ELS[t.z - 1];
+      const pro = t.z <= 20 ? `<details class="pro"><summary>Profi: Wie verteilen sich die Elektronen auf die Schalen?</summary>
+        <div class="shells-in">${['K', 'L', 'M', 'N'].map(s => `<label>${s}<input type="number" min="0" max="8" inputmode="numeric" id="t${i}-${s}"></label>`).join('')}</div></details>` : '';
+      return `<article class="task" data-i="${i}">
+        <header><h3>${e.name}</h3><span>Aufgabe ${i + 1}</span></header>
+        <div class="fields">
+          <label for="t${i}-p"><i><i class="sw p"></i>Protonen</i><input type="number" min="0" max="200" inputmode="numeric" id="t${i}-p"></label>
+          <label for="t${i}-e"><i><i class="sw e"></i>Elektronen</i><input type="number" min="0" max="200" inputmode="numeric" id="t${i}-e"></label>
+        </div>${pro}
+        <div class="actions"><button class="btn primary" data-act="check">Prüfen</button><button class="btn" data-act="solve">Lösung</button></div>
+        <p class="fb" aria-live="polite"></p></article>`;
+    }).join('');
+    score();
+  }
+  function val(id) { const el = $('#' + id); return el && el.value !== '' ? +el.value : null; }
+  function mark(id, ok) { const el = $('#' + id); el.classList.toggle('ok', ok); el.classList.toggle('err', !ok); }
+  function check(i) {
+    const t = tasks[i], e = ELS[t.z - 1], card = $(`.task[data-i="${i}"]`), fb = $('.fb', card);
+    const p = val(`t${i}-p`), el = val(`t${i}-e`);
+    if (p === null && el === null) { fb.className = 'fb'; fb.textContent = 'Trage zuerst deine Antworten ein.'; return; }
+    mark(`t${i}-p`, p === t.z); mark(`t${i}-e`, el === t.z);
+    t.ok = p === t.z && el === t.z;
+    let txt;
+    if (t.ok) txt = `Richtig! ${e.name} hat die Ordnungszahl ${t.z}: ${t.z} Protonen und ${t.z} Elektronen.`;
+    else if (p === t.z && el !== t.z) txt = 'Protonen stimmen. Im ungeladenen Atom gibt es genauso viele Elektronen wie Protonen.';
+    else txt = `Noch nicht ganz. Suche ${e.name} im Periodensystem und lies die Ordnungszahl ab.`;
+    if (t.z <= 20 && $(`#t${i}-K`)) {
+      const sh = shellsFor(t.z), names = ['K', 'L', 'M', 'N'];
+      const any = names.some(s => val(`t${i}-${s}`) !== null);
+      if (any) {
+        let all = true;
+        names.forEach((s, k) => { const v = val(`t${i}-${s}`) ?? 0, ok = v === (sh[k] || 0); all = all && ok; mark(`t${i}-${s}`, ok); });
+        txt += all ? ' Schalen: richtig verteilt!' : ' Schalen: noch nicht richtig. Denk an K max. 2, L max. 8, M max. 8.';
+      }
+    }
+    fb.className = 'fb ' + (t.ok ? 'ok' : 'err'); fb.textContent = txt;
+    card.classList.toggle('ok', t.ok);
+    score();
+  }
+  function solve(i) {
+    const t = tasks[i], sh = shellsFor(t.z);
+    $(`#t${i}-p`).value = t.z; $(`#t${i}-e`).value = t.z;
+    if (t.z <= 20 && $(`#t${i}-K`)) ['K', 'L', 'M', 'N'].forEach((s, k) => $(`#t${i}-${s}`).value = sh[k] || 0);
+    const card = $(`.task[data-i="${i}"]`); $('details', card) && ($('details', card).open = true);
+    check(i);
+    const fb = $('.fb', card); fb.textContent = `Lösung: Ordnungszahl ${t.z} → ${t.z} Protonen, ${t.z} Elektronen` + (t.z <= 20 ? ` · Schalen ${sh.map((k, j) => SHELL_N[j] + ' ' + k).join(', ')}` : '') + '.';
+  }
+  function score() { const ok = tasks.filter(t => t.ok).length; $('#score').innerHTML = `Richtig gelöst: <b>${ok}</b> von ${tasks.length}`; }
+  $('#tasks').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-act]'); if (!b) return;
+    const i = +b.closest('.task').dataset.i;
+    b.dataset.act === 'check' ? check(i) : solve(i);
+  });
+  $('#tasks').addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.matches('input')) check(+ev.target.closest('.task').dataset.i); });
+  $('#check-all').onclick = () => tasks.forEach((_, i) => { if (val(`t${i}-p`) !== null || val(`t${i}-e`) !== null) check(i); });
+  $('#new-tasks').onclick = newTasks;
+  newTasks();
+})();
+
+/* ---------------- Start ---------------- */
+const h0 = (location.hash || '').slice(1);
+if (STATIONS.includes(h0)) cur = STATIONS.indexOf(h0);
+render(false);
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>

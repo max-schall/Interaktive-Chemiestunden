@@ -1,0 +1,1536 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kern und Hülle in Zahlen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: feste Zeitstrahl-Leiste oben, eine Station pro Bildschirm (Text links, Experiment rechts), Blätter-Leiste unten – gebaut für Beamer & Presenter */
+:root{
+  --bg:#F2F5F9; --surface:#FFFFFF; --surface-2:#E6EBF2; --ink:#121D2B; --ink-2:#4B5A6D; --line:#CBD4E0;
+  --accent:#2453C4; --accent-ink:#FFFFFF;
+  --electron:#2563EB; --proton:#D63E2B; --neutron:#7D8898; --gold:#C9952A; --good:#1C8A4C; --bad:#C2392B;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --radius:14px;
+  font-size:clamp(16px, 0.75vw + 9px, 22px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D131B; --surface:#151D28; --surface-2:#1E2836; --ink:#E8EDF4; --ink-2:#A2AEBE; --line:#2C394A;
+    --accent:#7AA2FF; --accent-ink:#0D131B;
+    --electron:#5C8DFF; --proton:#FF6B55; --neutron:#9AA6B6; --gold:#E3B24B; --good:#3DC47D; --bad:#FF6D5E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D131B; --surface:#151D28; --surface-2:#1E2836; --ink:#E8EDF4; --ink-2:#A2AEBE; --line:#2C394A;
+  --accent:#7AA2FF; --accent-ink:#0D131B;
+  --electron:#5C8DFF; --proton:#FF6B55; --neutron:#9AA6B6; --gold:#E3B24B; --good:#3DC47D; --bad:#FF6D5E;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1rem;line-height:1.55}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.app{min-height:100vh;display:flex;flex-direction:column}
+
+/* ---------- Kopfleiste mit Zeitstrahl ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:1rem;padding:.5rem 16px}
+.brand{flex:none;display:flex;flex-direction:column;line-height:1.15}
+.brand b{font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:1.05rem;letter-spacing:-.01em}
+.brand span{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.tl-scroll{flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin}
+.tl{list-style:none;margin:0 auto;padding:0;display:flex;align-items:flex-start;width:max-content}
+.tl li{position:relative;display:flex}
+.tl li.m::before{content:"";position:absolute;left:0;right:0;top:calc(.25rem + 17px);height:3px;background:var(--line);z-index:0}
+.tl li.m.first::before{left:50%}
+.tl li.m.last::before{right:50%}
+.tl li.m.done::before{background:var(--accent)}
+.tl li.m.half::before{background:linear-gradient(90deg,var(--accent) 50%,var(--line) 50%)}
+.tl li.m.first.half::before{background:var(--line)}
+.tl-stop{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:.1rem;background:none;border:0;cursor:pointer;padding:.25rem .55rem;color:var(--ink-2);min-width:4.6rem}
+.tl-stop .dot{width:37px;height:37px;border-radius:50%;background:var(--surface);border:2px solid var(--line);display:grid;place-items:center;transition:border-color .2s, transform .2s}
+.tl-stop .dot svg{width:25px;height:25px}
+.tl-stop .yr{font-family:var(--f-mono);font-size:.66rem;line-height:1.2;white-space:nowrap}
+.tl-stop .nm{font-size:.78rem;font-weight:700;line-height:1.2;white-space:nowrap}
+.tl-stop:hover .dot{border-color:var(--ink-2)}
+.tl-stop[aria-current="step"]{color:var(--ink)}
+.tl-stop[aria-current="step"] .dot{border-color:var(--accent);border-width:3px;transform:scale(1.12);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+.tl li.gap{align-self:flex-start;padding-top:calc(.25rem + 9px)}
+.tl li.gap span{display:block;position:relative;z-index:1;font-family:var(--f-mono);font-size:.62rem;color:var(--ink-2);background:var(--bg);padding:.1rem .4rem;border:1px dashed var(--line);border-radius:99px;white-space:nowrap}
+.tl li.gap::before{content:"";position:absolute;left:0;right:0;top:calc(.25rem + 17px);border-top:3px dotted var(--line)}
+.tl li.gap.done::before{border-top-color:var(--accent)}
+.tl li.sep{width:1px;background:var(--line);margin:.4rem .7rem;align-self:stretch}
+.tl-pill{align-self:center;margin-top:.35rem;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.3rem .8rem;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-2);white-space:nowrap;margin-inline:.15rem}
+.tl-pill:hover{border-color:var(--ink-2)}
+.tl-pill[aria-current="step"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.icon-btn{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.4rem .7rem;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-2)}
+.icon-btn:hover{color:var(--ink);border-color:var(--ink-2)}
+
+/* ---------- Bühne ---------- */
+main{flex:1;padding:clamp(1rem,2.6vw,2.4rem) clamp(16px,4vw,3.5rem)}
+.station{max-width:1440px;margin-inline:auto;animation:enter .35s ease-out}
+@keyframes enter{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.station{animation:none}}
+.model{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(1.5rem,3.2vw,3.2rem);align-items:start}
+@media (max-width:920px){.model{grid-template-columns:minmax(0,1fr)}}
+.txt{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.eyebrow{margin:0;font-family:var(--f-mono);font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.05}
+h1{font-size:clamp(2.3rem,5.2vw,4.4rem);font-stretch:122%;font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(2rem,4.2vw,3.5rem);font-stretch:122%;font-weight:800;letter-spacing:-.02em}
+h3{font-size:1.25rem;font-stretch:112%;font-weight:700}
+.who{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .8rem}
+.who .life{font-family:var(--f-mono);font-size:.8rem;color:var(--ink-2)}
+.modelname{display:inline-flex;align-items:center;gap:.5rem;align-self:flex-start;font-family:var(--f-display);font-stretch:110%;font-weight:700;font-size:1.05rem;color:var(--accent);border:2px solid currentColor;border-radius:99px;padding:.15rem .8rem}
+.lead{font-size:1.22rem;line-height:1.45;margin:0;max-width:34em}
+.facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55rem;max-width:38em}
+.facts li{position:relative;padding-left:1.4rem}
+.facts li::before{content:"";position:absolute;left:.2rem;top:.6em;width:.5rem;height:.5rem;border-radius:50%;background:var(--ink-2)}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+@media (max-width:560px){.pair{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.8rem 1rem;min-width:0}
+.box p{margin:.35rem 0 0}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;border-radius:6px;padding:.1rem .45rem}
+.tag.new{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.tag.lim{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.tag.info{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+blockquote{margin:0;padding:.2rem 0 .2rem 1rem;border-left:3px solid var(--line);font-style:italic;color:var(--ink-2);max-width:36em}
+blockquote cite{display:block;font-style:normal;font-family:var(--f-mono);font-size:.75rem;margin-top:.3rem}
+.fun{font-size:.92rem;color:var(--ink-2);margin:0}
+.fun b{color:var(--ink)}
+
+/* Experiment-Fläche */
+.vis{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem;display:flex;flex-direction:column;gap:.75rem;min-width:0}
+.vis-head{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+.vis-head h3{font-size:1.02rem}
+.vis canvas{display:block;width:100%;max-width:100%;aspect-ratio:4/3;border-radius:10px;background:var(--surface)}
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:.5rem .95rem;font-weight:700;cursor:pointer;font-size:.92rem;line-height:1.2}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--surface);padding:.45rem .8rem;cursor:pointer;font-weight:700;font-size:.88rem;color:var(--ink-2)}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.status{margin:0;font-size:.95rem;min-height:2.9em}
+.status b{font-family:var(--f-mono);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem 1rem;font-size:.82rem;color:var(--ink-2);margin:0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:.35rem}
+.sw{width:.85rem;height:.85rem;border-radius:50%;display:inline-block;flex:none}
+.sw.p{background:var(--proton)} .sw.n{background:var(--neutron)} .sw.e{background:var(--electron)} .sw.g{background:var(--gold)}
+.sw.pos{background:color-mix(in srgb,var(--proton) 30%,transparent);border:1.5px solid var(--proton)}
+.note{font-size:.8rem;color:var(--ink-2);margin:0}
+
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.meter{background:var(--surface-2);border-radius:10px;padding:.45rem .6rem;min-width:0}
+.meter span{display:block;font-size:.74rem;color:var(--ink-2);line-height:1.2}
+.meter b{font-family:var(--f-mono);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.meter small{font-family:var(--f-mono);color:var(--ink-2);font-size:.75rem;margin-left:.3rem}
+
+.dalton-sym{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:0;padding:0;list-style:none}
+.dalton-sym li{display:flex;flex-direction:column;align-items:center;gap:.2rem;font-size:.75rem;color:var(--ink-2)}
+.dalton-sym svg{width:34px;height:34px;color:var(--ink)}
+
+.flame{display:inline-flex;align-items:center;gap:.5rem;font-weight:700}
+.flame i{width:1.1rem;height:1.1rem;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;display:inline-block}
+
+/* ---------- Start ---------- */
+.start{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(1.5rem,4vw,4rem);align-items:center}
+@media (max-width:920px){.start{grid-template-columns:minmax(0,1fr)}}
+.start .txt{gap:1.2rem}
+.teaser{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem;max-width:34em}
+.teaser p{margin:.3rem 0 0}
+.preview{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.preview button{width:100%;display:grid;grid-template-columns:3.2rem 6.5rem minmax(0,1fr);align-items:center;gap:.9rem;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.55rem .9rem;cursor:pointer}
+.preview button:hover{border-color:var(--ink-2)}
+.preview svg{width:3.2rem;height:3.2rem}
+.preview .y{font-family:var(--f-mono);font-size:.85rem;color:var(--ink-2)}
+.preview .n{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.preview .n b{font-family:var(--f-display);font-stretch:112%;font-size:1.12rem}
+.preview .n span{font-size:.88rem;color:var(--ink-2)}
+@media (max-width:460px){.preview button{grid-template-columns:2.6rem minmax(0,1fr)}.preview .y{display:none}.preview svg{width:2.6rem;height:2.6rem}}
+
+/* ---------- Vergleich ---------- */
+.section-head{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.4rem;max-width:58em}
+.section-head p{margin:0}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+table.cmp{border-collapse:collapse;width:100%;min-width:760px}
+.cmp th,.cmp td{padding:.6rem .75rem;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.cmp thead th{vertical-align:bottom}
+.cmp thead th svg{width:3rem;height:3rem;display:block;margin:0 auto .3rem}
+.cmp thead th .y{display:block;font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);font-weight:400}
+.cmp thead th .nm{font-family:var(--f-display);font-stretch:112%;font-size:1.05rem}
+.cmp tbody th{text-align:left;font-weight:700;font-size:.92rem;width:13rem}
+.cmp tbody tr:last-child th,.cmp tbody tr:last-child td{border-bottom:0}
+.cmp tbody tr:hover{background:var(--surface-2)}
+.cmp td{font-size:.92rem}
+.yes,.no{font-family:var(--f-mono);font-weight:600;font-size:1.25rem}
+.yes{color:var(--good)} .no{color:var(--bad)}
+.cmp.quiz td.q{cursor:pointer}
+.cmp.quiz td.q:not(.shown) > *{visibility:hidden}
+.cmp.quiz td.q:not(.shown){background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,transparent 6px 12px)}
+.cmp.quiz td.q:not(.shown)::after{content:"?";font-family:var(--f-mono);font-weight:600;color:var(--ink-2)}
+.cmp.quiz td.q:not(.shown){position:relative}
+.cmp.quiz td.q:not(.shown)::after{position:absolute;inset:0;display:grid;place-items:center}
+.cmp-tools{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem;align-items:center}
+.takeaway{margin-top:1.4rem;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:820px){.takeaway{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- Bohr im Detail ---------- */
+.particles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin-bottom:1.4rem}
+@media (max-width:820px){.particles{grid-template-columns:minmax(0,1fr)}}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:.2rem .9rem;align-items:start}
+.pcard .ball{grid-row:span 2;width:3.4rem;height:3.4rem;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--f-mono);font-weight:600;font-size:1.5rem;box-shadow:inset -6px -8px 14px rgba(0,0,0,.22), inset 5px 6px 10px rgba(255,255,255,.28)}
+.pcard .ball.p{background:var(--proton)} .pcard .ball.n{background:var(--neutron)} .pcard .ball.e{background:var(--electron);width:2.6rem;height:2.6rem;margin:.4rem}
+.pcard h3{align-self:center}
+.pcard h3 small{font-family:var(--f-mono);font-weight:400;font-size:.85rem;color:var(--ink-2);margin-left:.3rem}
+.pcard dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.15rem .7rem;font-size:.9rem}
+.pcard dt{color:var(--ink-2)}
+.pcard dd{margin:0;font-weight:700}
+.pcard .say{grid-column:1 / -1;margin:.5rem 0 0;font-size:.88rem;color:var(--ink-2);border-top:1px solid var(--line);padding-top:.5rem}
+
+.kit{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.kit{grid-template-columns:minmax(0,1fr)}}
+.kit .vis canvas{aspect-ratio:1/1;max-height:72vh;width:auto;max-width:100%;margin-inline:auto}
+.kit-panel{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.chips{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:.3rem}
+@media (max-width:480px){.chips{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.chips button{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:.25rem 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.chips button small{font-family:var(--f-mono);font-size:.6rem;color:var(--ink-2)}
+.chips button b{font-size:.95rem}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips button[aria-pressed="true"] small{color:var(--bg)}
+.ctrs{display:flex;flex-direction:column;gap:.45rem}
+.ctr{display:grid;grid-template-columns:1.1rem minmax(0,1fr) 2.6rem 3rem 2.6rem;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.4rem .6rem}
+.ctr span.l{font-weight:700}
+.ctr span.l small{display:block;font-weight:400;font-size:.75rem;color:var(--ink-2)}
+.ctr button{height:2.4rem;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);font-size:1.3rem;font-weight:700;cursor:pointer;line-height:1}
+.ctr button:hover{border-color:var(--ink-2)}
+.ctr output{font-family:var(--f-mono);font-weight:600;font-size:1.4rem;text-align:center;font-variant-numeric:tabular-nums}
+.readout{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.9rem 1.2rem;align-items:center}
+.nuc{font-family:var(--f-mono);font-size:2.6rem;font-weight:600;display:inline-flex;align-items:center;line-height:1}
+.nuc .ms{display:inline-flex;flex-direction:column;align-items:flex-end;font-size:.95rem;line-height:1.15;margin-right:.15rem}
+.nuc .q{font-size:1rem;align-self:flex-start;margin-left:.1rem;color:var(--accent)}
+.readout .nm{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:1.3rem;line-height:1.15}
+.readout .sub{font-size:.88rem;color:var(--ink-2)}
+.readout dl{grid-column:1 / -1;margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem}
+.readout dl div{background:var(--surface-2);border-radius:8px;padding:.35rem .5rem;min-width:0}
+.readout dt{font-size:.72rem;color:var(--ink-2)}
+.readout dd{margin:0;font-family:var(--f-mono);font-weight:600;font-size:1.05rem}
+.shellrow{grid-column:1 / -1;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;font-size:.88rem}
+.shellrow .sh{font-family:var(--f-mono);border:1.5px solid var(--line);border-radius:8px;padding:.15rem .5rem}
+.shellrow .sh b{color:var(--electron)}
+.charge{grid-column:1 / -1;margin:0;font-weight:700}
+.charge.ion{color:var(--accent)}
+.merke{background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--radius);padding:.9rem 1.1rem}
+.merke ul{margin:.5rem 0 0;padding-left:1.1rem;display:flex;flex-direction:column;gap:.3rem}
+.merke .eq{font-family:var(--f-mono);font-weight:600}
+
+/* ---------- Übungen ---------- */
+.pse-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.7rem}
+.pse{display:grid;grid-template-columns:1.4rem repeat(18,minmax(2.35rem,1fr));gap:3px;min-width:860px}
+.pse .lab{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-2);display:grid;place-items:center}
+.pse .el{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:.12rem .2rem .18rem;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;min-width:0;text-align:left}
+.pse .el .z{font-family:var(--f-mono);font-size:.6rem;color:var(--ink-2)}
+.pse .el .s{font-weight:700;font-size:.98rem;align-self:center}
+.pse .el.tm{background:var(--surface-2)}
+.pse .el.f{background:var(--surface-2);border-style:dashed}
+.pse .el:hover{border-color:var(--ink)}
+.pse .el.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pse .el.sel .z{color:var(--bg)}
+.pse .el.found{box-shadow:inset 0 0 0 2px var(--good)}
+.pse .ph{grid-column:span 1;font-family:var(--f-mono);font-size:.58rem;color:var(--ink-2);border:1px dashed var(--line);border-radius:5px;display:grid;place-items:center;text-align:center}
+.pse-bottom{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.8rem;margin-top:.8rem}
+@media (max-width:820px){.pse-bottom{grid-template-columns:minmax(0,1fr)}}
+.pse-info{display:flex;gap:1rem;align-items:center}
+.bigcell{flex:none;width:5.6rem;height:5.6rem;border:2px solid var(--ink);border-radius:10px;display:flex;flex-direction:column;justify-content:space-between;padding:.3rem .45rem;background:var(--surface)}
+.bigcell .z{font-family:var(--f-mono);font-size:.9rem;font-weight:600}
+.bigcell .s{font-size:2rem;font-weight:700;align-self:center;line-height:1}
+.bigcell .n{font-size:.62rem;text-align:center;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pse-info p{margin:0}
+.tasks-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.8rem;margin:1.6rem 0 .9rem}
+.score{font-family:var(--f-mono);font-size:1rem}
+.score b{font-size:1.3rem}
+.tasks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:1100px){.tasks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.tasks{grid-template-columns:minmax(0,1fr)}}
+.task{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:flex;flex-direction:column;gap:.7rem;min-width:0}
+.task.ok{border-color:var(--good)}
+.task header{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+.task header span{font-family:var(--f-mono);font-size:.72rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.task h3{font-size:1.4rem}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.fields label{display:flex;flex-direction:column;gap:.2rem;font-size:.85rem;font-weight:700;color:var(--ink-2)}
+.fields label i{font-style:normal;display:inline-flex;align-items:center;gap:.3rem}
+input[type=number]{font:inherit;font-family:var(--f-mono);font-size:1.25rem;font-weight:600;width:100%;padding:.35rem .5rem;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{opacity:.4}
+input.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 10%,var(--bg))}
+input.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--bg))}
+details.pro{border-top:1px dashed var(--line);padding-top:.5rem}
+details.pro summary{cursor:pointer;font-size:.86rem;font-weight:700;color:var(--accent)}
+.shells-in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem;margin-top:.5rem}
+.shells-in label{display:flex;flex-direction:column;align-items:center;font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);gap:.15rem}
+.shells-in input{font-size:1.05rem;text-align:center;padding:.25rem}
+.task .actions{display:flex;gap:.45rem;flex-wrap:wrap}
+.task .actions .btn{padding:.4rem .75rem;font-size:.85rem}
+.fb{margin:0;font-size:.88rem;min-height:1.4em}
+.fb.ok{color:var(--good);font-weight:700}
+.fb.err{color:var(--bad)}
+.tip{margin-top:.6rem}
+.bonus{margin-top:1.2rem;display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;align-items:center}
+.bonus .found{font-family:var(--f-mono);font-weight:600}
+
+/* ---------- Blätter-Leiste ---------- */
+.pager{position:sticky;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.5rem 16px calc(.5rem + env(safe-area-inset-bottom,0px))}
+.pager .btn{min-width:0;max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pager .mid{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);text-align:center}
+@media (max-width:620px){.pager .mid .keys{display:none}.brand span{display:none}}
+
+
+/* ---------- Ergänzungen für die Unterrichtsreihe ---------- */
+a.icon-btn{text-decoration:none;display:inline-flex;align-items:center}
+.tl-stop .dot .num{font-family:var(--f-mono);font-weight:600;font-size:.9rem;line-height:1}
+.tl-stop[aria-current="step"] .dot .num{color:var(--accent)}
+.tl-stop .yr{text-transform:uppercase;letter-spacing:.06em}
+.good{color:var(--good)} .bad{color:var(--bad)}
+.vis canvas.wide{aspect-ratio:16/10}
+.vis canvas.square,.kit .vis canvas.square{aspect-ratio:1/1;width:100%;max-height:64vh}
+.vis canvas.tall{aspect-ratio:5/4}
+.preview .num{width:3.2rem;height:3.2rem;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:1.2rem;color:var(--ink-2)}
+@media (max-width:460px){.preview .num{width:2.6rem;height:2.6rem}}
+.q-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.q-list li{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.6rem .9rem;display:flex;gap:.7rem;align-items:baseline}
+.q-list li b.n{font-family:var(--f-mono);color:var(--accent)}
+.big-num{font-family:var(--f-mono);font-weight:600;font-size:clamp(1.6rem,3vw,2.4rem);line-height:1.1;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.slider{display:flex;flex-direction:column;gap:.2rem}
+.slider label{display:flex;justify-content:space-between;font-size:.85rem;font-weight:700;color:var(--ink-2)}
+.slider label output{font-family:var(--f-mono);color:var(--ink)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:.4rem}
+.kv div{background:var(--surface-2);border-radius:8px;padding:.35rem .55rem;min-width:0}
+.kv dt,.kv span{display:block;font-size:.72rem;color:var(--ink-2)}
+.kv dd,.kv b{margin:0;font-family:var(--f-mono);font-weight:600;font-size:1.05rem}
+.kv{margin:0}
+.formula{font-family:var(--f-mono);font-weight:600;font-size:1.15rem;background:var(--surface-2);border-radius:10px;padding:.55rem .8rem;overflow-x:auto;white-space:nowrap}
+.formula .arrow{color:var(--accent);padding:0 .4rem}
+.wide-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.wide-grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:1rem;min-width:0}
+
+/* Hefteintrag */
+.heft{background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--radius);padding:1.1rem 1.3rem;display:flex;flex-direction:column;gap:.8rem}
+.heft-title{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:.5rem}
+.heft-title h3{font-size:1.5rem}
+.heft-title span{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2)}
+.heft ol{margin:0;padding-left:1.3rem;display:flex;flex-direction:column;gap:.65rem}
+.heft [data-step]{transition:opacity .3s, filter .3s}
+.heft [data-step]:not(.shown){opacity:.12;filter:blur(5px);user-select:none}
+@media (prefers-reduced-motion: reduce){.heft [data-step]{transition:none}}
+.heft .eq{font-family:var(--f-mono);font-weight:600;background:var(--surface-2);padding:.05rem .35rem;border-radius:6px}
+.heft-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.heft-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Multiple Choice */
+.mc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem;display:flex;flex-direction:column;gap:.8rem}
+.mc-end{display:flex;flex-direction:column;gap:.9rem}
+.mc-head{display:flex;justify-content:space-between;align-items:baseline}
+.mc-bar{height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.mc-bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.mc-q{font-size:clamp(1.3rem,2.2vw,1.8rem);font-stretch:110%}
+.mc-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+@media (max-width:640px){.mc-opts{grid-template-columns:minmax(0,1fr)}}
+.mc-opt{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:.75rem 1rem;cursor:pointer;font-size:1.02rem;font-weight:700;line-height:1.3}
+.mc-opt:hover:not(:disabled){border-color:var(--ink-2)}
+.mc-opt:disabled{cursor:default}
+.mc-opt.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 14%,var(--surface))}
+.mc-opt.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.mc-why{margin:0;min-height:1.5em}
+.mc-end{align-items:flex-start}
+.mc-big{font-family:var(--f-mono);font-weight:600;font-size:3.5rem;margin:0;line-height:1}
+
+/* Zuordnen */
+.sort-pool{display:flex;flex-wrap:wrap;gap:.45rem;min-height:3rem;padding:.6rem;border:1.5px dashed var(--line);border-radius:var(--radius);margin-bottom:.8rem}
+.sort-cols{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:.7rem;margin-bottom:.8rem}
+@media (max-width:820px){.sort-cols{grid-template-columns:minmax(0,1fr)}}
+.sort-col{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.7rem;cursor:pointer;min-height:9rem;min-width:0}
+.sort-col:hover{border-color:var(--ink-2)}
+.sort-col h3{font-size:1.1rem;margin-bottom:.5rem}
+.sort-drop{display:flex;flex-direction:column;gap:.35rem}
+.sort-card{border:1.5px solid var(--line);background:var(--surface-2);border-radius:10px;padding:.4rem .7rem;cursor:pointer;font-size:.9rem;font-weight:700;text-align:left;line-height:1.3}
+.sort-card.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.sort-card.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 14%,var(--surface))}
+.sort-card.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.sort-fb{font-size:.92rem}
+
+/* Paare finden */
+.match{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:.8rem;margin-bottom:.8rem}
+.match-col{display:flex;flex-direction:column;gap:.45rem}
+.match-card{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:.55rem .8rem;cursor:pointer;font-size:.95rem;text-align:left;line-height:1.3}
+.match-card.term{font-weight:700;font-family:var(--f-display);font-stretch:110%;font-size:1.05rem}
+.match-card:hover{border-color:var(--ink-2)}
+.match-card.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.match-card.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--surface));cursor:default;opacity:.75}
+.match-card.err{border-color:var(--bad);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* Daten-Tabellen */
+table.data{border-collapse:collapse;width:100%}
+.data th,.data td{padding:.45rem .6rem;border-bottom:1px solid var(--line);text-align:left;font-size:.92rem}
+.data thead th{font-size:.78rem;color:var(--ink-2);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.data td.num{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.data tbody tr:last-child td,.data tbody tr:last-child th{border-bottom:0}
+.data tbody tr.sel{background:var(--surface-2)}
+.data tbody tr[data-pick]{cursor:pointer}
+.data tbody tr[data-pick]:hover{background:var(--surface-2)}
+
+/* Schritt-Leiste in Visualisierungen */
+.steps{display:flex;gap:.4rem;flex-wrap:wrap}
+.steps .btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.next-lesson{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;margin-top:1.4rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1.1rem}
+.next-lesson p{margin:0}
+a.btn{text-decoration:none;display:inline-block;color:inherit}
+a.btn.primary{color:var(--accent-ink)}
+.lw-svg{width:4.2rem;height:4.2rem;display:block}
+.lw-svg .lw-sym{font:700 40px var(--f-body);fill:var(--ink);text-anchor:middle;dominant-baseline:middle}
+.lw-svg .lw-dot{fill:var(--electron)}
+.lw-svg .lw-line{stroke:var(--electron);stroke-width:5;stroke-linecap:round}
+@media (max-width:760px){.top{flex-wrap:wrap;row-gap:.3rem}.top .brand{flex:1}.tl-scroll{order:3;flex-basis:100%}}
+
+.massbar{display:flex;height:1.6rem;border-radius:8px;overflow:hidden;background:var(--surface-2);gap:2px}
+.massbar i{display:block;height:100%}
+.massbar .k{background:var(--proton)} .massbar .h{background:var(--electron);min-width:3px}
+.nuk-explain{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1.2rem;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem}
+@media (max-width:560px){.nuk-explain{grid-template-columns:minmax(0,1fr)}}
+.nuk-big{font-family:var(--f-mono);font-weight:600;font-size:4.6rem;display:inline-flex;align-items:center;line-height:1}
+.nuk-big .ms{display:inline-flex;flex-direction:column;align-items:flex-end;font-size:1.6rem;line-height:1.25;margin-right:.2rem}
+.nuk-big .ms span:first-child{color:var(--good)} .nuk-big .ms span:last-child{color:var(--bad)}
+.nuk-labels p{margin:.15rem 0}
+.calc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.calc div{background:var(--surface-2);border-radius:10px;padding:.5rem .7rem;display:flex;flex-direction:column;gap:.1rem}
+.calc span{font-size:.78rem;color:var(--ink-2);display:flex;align-items:center;gap:.35rem}
+.calc b{font-family:var(--f-mono);font-size:1.6rem}
+.calc small{font-family:var(--f-mono);font-size:.78rem;color:var(--ink-2)}
+#nuklid .kit .vis canvas{max-height:46vh}
+.sketch{width:100%;max-width:360px;display:block;margin-top:.5rem}
+.sketch .sk-big{font:700 64px var(--f-body);fill:var(--ink)}
+.sketch .sk-sm{font:600 22px var(--f-mono);fill:var(--ink)}
+.sketch .sk-lab{font:700 12px var(--f-body);fill:var(--ink)}
+.sketch .sk-note{font:400 12px var(--f-mono);fill:var(--ink-2)}
+.sketch .sk-line{stroke:var(--ink-2);stroke-width:1.2;fill:none}
+.task .nuc-task{font-family:var(--f-mono);font-weight:600;font-size:2.6rem;display:inline-flex;align-items:center;line-height:1}
+.task .nuc-task .ms{display:inline-flex;flex-direction:column;align-items:flex-end;font-size:1rem;line-height:1.15;margin-right:.15rem}
+.fields.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.task header .nuc-task,.task header .nuc-task span{text-transform:none;letter-spacing:0;color:var(--ink);font-family:var(--f-mono)}
+.task header .nuc-task{font-size:2.6rem}.task header .nuc-task .ms span{font-size:1rem;font-weight:600}
+
+</style>
+</head>
+<body data-next="{&quot;href&quot;: &quot;03_Schalenmodell.html&quot;, &quot;label&quot;: &quot;Stunde 3: Schalenmodell&quot;}">
+<div class="app">
+<header class="top">
+  <div class="brand"><b>Atombau</b><span>Stunde 2 · Klasse 9</span></div>
+  <nav class="tl-scroll" aria-label="Stationen der Stunde">
+    <ol class="tl" id="tl">
+      <li><button class="tl-pill" data-go="start">Start</button></li>
+      <li class="sep" aria-hidden="true"></li>
+      <li class="m first"><button class="tl-stop" data-go="groesse"><span class="dot"><span class="num">1</span></span><span class="yr">Einstieg</span><span class="nm">Größe</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="masse"><span class="dot"><span class="num">2</span></span><span class="yr">Erarbeitung</span><span class="nm">Masse</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="nuklid"><span class="dot"><span class="num">3</span></span><span class="yr">Erarbeitung</span><span class="nm">Steckbrief</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="isotope"><span class="dot"><span class="num">4</span></span><span class="yr">Erarbeitung</span><span class="nm">Isotope</span></button></li>
+      <li class="m last"><button class="tl-stop" data-go="atommasse"><span class="dot"><span class="num">5</span></span><span class="yr">Vertiefung</span><span class="nm">Atommasse</span></button></li>
+      <li class="sep" aria-hidden="true"></li>
+      <li><button class="tl-pill" data-go="merke">Hefteintrag</button></li>
+      <li><button class="tl-pill" data-go="uebungen">Übungen</button></li>
+    </ol>
+  </nav>
+  <a class="icon-btn" href="00_Uebersicht.html" title="Zur Übersicht der Reihe">Übersicht</a>
+  <button class="icon-btn" id="fs" title="Vollbild (F)">Vollbild</button>
+</header>
+
+<main id="stage">
+<!-- ================= START ================= -->
+<section class="station" id="start" data-label="Start">
+  <div class="start">
+    <div class="txt">
+      <p class="eyebrow">Stunde 2 · Atombau</p>
+      <h1>Kern und Hülle in Zahlen</h1>
+      <p class="lead">Wir wissen jetzt: Ein Atom hat einen winzigen Kern aus Protonen und Neutronen und eine Hülle mit Elektronen. Aber wie klein ist „winzig“? Wie schwer ist ein Atom? Und sind alle Atome eines Elements wirklich gleich, wie Dalton dachte?</p>
+      <div class="teaser">
+        <span class="tag info">Wiederholung</span>
+        <p>Nenne die drei Elementarteilchen. Wo sitzen sie, und welche Ladung haben sie?</p>
+      </div>
+      <div class="teaser">
+        <span class="tag info">Leitfrage</span>
+        <p>Im Periodensystem steht bei Chlor die Atommasse <b>35,45 u</b>. Wie kann ein Atom eine „krumme“ Masse haben, wenn Protonen und Neutronen je etwa 1 u wiegen?</p>
+      </div>
+      <div class="controls"><button class="btn primary" data-go="groesse">Los geht's →</button></div>
+    </div>
+    <ol class="preview" aria-label="Stationen dieser Stunde">
+      <li><button data-go="groesse"><span class="num">1</span><span class="y">Einstieg</span><span class="n"><b>Wie groß ist ein Atom?</b><span>Zoom-Reise vom Sandkorn bis zum Kern</span></span></button></li>
+      <li><button data-go="masse"><span class="num">2</span><span class="y">Erarbeitung</span><span class="n"><b>Wo steckt die Masse?</b><span>Atome wiegen mit der Einheit u</span></span></button></li>
+      <li><button data-go="nuklid"><span class="num">3</span><span class="y">Erarbeitung</span><span class="n"><b>Steckbrief eines Atoms</b><span>Ordnungszahl und Massenzahl</span></span></button></li>
+      <li><button data-go="isotope"><span class="num">4</span><span class="y">Erarbeitung</span><span class="n"><b>Isotope</b><span>Gleiches Element, andere Masse</span></span></button></li>
+      <li><button data-go="atommasse"><span class="num">5</span><span class="y">Vertiefung</span><span class="n"><b>Warum 35,45 u?</b><span>Die mittlere Atommasse</span></span></button></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= GRÖSSE ================= -->
+<section class="station" id="groesse" data-label="Größe" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 1 · Größenverhältnisse</p>
+      <h2>Wie groß ist ein Atom?</h2>
+      <p class="lead">Ein Atom hat einen Durchmesser von etwa <b>0,1 Nanometer</b>. Das ist ein Zehnmillionstel Millimeter. Der Kern ist noch einmal <b>10 000- bis 100 000-mal kleiner</b>.</p>
+      <ul class="facts">
+        <li>1 nm (Nanometer) = 0,000 001 mm. In ein Millimeter passen etwa <b>10 Millionen</b> Atome nebeneinander.</li>
+        <li>Ein menschliches Haar ist etwa <b>500 000 Atome</b> dick.</li>
+        <li>Wäre der Atomkern so groß wie eine Kirsche, dann hätte die Atomhülle einen Durchmesser von etwa <b>einem Kilometer</b>.</li>
+        <li>Das Atom besteht also fast nur aus <b>leerem Raum</b>. Genau das hat Rutherfords Streuversuch gezeigt.</li>
+      </ul>
+      <div class="box"><span class="tag info">Zehnerpotenzen</span>
+        <p>Bei jedem Zoom-Schritt wird das Bild <b>10-mal</b> stärker vergrößert. Vom Sandkorn bis zum Atomkern sind es 12 Schritte, also eine Vergrößerung um das <b>Billionenfache</b>.</p></div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Zoom-Reise ins Atom</h3><span class="note" id="z-width"></span></div>
+      <canvas id="cv-zoom" aria-label="Zoom vom Sandkorn bis zum Atomkern"></canvas>
+      <div class="slider">
+        <label for="z-range">Vergrößerung <output id="z-out"></output></label>
+        <input type="range" id="z-range" min="0" max="12" step="0.01" value="0">
+      </div>
+      <div class="controls">
+        <button class="btn" id="z-out-btn">− 10× herauszoomen</button>
+        <button class="btn primary" id="z-in-btn">+ 10× hineinzoomen</button>
+      </div>
+      <p class="status" id="z-status" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MASSE ================= -->
+<section class="station" id="masse" data-label="Masse" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 2 · Atommasse</p>
+      <h2>Wo steckt die Masse?</h2>
+      <p class="lead">Ein Wasserstoffatom wiegt etwa 0,000 000 000 000 000 000 000 001 67 g. Mit so kleinen Zahlen rechnet niemand gern. Deshalb gibt es eine eigene Einheit: die <b>atomare Masseneinheit u</b>.</p>
+      <ul class="facts">
+        <li><b>1 u</b> ist ungefähr die Masse eines Protons oder eines Neutrons.</li>
+        <li>Ein Elektron wiegt nur etwa <b>1/1836 u</b>. Beim Wiegen fällt es kaum ins Gewicht.</li>
+        <li>Darum steckt mehr als <b>99,9 %</b> der Masse eines Atoms im <b>Kern</b>.</li>
+        <li>Die Masse eines Atoms in u ist ungefähr gleich der Zahl seiner Protonen und Neutronen.</li>
+      </ul>
+      <div class="pair">
+        <div class="box"><span class="tag info">Zum Staunen</span><p>Ein Würfelzucker nur aus Atomkernen würde mehrere hundert Millionen Tonnen wiegen.</p></div>
+        <div class="box"><span class="tag info">Einheit</span><p>u steht für englisch <i>unit</i>, Einheit. 1 u = 1,66 · 10⁻²⁴ g.</p></div>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Atomwaage</h3><span class="note">Lege 1-u-Gewichte auf, bis die Waage im Gleichgewicht ist.</span></div>
+      <div class="chips" id="m-chips"></div>
+      <canvas id="cv-waage" aria-label="Balkenwaage mit einem Atom und u-Gewichten"></canvas>
+      <div class="controls">
+        <button class="btn" id="w-minus">− 1 u</button>
+        <button class="btn primary" id="w-plus">+ 1 u</button>
+        <button class="btn" id="w-plus10">+ 10 u</button>
+        <button class="btn" id="w-show">Masse verraten</button>
+      </div>
+      <p class="status" id="w-status" aria-live="polite"></p>
+      <div>
+        <p class="note" style="margin-bottom:.3rem">Anteil an der Masse des Atoms:</p>
+        <div class="massbar" id="massbar"><i class="k"></i><i class="h"></i></div>
+        <ul class="legend" style="margin-top:.4rem"><li><i class="sw p"></i>Kern (Protonen + Neutronen): <b id="mb-k"></b></li><li><i class="sw e"></i>Hülle (Elektronen): <b id="mb-h"></b></li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= NUKLID ================= -->
+<section class="station" id="nuklid" data-label="Steckbrief" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Station 3 · Nuklidschreibweise</p>
+    <h2>Steckbrief eines Atoms</h2>
+    <p class="lead">Zwei Zahlen reichen, um den Aufbau eines Atoms vollständig zu beschreiben. Man schreibt sie links neben das Elementsymbol.</p>
+  </div>
+  <div class="kit">
+    <div class="stack">
+      <div class="nuk-explain">
+        <div class="nuk-big" aria-label="Nuklidschreibweise: Massenzahl oben, Ordnungszahl unten, dann Elementsymbol">
+          <span class="ms"><span id="nk-A">12</span><span id="nk-Z">6</span></span><span id="nk-S">C</span>
+        </div>
+        <div class="nuk-labels">
+          <p><span class="tag new">oben</span> <b>Massenzahl A</b> = Anzahl der Protonen + Neutronen</p>
+          <p><span class="tag lim">unten</span> <b>Ordnungszahl Z</b> = Anzahl der Protonen (= Elektronen im Atom)</p>
+          <p class="note">Die Ordnungszahl steht im Periodensystem. Sie legt das Element fest. Darum lässt man sie oft weg und schreibt einfach <b>C-12</b> oder <b>¹²C</b>.</p>
+        </div>
+      </div>
+      <div class="box calc" id="nk-calc"></div>
+      <div class="vis">
+        <div class="vis-head"><h3>So sieht das Atom aus</h3><span class="note">nicht maßstabsgetreu</span></div>
+        <canvas id="cv-nuk" class="square" aria-label="Bohr-Modell des gewählten Atoms"></canvas>
+      </div>
+    </div>
+    <div class="kit-panel">
+      <div>
+        <p class="note" style="margin-bottom:.4rem">Element wählen:</p>
+        <div class="chips" id="nk-chips"></div>
+      </div>
+      <div class="ctrs">
+        <div class="ctr"><i class="sw n"></i><span class="l">Neutronen<small>im Kern</small></span><button data-nk="-1" aria-label="Neutron entfernen">−</button><output id="nk-n"></output><button data-nk="1" aria-label="Neutron hinzufügen">+</button></div>
+      </div>
+      <div class="box">
+        <span class="tag info">Rechenweg</span>
+        <p><span class="eq formula" style="display:block;margin-top:.4rem">Neutronen = Massenzahl − Ordnungszahl</span></p>
+        <p class="note">Beispiel: ³⁵Cl hat 35 − 17 = 18 Neutronen.</p>
+      </div>
+      <div class="box">
+        <span class="tag info">Ausprobieren</span>
+        <p>Verändere die Zahl der Neutronen. Bleibt es dasselbe Element? Was ändert sich?</p>
+        <p class="note" id="nk-hint"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ISOTOPE ================= -->
+<section class="station" id="isotope" data-label="Isotope" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 4 · Isotope</p>
+      <h2>Gleiches Element, andere Masse</h2>
+      <p class="lead">Atome eines Elements haben immer gleich viele Protonen. Die Zahl der Neutronen kann aber verschieden sein. Solche Atome nennt man <b>Isotope</b>.</p>
+      <ul class="facts">
+        <li>Isotope haben die gleiche <b>Ordnungszahl</b>, aber eine verschiedene <b>Massenzahl</b>.</li>
+        <li>Sie haben gleich viele Elektronen. Darum verhalten sie sich <b>chemisch gleich</b>.</li>
+        <li>Fast alle Elemente sind <b>Isotopengemische</b>. Nur wenige, z. B. Fluor, Natrium und Aluminium, bestehen aus einer einzigen Atomsorte.</li>
+        <li>Manche Isotope sind instabil und zerfallen. Sie sind <b>radioaktiv</b>, z. B. Kohlenstoff-14 oder Tritium.</li>
+      </ul>
+      <div class="pair">
+        <div class="box"><span class="tag lim">Korrektur</span><p>Dalton dachte, alle Atome eines Elements seien völlig gleich. Das stimmt nicht ganz: Sie können verschieden schwer sein.</p></div>
+        <div class="box"><span class="tag info">Anwendung</span><p>Mit Kohlenstoff-14 bestimmt man das Alter von Mumien, Knochen und Holz (Radiokarbonmethode).</p></div>
+      </div>
+      <p class="fun"><b>Wort:</b> griechisch <i>isos tópos</i> = „gleicher Ort“. Isotope stehen am gleichen Platz im Periodensystem.</p>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Die Isotope im Vergleich</h3></div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Element">
+          <button data-iso="H" aria-pressed="true">Wasserstoff</button>
+          <button data-iso="C" aria-pressed="false">Kohlenstoff</button>
+          <button data-iso="Cl" aria-pressed="false">Chlor</button>
+          <button data-iso="O" aria-pressed="false">Sauerstoff</button>
+        </div>
+      </div>
+      <canvas id="cv-iso" class="wide" aria-label="Isotope eines Elements nebeneinander"></canvas>
+      <ul class="legend"><li><i class="sw p"></i>Proton</li><li><i class="sw n"></i>Neutron</li><li><i class="sw e"></i>Elektron</li></ul>
+      <p class="status" id="iso-status"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ATOMMASSE ================= -->
+<section class="station" id="atommasse" data-label="Atommasse" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 5 · Mittlere Atommasse</p>
+      <h2>Warum 35,45 u?</h2>
+      <p class="lead">Natürliches Chlor ist ein Gemisch: Etwa <b>3 von 4</b> Chloratomen sind Chlor-35, etwa <b>1 von 4</b> ist Chlor-37. Im Periodensystem steht der <b>Durchschnitt</b>.</p>
+      <ul class="facts">
+        <li>Die Atommasse im Periodensystem ist eine <b>mittlere Atommasse</b>. Sie berücksichtigt, wie häufig jedes Isotop vorkommt.</li>
+        <li>Darum ist sie meist keine ganze Zahl.</li>
+        <li>Sie liegt immer näher am <b>häufigsten</b> Isotop.</li>
+      </ul>
+      <div class="box">
+        <span class="tag info">So rechnet man</span>
+        <p class="formula" style="margin-top:.5rem">76 × 35 u + 24 × 37 u = 3548 u</p>
+        <p class="formula" style="margin-top:.4rem">3548 u : 100 Atome ≈ <b>35,5 u</b></p>
+        <p class="note" style="margin-top:.4rem">Genau gerechnet (mit den exakten Isotopenmassen) ergibt sich 35,45 u.</p>
+      </div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>100 Atome aus der Natur</h3></div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Element">
+          <button data-am="Cl" aria-pressed="true">Chlor</button>
+          <button data-am="B" aria-pressed="false">Bor</button>
+          <button data-am="Cu" aria-pressed="false">Kupfer</button>
+        </div>
+      </div>
+      <canvas id="cv-am" aria-label="100 Atome eines Isotopengemischs und ihre mittlere Masse"></canvas>
+      <div class="slider">
+        <label for="am-range"><span id="am-lab"></span><output id="am-out"></output></label>
+        <input type="range" id="am-range" min="0" max="100" step="1" value="76">
+      </div>
+      <div class="controls">
+        <button class="btn" id="am-nat">Natürliches Verhältnis</button>
+      </div>
+      <p class="status" id="am-status" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HEFTEINTRAG ================= -->
+<section class="station" id="merke" data-label="Hefteintrag" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Sicherung</p>
+    <h2>Hefteintrag: Atombau</h2>
+  </div>
+  <div class="heft-grid">
+    <div class="heft">
+      <div class="heft-title"><h3>Kern und Hülle</h3><span>Chemie · Klasse 9</span></div>
+      <ol>
+        <li data-step>Ein Atom ist etwa <b>0,1 nm</b> groß. Der Atomkern ist 10 000- bis 100 000-mal kleiner. Das Atom ist fast leer.</li>
+        <li data-step>Atommassen gibt man in der <b>atomaren Masseneinheit u</b> an. Proton und Neutron wiegen je etwa <b>1 u</b>, ein Elektron nur etwa 1/1836 u. Die Masse steckt fast vollständig im Kern.</li>
+        <li data-step><span class="eq">Ordnungszahl Z = Protonenzahl = Elektronenzahl</span> (im Atom)</li>
+        <li data-step><span class="eq">Massenzahl A = Protonen + Neutronen</span> → <span class="eq">Neutronen = A − Z</span></li>
+        <li data-step><b>Isotope</b> sind Atome eines Elements mit gleicher Protonenzahl, aber unterschiedlicher Neutronenzahl. Beispiel: ³⁵Cl und ³⁷Cl.</li>
+        <li data-step>Die Atommasse im Periodensystem ist eine <b>mittlere Atommasse</b>. Sie hängt davon ab, wie häufig die einzelnen Isotope vorkommen.</li>
+      </ol>
+      <div class="controls"><button class="btn primary" data-heft-next>Nächster Punkt</button><button class="btn" data-heft-all>Alles zeigen</button></div>
+    </div>
+    <div class="stack">
+      <div class="box">
+        <span class="tag info">Skizze für das Heft</span>
+        <svg viewBox="0 0 320 150" class="sketch" aria-label="Nuklidschreibweise mit Beschriftung">
+          <text x="92" y="58" class="sk-sm">35</text><text x="92" y="108" class="sk-sm">17</text>
+          <text x="128" y="100" class="sk-big">Cl</text>
+          <path d="M88 48 H40" class="sk-line"/><text x="6" y="30" class="sk-lab">Massenzahl A</text><text x="6" y="44" class="sk-note">p + n = 35</text>
+          <path d="M88 100 H40" class="sk-line"/><text x="6" y="124" class="sk-lab">Ordnungszahl Z</text><text x="6" y="138" class="sk-note">p = e = 17</text>
+          <text x="222" y="66" class="sk-note">n = 35 − 17</text><text x="222" y="82" class="sk-note">  = 18</text>
+        </svg>
+      </div>
+      <div class="box">
+        <span class="tag info">Merksatz</span>
+        <p>Die <b>Protonen</b> bestimmen das Element. Die <b>Neutronen</b> bestimmen, welches Isotop es ist.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ÜBUNGEN ================= -->
+<section class="station" id="uebungen" data-label="Übungen" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Jetzt seid ihr dran</p>
+    <h2>Atome entschlüsseln</h2>
+    <p class="lead">Bestimme für jedes Atom die Zahl der Protonen, Neutronen und Elektronen. Die Ordnungszahl findest du im Periodensystem.</p>
+  </div>
+  <div class="tasks-head">
+    <div class="score" id="score"></div>
+    <div class="controls">
+      <button class="btn" id="check-all">Alle prüfen</button>
+      <button class="btn primary" id="new-tasks">Neue Aufgaben</button>
+    </div>
+  </div>
+  <div class="tasks" id="tasks"></div>
+  <div class="section-head" style="margin-top:2rem">
+    <h3>Isotop oder nicht?</h3>
+    <p>Entscheide für jedes Paar, ob es sich um Isotope desselben Elements handelt.</p>
+  </div>
+  <div class="mc" id="iso-quiz"></div>
+  <div class="next-lesson"><p><b>Nächste Stunde:</b> Wie sind die Elektronen in der Hülle angeordnet? Energiestufen und Schalen.</p><a class="btn primary" href="03_Schalenmodell.html">Zu Stunde 3 →</a></div>
+</section>
+
+</main>
+
+<footer class="pager">
+  <button class="btn" id="prev">←</button>
+  <div class="mid"><span id="pos"></span><span class="keys"> · Pfeiltasten ← → oder Presenter</span></div>
+  <button class="btn primary" id="next">→</button>
+</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const MONO = '"IBM Plex Mono", ui-monospace, monospace';
+const SANS = '"Atkinson Hyperlegible", system-ui, sans-serif';
+const DISPLAY = '"Archivo", "Arial Narrow", system-ui, sans-serif';
+
+/* ---------------- Farben aus den Tokens ---------------- */
+const C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  ['bg','surface','surface-2','ink','ink-2','line','accent','electron','proton','neutron','gold','good','bad']
+    .forEach(k => C[k.replace('-2','2')] = cs.getPropertyValue('--' + k).trim() || '#888888');
+}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
+function rgb(h) { h = h.replace('#',''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function alpha(h, a) { return `rgba(${rgb(h).join(',')},${a})`; }
+function mix(a, b, t) { const A = rgb(a), B = rgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; }
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+const fmt = (v, d = 3) => v.toLocaleString('de-DE', {maximumSignificantDigits: d});
+const fix = (v, d = 1) => v.toLocaleString('de-DE', {minimumFractionDigits: d, maximumFractionDigits: d});
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const SUP = s => String(s).replace(/[0-9+\-−]/g, c => ({'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻','−':'⁻'})[c]);
+const SUB = s => String(s).replace(/[0-9]/g, c => '₀₁₂₃₄₅₆₇₈₉'[+c]);
+function chargeStr(q) { return q === 0 ? '' : (Math.abs(q) > 1 ? Math.abs(q) : '') + (q > 0 ? '+' : '−'); }
+
+function setup(cv) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return {ctx, w, h};
+}
+function sphere(ctx, x, y, r, col, label, lc, stroke) {
+  const g = ctx.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+  g.addColorStop(0, mix(col, '#ffffff', .45)); g.addColorStop(1, col);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+  if (label) {
+    ctx.fillStyle = lc || '#fff'; ctx.font = `700 ${Math.max(9, r * .95)}px ${MONO}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + r * .06);
+  }
+}
+function sign(ctx, x, y, r, plus) {
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.4, r * .22); ctx.lineCap = 'round';
+  const s = r * .48; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y);
+  if (plus) { ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); }
+  ctx.stroke();
+}
+function label(ctx, txt, x, y, o = {}) {
+  ctx.font = `${o.weight || 700} ${o.size || 14}px ${o.font || SANS}`;
+  ctx.fillStyle = o.color || C.ink; ctx.textAlign = o.align || 'center'; ctx.textBaseline = o.base || 'middle';
+  ctx.fillText(txt, x, y);
+}
+function roundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/* ---------------- Navigation ---------------- */
+const STATIONS = $$('.station').map(s => s.id);
+const LABEL = Object.fromEntries($$('.station').map(s => [s.id, s.dataset.label || s.id]));
+const NEXT_LESSON = document.body.dataset.next ? JSON.parse(document.body.dataset.next) : null;
+let cur = 0;
+function go(id) { const i = STATIONS.indexOf(id); if (i >= 0 && i !== cur) { cur = i; render(true); } }
+function render(scroll) {
+  const id = STATIONS[cur];
+  $$('.station').forEach(s => s.hidden = s.id !== id);
+  $$('[data-go]', $('#tl')).forEach(b => b.dataset.go === id ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
+  const stops = $$('#tl li.m');
+  const idx = stops.map(li => STATIONS.indexOf($('[data-go]', li).dataset.go));
+  stops.forEach((li, i) => { li.classList.toggle('done', idx[i] < cur); li.classList.toggle('half', idx[i] === cur); });
+  const prev = STATIONS[cur - 1], next = STATIONS[cur + 1];
+  $('#prev').textContent = prev ? '← ' + LABEL[prev] : '←';
+  $('#prev').disabled = !prev;
+  if (next) { $('#next').textContent = LABEL[next] + ' →'; $('#next').disabled = false; }
+  else if (NEXT_LESSON) { $('#next').textContent = NEXT_LESSON.label + ' →'; $('#next').disabled = false; }
+  else { $('#next').textContent = '→'; $('#next').disabled = true; }
+  $('#pos').textContent = `${cur + 1} / ${STATIONS.length}`;
+  try { history.replaceState(null, '', '#' + id); } catch (e) {}
+  if (scroll) {
+    window.scrollTo({top: 0});
+    const b = $(`#tl [data-go="${id}"]`);
+    if (b) { const sc = $('.tl-scroll'); sc.scrollLeft = b.offsetLeft - sc.clientWidth / 2 + b.offsetWidth / 2; }
+  }
+  lastT = performance.now();
+  for (const f of onShow) f(id);
+}
+const onShow = [];
+document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+$('#prev').onclick = () => { if (cur > 0) { cur--; render(true); } };
+$('#next').onclick = () => {
+  if (cur < STATIONS.length - 1) { cur++; render(true); }
+  else if (NEXT_LESSON) location.href = NEXT_LESSON.href;
+};
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, select, textarea') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (['ArrowRight','PageDown'].includes(e.key)) { e.preventDefault(); if (cur < STATIONS.length - 1) $('#next').click(); }
+  else if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); $('#prev').click(); }
+  else if (e.key === 'f' || e.key === 'F') toggleFs();
+});
+function toggleFs() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+}
+$('#fs').onclick = toggleFs;
+document.addEventListener('fullscreenchange', () => $('#fs').textContent = document.fullscreenElement ? 'Vollbild beenden' : 'Vollbild');
+
+/* ---------------- Render-Schleife ---------------- */
+const visuals = [];
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  const id = STATIONS[cur];
+  for (const v of visuals) if (v.station === id) v.tick(dt, now / 1000);
+  requestAnimationFrame(frame);
+}
+function startApp() {
+  const h0 = (location.hash || '').slice(1);
+  if (STATIONS.includes(h0)) cur = STATIONS.indexOf(h0);
+  render(false);
+  requestAnimationFrame(frame);
+}
+
+/* ================= Bohr-Atom zeichnen ================= */
+const SHELL_R = [.42, .62, .81, 1.0, 1.19], SHELL_N = ['K', 'L', 'M', 'N', 'O'];
+function shellsFor(e) { const out = []; let r = e; for (const c of [2, 8, 8, 99]) { if (r <= 0) break; const k = Math.min(c, r); out.push(k); r -= k; } return out; }
+function drawNucleus(ctx, cx, cy, rn, p, n) {
+  const N = p + n, pts = [];
+  for (let i = 0; i < N; i++) {
+    const r = rn * 1.02 * Math.sqrt(i), a = i * 2.399963;
+    const isP = Math.floor((i + 1) * p / N) > Math.floor(i * p / N);
+    pts.push({x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), isP});
+  }
+  for (let i = N - 1; i >= 0; i--) {
+    const q = pts[i]; sphere(ctx, q.x, q.y, rn, q.isP ? C.proton : C.neutron, null, null, alpha('#000000', .18));
+    if (q.isP && rn > 5) sign(ctx, q.x, q.y, rn * .8, true);
+  }
+}
+/* o: {p, n, shells, t, excite, hiOuter, fadeInner, rings (Anzahl gezeichneter Ringe), ghost: [Schale,...] leere Plätze, nucR} */
+function drawAtom(ctx, cx, cy, R, o) {
+  const shells = o.shells, S = shells.length, rings = Math.max(S, o.rings || 0);
+  const fs = Math.max(11, R * .065);
+  for (let s = 0; s < rings; s++) {
+    const r = R * SHELL_R[s], outer = o.hiOuter && s === S - 1;
+    ctx.lineWidth = outer ? 3 : 1.5;
+    ctx.strokeStyle = outer ? alpha(C.accent, .8) : alpha(C.ink2, o.fadeInner && s < S - 1 ? .2 : .45);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+  }
+  if (o.excite > 0 && S) {
+    ctx.setLineDash([5, 6]); ctx.lineWidth = 1.5; ctx.strokeStyle = alpha(C.ink2, .45 * Math.min(1, o.excite * 3));
+    ctx.beginPath(); ctx.arc(cx, cy, R * SHELL_R[S], 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (!o.noLabels) {
+    ctx.font = `600 ${fs}px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let s = 0; s < rings; s++) {
+      const r = R * SHELL_R[s], a = -Math.PI * .75;
+      const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+      ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(x, y, fs * .85, 0, 7); ctx.fill();
+      ctx.fillStyle = C.ink2; ctx.fillText(SHELL_N[s], x, y + 1);
+    }
+  }
+  drawNucleus(ctx, cx, cy, o.nucR || R * .046, o.p, o.n);
+  const er = Math.max(4.5, R * .042);
+  let ex = null;
+  for (let s = 0; s < S; s++) {
+    const k = shells[s], cap = o.ghost ? (o.ghost[s] || k) : k, a0 = o.t * (.9 / (s + 1)) + s * .7;
+    for (let j = 0; j < Math.max(k, cap); j++) {
+      const slots = Math.max(k, cap);
+      const ang = a0 + Math.PI * 2 * j / slots + (s === 0 ? Math.PI / 2 : 0);
+      let r = R * SHELL_R[s];
+      const isEx = o.excite > 0 && s === S - 1 && j === k - 1;
+      if (isEx) r = lerp(R * SHELL_R[s], R * SHELL_R[s + 1], o.excite);
+      const x = cx + r * Math.cos(ang), y = cy + r * Math.sin(ang);
+      if (j >= k) {
+        ctx.setLineDash([3, 3]); ctx.strokeStyle = alpha(C.electron, .7); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, er, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+        continue;
+      }
+      if (isEx) ex = {x, y, ang};
+      ctx.globalAlpha = o.fadeInner && s < S - 1 ? .35 : 1;
+      ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, er, 0, 7); ctx.fill();
+      sign(ctx, x, y, er, false);
+      ctx.globalAlpha = 1;
+    }
+  }
+  return ex;
+}
+/* Lewis-Schreibweise: Symbol mit Valenzelektronen als Punkte (oder Paare als Striche) */
+function lewisSlots(v) {
+  // Reihenfolge der Seiten: oben, rechts, unten, links – erst einzeln, dann paaren
+  const sides = [0, 0, 0, 0];
+  if (v === 2 && arguments[1] === 'He') { sides[0] = 2; return sides; }
+  for (let i = 0; i < v; i++) sides[i % 4]++;
+  return sides;
+}
+function drawLewis(ctx, x, y, sym, v, size, o = {}) {
+  const sides = o.sides || lewisSlots(v, sym);
+  ctx.font = `700 ${size}px ${SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(sym).width;
+  ctx.fillStyle = o.color || C.ink; ctx.fillText(sym, x, y + size * .04);
+  const dx = tw / 2 + size * .28, dy = size * .62, d = size * .1, gap = size * .17;
+  const dir = [[0, -dy, 1, 0], [dx, 0, 0, 1], [0, dy, 1, 0], [-dx, 0, 0, 1]];
+  ctx.fillStyle = o.dot || C.electron; ctx.strokeStyle = o.dot || C.electron; ctx.lineWidth = Math.max(2, size * .07); ctx.lineCap = 'round';
+  sides.forEach((k, i) => {
+    const [px, py, ux, uy] = dir[i];
+    if (k === 1) { ctx.beginPath(); ctx.arc(x + px, y + py, d, 0, 7); ctx.fill(); }
+    if (k === 2) {
+      if (o.lines) {
+        const L = size * .32; ctx.beginPath(); ctx.moveTo(x + px - ux * L, y + py - uy * L); ctx.lineTo(x + px + ux * L, y + py + uy * L); ctx.stroke();
+      } else for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + px + ux * gap * s, y + py + uy * gap * s, d, 0, 7); ctx.fill(); }
+    }
+  });
+  let right = x + dx + size * .2;
+  if (o.charge) {
+    if (o.brackets) {
+      ctx.strokeStyle = C.ink; ctx.lineWidth = Math.max(1.5, size * .05);
+      const bx = dx + size * .3, by = dy + size * .3;
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * bx + -s * size * .12, y - by); ctx.lineTo(x + s * bx, y - by); ctx.lineTo(x + s * bx, y + by); ctx.lineTo(x + s * bx - s * size * .12, y + by); ctx.stroke(); }
+      right = x + bx + size * .05;
+      ctx.font = `700 ${size * .5}px ${SANS}`; ctx.fillStyle = C.accent; ctx.textAlign = 'left';
+      ctx.fillText(o.charge, right, y - by + size * .1);
+    } else {
+      ctx.font = `700 ${size * .5}px ${SANS}`; ctx.fillStyle = C.accent; ctx.textAlign = 'left';
+      ctx.fillText(o.charge, x + tw / 2 + size * .05, y - size * .45);
+    }
+  }
+}
+
+/* Lewis-Schreibweise als SVG (für Tabellen und Aufgaben) */
+function lewisSVG(sym, v, o = {}) {
+  const sides = lewisSlots(v, sym), wide = sym.length > 1;
+  const P = lewisPos(wide);
+  let dots = '';
+  sides.forEach((k, s) => {
+    if (k === 1) dots += `<circle cx="${P[s][2][0]}" cy="${P[s][2][1]}" r="5" class="lw-dot"/>`;
+    if (k === 2) {
+      if (o.lines) { const [a, b] = [P[s][0], P[s][1]]; dots += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" class="lw-line"/>`; }
+      else dots += `<circle cx="${P[s][0][0]}" cy="${P[s][0][1]}" r="5" class="lw-dot"/><circle cx="${P[s][1][0]}" cy="${P[s][1][1]}" r="5" class="lw-dot"/>`;
+    }
+  });
+  return `<svg viewBox="0 0 120 120" class="lw-svg" role="img" aria-label="${sym} mit ${v} Valenzelektronen"><text x="60" y="62" class="lw-sym">${sym}</text>${dots}</svg>`;
+}
+/* je Seite: [Paarplatz 1, Paarplatz 2, Einzelplatz] */
+function lewisPos(wide) {
+  const xr = wide ? 104 : 96, xl = wide ? 16 : 24;
+  return [[[50, 24], [70, 24], [60, 24]], [[xr, 50], [xr, 70], [xr, 60]], [[50, 98], [70, 98], [60, 98]], [[xl, 50], [xl, 70], [xl, 60]]];
+}
+
+/* ================= Periodensystem-Daten ================= */
+const PSE_RAW = 'H Wasserstoff|He Helium|Li Lithium|Be Beryllium|B Bor|C Kohlenstoff|N Stickstoff|O Sauerstoff|F Fluor|Ne Neon|Na Natrium|Mg Magnesium|Al Aluminium|Si Silicium|P Phosphor|S Schwefel|Cl Chlor|Ar Argon|K Kalium|Ca Calcium|Sc Scandium|Ti Titan|V Vanadium|Cr Chrom|Mn Mangan|Fe Eisen|Co Cobalt|Ni Nickel|Cu Kupfer|Zn Zink|Ga Gallium|Ge Germanium|As Arsen|Se Selen|Br Brom|Kr Krypton|Rb Rubidium|Sr Strontium|Y Yttrium|Zr Zirconium|Nb Niob|Mo Molybdän|Tc Technetium|Ru Ruthenium|Rh Rhodium|Pd Palladium|Ag Silber|Cd Cadmium|In Indium|Sn Zinn|Sb Antimon|Te Tellur|I Iod|Xe Xenon|Cs Caesium|Ba Barium';
+const ELS = PSE_RAW.split('|').map((s, i) => { const [sym, ...nm] = s.split(' '); return {z: i + 1, sym, name: nm.join(' ')}; });
+const BY_SYM = Object.fromEntries(ELS.map(e => [e.sym, e]));
+const NEUTRONS = [0, 0, 2, 4, 5, 6, 6, 7, 8, 10, 10, 12, 12, 14, 14, 16, 16, 18, 22, 20, 20];
+const MASS = [0, 1.008, 4.003, 6.94, 9.012, 10.81, 12.01, 14.01, 16.00, 19.00, 20.18, 22.99, 24.31, 26.98, 28.09, 30.97, 32.06, 35.45, 39.95, 39.10, 40.08];
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+/* Hauptgruppe und Periode der ersten 20 Elemente */
+function hgOf(z) { if (z === 1) return 1; if (z === 2) return 8; const v = shellsFor(z).at(-1); return v; }
+function perOf(z) { return shellsFor(z).length; }
+const IONS = { // häufige Ionen
+  1: null, 3: 1, 4: 2, 5: null, 6: null, 7: -3, 8: -2, 9: -1, 11: 1, 12: 2, 13: 3, 14: null, 15: -3, 16: -2, 17: -1, 19: 1, 20: 2
+};
+const ANION_NAME = {N: 'Nitrid', O: 'Oxid', F: 'Fluorid', P: 'Phosphid', S: 'Sulfid', Cl: 'Chlorid', Br: 'Bromid', I: 'Iodid', Se: 'Selenid'};
+function ionName(sym) { return ANION_NAME[sym] ? ANION_NAME[sym] + '-Ion' : BY_SYM[sym].name + '-Ion'; }
+
+/* ================= Bausteine ================= */
+/* Hefteintrag: Punkte nacheinander aufdecken */
+$$('.heft').forEach(h => {
+  const items = $$('[data-step]', h), btn = $('[data-heft-next]', h), all = $('[data-heft-all]', h);
+  let k = 0;
+  const upd = () => { items.forEach((it, i) => it.classList.toggle('shown', i < k)); if (btn) { btn.disabled = k >= items.length; btn.textContent = k >= items.length ? 'Alles aufgedeckt' : `Nächster Punkt (${k + 1}/${items.length})`; } if (all) all.textContent = k >= items.length ? 'Wieder verdecken' : 'Alles zeigen'; };
+  if (btn) btn.onclick = () => { k = Math.min(items.length, k + 1); upd(); };
+  if (all) all.onclick = () => { k = k >= items.length ? 0 : items.length; upd(); };
+  upd();
+});
+
+/* Multiple-Choice-Quiz. qs: [{q, a:[...], ok: index, why}] */
+function mcQuiz(root, qs, o = {}) {
+  let list = [], i = 0, score = 0, answered = false;
+  function start() { list = o.pick ? shuffle(qs.slice()).slice(0, o.pick) : qs.slice(); i = 0; score = 0; show(); }
+  function show() {
+    if (i >= list.length) {
+      const pct = score / list.length;
+      root.innerHTML = `<div class="mc-end"><p class="eyebrow">Ergebnis</p><p class="mc-big">${score} / ${list.length}</p>
+        <p class="lead">${pct === 1 ? 'Perfekt! Alles richtig.' : pct >= .7 ? 'Sehr gut! Fast alles richtig.' : pct >= .4 ? 'Ordentlich. Schau dir die Fehler noch einmal an.' : 'Wiederhole die Inhalte und versuch es noch einmal.'}</p>
+        <button class="btn primary" data-mc="again">Neue Runde</button></div>`;
+      return;
+    }
+    const q = list[i]; answered = false;
+    const order = shuffle(q.a.map((t, k) => k));
+    root.innerHTML = `<div class="mc-head"><span class="eyebrow">Frage ${i + 1} von ${list.length}</span><span class="score">Punkte: <b>${score}</b></span></div>
+      <div class="mc-bar"><i style="width:${100 * i / list.length}%"></i></div>
+      <h3 class="mc-q">${q.q}</h3>
+      <div class="mc-opts">${order.map(k => `<button class="mc-opt" data-k="${k}">${q.a[k]}</button>`).join('')}</div>
+      <p class="mc-why" aria-live="polite"></p>
+      <div class="controls"><button class="btn primary" data-mc="next" hidden>${i + 1 < list.length ? 'Nächste Frage →' : 'Ergebnis anzeigen'}</button></div>`;
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('.mc-opt, [data-mc]'); if (!b) return;
+    if (b.dataset.mc === 'again') return start();
+    if (b.dataset.mc === 'next') { i++; return show(); }
+    if (answered) return;
+    answered = true;
+    const q = list[i], k = +b.dataset.k, ok = k === q.ok;
+    if (ok) score++;
+    $$('.mc-opt', root).forEach(x => { x.disabled = true; if (+x.dataset.k === q.ok) x.classList.add('ok'); });
+    if (!ok) b.classList.add('err');
+    $('.mc-why', root).innerHTML = (ok ? '<b class="good">Richtig!</b> ' : '<b class="bad">Leider falsch.</b> ') + (q.why || '');
+    $('[data-mc="next"]', root).hidden = false;
+    $('.score b', root).textContent = score;
+  });
+  start();
+}
+
+/* Zuordnen: Karten in Spalten sortieren. cats: [{id, name}], items: [{t, c}] */
+function sorter(root, cats, items) {
+  let sel = null;
+  function build() {
+    const its = shuffle(items.map((it, k) => ({...it, k})));
+    root.innerHTML = `<div class="sort-pool" data-pool>${its.map(it => `<button class="sort-card" data-k="${it.k}">${it.t}</button>`).join('')}</div>
+      <div class="sort-cols" style="--n:${cats.length}">${cats.map(c => `<div class="sort-col" data-c="${c.id}"><h3>${c.name}</h3><div class="sort-drop"></div></div>`).join('')}</div>
+      <div class="controls"><button class="btn primary" data-s="check">Prüfen</button><button class="btn" data-s="reset">Neu mischen</button><span class="sort-fb" aria-live="polite"></span></div>`;
+  }
+  root.addEventListener('click', e => {
+    const card = e.target.closest('.sort-card'), col = e.target.closest('.sort-col'), act = e.target.closest('[data-s]');
+    if (act) {
+      if (act.dataset.s === 'reset') { build(); sel = null; return; }
+      let ok = 0, placed = 0;
+      $$('.sort-col .sort-card', root).forEach(c => { placed++; const good = items[+c.dataset.k].c === c.closest('.sort-col').dataset.c; c.classList.toggle('ok', good); c.classList.toggle('err', !good); if (good) ok++; });
+      const left = $$('[data-pool] .sort-card', root).length;
+      $('.sort-fb', root).innerHTML = `<b>${ok}</b> von ${items.length} richtig zugeordnet${left ? ` · ${left} noch nicht einsortiert` : ''}${ok === items.length ? ' – perfekt!' : ''}`;
+      return;
+    }
+    if (card) {
+      if (sel === card) { card.classList.remove('sel'); sel = null; return; }
+      if (sel) sel.classList.remove('sel');
+      if (card.closest('.sort-col') && !sel) { /* zurück in den Pool bei erneutem Klick */ }
+      sel = card; card.classList.add('sel'); card.classList.remove('ok', 'err');
+      return;
+    }
+    if (col && sel) { $('.sort-drop', col).appendChild(sel); sel.classList.remove('sel'); sel = null; return; }
+    if (e.target.closest('[data-pool]') && sel) { $('[data-pool]', root).appendChild(sel); sel.classList.remove('sel'); sel = null; }
+  });
+  build();
+}
+
+/* Paare finden: Begriff ↔ Erklärung. pairs: [[begriff, erklärung], ...] */
+function matcher(root, pairs) {
+  let selL = null, selR = null, done = 0, tries = 0;
+  function build() {
+    done = 0; tries = 0;
+    const L = shuffle(pairs.map((p, k) => k)), R = shuffle(pairs.map((p, k) => k));
+    root.innerHTML = `<div class="match"><div class="match-col">${L.map(k => `<button class="match-card term" data-k="${k}">${pairs[k][0]}</button>`).join('')}</div>
+      <div class="match-col">${R.map(k => `<button class="match-card def" data-k="${k}">${pairs[k][1]}</button>`).join('')}</div></div>
+      <div class="controls"><span class="score">Gefunden: <b>0</b> / ${pairs.length}</span><button class="btn" data-m="reset">Neu mischen</button><span class="sort-fb" aria-live="polite"></span></div>`;
+  }
+  root.addEventListener('click', e => {
+    if (e.target.closest('[data-m="reset"]')) return build();
+    const c = e.target.closest('.match-card'); if (!c || c.classList.contains('ok')) return;
+    const isL = c.classList.contains('term');
+    if (isL) { if (selL) selL.classList.remove('sel'); selL = selL === c ? null : c; } else { if (selR) selR.classList.remove('sel'); selR = selR === c ? null : c; }
+    if (selL) selL.classList.add('sel'); if (selR) selR.classList.add('sel');
+    if (selL && selR) {
+      tries++;
+      const a = selL, b = selR;
+      if (a.dataset.k === b.dataset.k) { a.classList.add('ok'); b.classList.add('ok'); done++; $('.sort-fb', root).textContent = done === pairs.length ? `Alle Paare gefunden – mit ${tries} Versuchen!` : 'Passt!'; }
+      else { a.classList.add('err'); b.classList.add('err'); setTimeout(() => { a.classList.remove('err'); b.classList.remove('err'); }, 650); $('.sort-fb', root).textContent = 'Passt nicht. Versuch es noch einmal.'; }
+      a.classList.remove('sel'); b.classList.remove('sel'); selL = selR = null;
+      $('.score b', root).textContent = done;
+    }
+  });
+  build();
+}
+
+/* Kleine Element-Auswahl (Chips 1–20) */
+function elementChips(root, onPick, o = {}) {
+  const list = o.list || ELS.slice(0, 20).map(e => e.z);
+  root.innerHTML = list.map(z => { const e = ELS[z - 1]; return `<button data-z="${z}" title="${e.name}" aria-pressed="false"><small>${z}</small><b>${e.sym}</b></button>`; }).join('');
+  const set = z => $$('button', root).forEach(b => b.setAttribute('aria-pressed', +b.dataset.z === z));
+  root.onclick = ev => { const b = ev.target.closest('[data-z]'); if (!b) return; set(+b.dataset.z); onPick(+b.dataset.z); };
+  return set;
+}
+
+/* ================= ZOOM-REISE ================= */
+(() => {
+  const cv = $('#cv-zoom'), range = $('#z-range');
+  const Z = {k: 0, target: 0};
+  const OBJ = [
+    {id: 'sand', d: 1e-3, name: 'Sandkorn', size: '1 mm'},
+    {id: 'haar', d: 8e-5, name: 'Haar (Dicke)', size: '0,08 mm'},
+    {id: 'zelle', d: 7.5e-6, name: 'rotes Blutkörperchen', size: '7,5 µm'},
+    {id: 'bakt', d: 2e-6, name: 'Bakterium', size: '2 µm'},
+    {id: 'virus', d: 1e-7, name: 'Grippevirus', size: '100 nm'},
+    {id: 'mol', d: 1e-9, name: 'Zuckermolekül', size: '1 nm'},
+    {id: 'atom', d: 2.9e-10, name: 'Goldatom', size: '0,3 nm'},
+    {id: 'kern', d: 1.4e-14, name: 'Goldatomkern', size: '0,000 014 nm'}
+  ];
+  const fieldW = k => 3e-3 * Math.pow(10, -k);
+  function unit(m) {
+    if (m >= 1e-3) return fmt(m * 1e3, 2) + ' mm';
+    if (m >= 1e-6) return fmt(m * 1e6, 2) + ' µm';
+    if (m >= 1e-9) return fmt(m * 1e9, 2) + ' nm';
+    if (m >= 1e-12) return fmt(m * 1e12, 2) + ' pm';
+    return fmt(m * 1e15, 2) + ' fm';
+  }
+  const MSG = [
+    [0.5, 'Ein <b>Sandkorn</b>, etwa 1 mm groß. Daneben ein Haar.'],
+    [1.6, 'Ein <b>Haar</b> ist etwa 0,08 mm dick.'],
+    [2.6, 'Ein <b>rotes Blutkörperchen</b>. Ab hier braucht man ein Lichtmikroskop.'],
+    [3.6, 'Ein <b>Bakterium</b> ist nur wenige Mikrometer lang.'],
+    [5, 'Ein <b>Virus</b>: Nur noch im Elektronenmikroskop sichtbar.'],
+    [6.4, 'Ein <b>Molekül</b> aus wenigen Dutzend Atomen.'],
+    [8.5, 'Ein einzelnes <b>Atom</b>. Die Elektronen bilden eine Hülle. In der Mitte ist noch nichts zu sehen …'],
+    [10.3, 'Immer noch fast nur leerer Raum in der Hülle. Der Kern ist ein winziger Punkt.'],
+    [12.1, 'Der <b>Atomkern</b>: 79 Protonen und 118 Neutronen, dicht gepackt. Er ist rund 20 000-mal kleiner als das Atom.']
+  ];
+  function status() {
+    const k = Z.k;
+    $('#z-out').textContent = k < .05 ? '1×' : '10' + SUP(Math.round(k)) + '×';
+    $('#z-width').textContent = 'Bildbreite: ' + unit(fieldW(k));
+    $('#z-status').innerHTML = MSG.find(m => k < m[0])[1];
+  }
+  function drawObj(ctx, o, cx, cy, r, w, h, t) {
+    if (o.id === 'sand') {
+      const rr = rng(3); ctx.beginPath();
+      for (let i = 0; i <= 24; i++) { const a = i / 24 * 6.283, q = r * (.9 + .1 * Math.sin(a * 3 + 1) + .04 * rr()); i ? ctx.lineTo(cx + q * Math.cos(a), cy + q * Math.sin(a)) : ctx.moveTo(cx + q * Math.cos(a), cy + q * Math.sin(a)); }
+      ctx.closePath(); ctx.fillStyle = alpha(C.gold, .45); ctx.fill(); ctx.strokeStyle = alpha(C.gold, .9); ctx.lineWidth = 2; ctx.stroke();
+    } else if (o.id === 'haar') {
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(.5);
+      const L = Math.max(w, h) * 2;
+      ctx.fillStyle = alpha(C.ink2, .55); ctx.fillRect(-L, -r, 2 * L, 2 * r);
+      ctx.strokeStyle = alpha(C.ink, .3); ctx.lineWidth = 1;
+      for (let x = -L; x < L; x += Math.max(6, r * .9)) { ctx.beginPath(); ctx.moveTo(x, -r); ctx.lineTo(x + r * .5, r); ctx.stroke(); }
+      ctx.restore();
+    } else if (o.id === 'zelle') {
+      const g = ctx.createRadialGradient(cx, cy, r * .1, cx, cy, r);
+      g.addColorStop(0, alpha(C.proton, .4)); g.addColorStop(.7, alpha(C.proton, .75)); g.addColorStop(1, alpha(C.proton, .9));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+    } else if (o.id === 'bakt') {
+      ctx.fillStyle = alpha(C.good, .5); ctx.strokeStyle = C.good; ctx.lineWidth = 2;
+      roundRect(ctx, cx - r, cy - r * .4, 2 * r, r * .8, r * .4); ctx.fill(); ctx.stroke();
+    } else if (o.id === 'virus') {
+      ctx.strokeStyle = alpha(C.accent, .9); ctx.lineWidth = Math.max(1, r * .06);
+      for (let i = 0; i < 18; i++) { const a = i / 18 * 6.283; ctx.beginPath(); ctx.moveTo(cx + r * .8 * Math.cos(a), cy + r * .8 * Math.sin(a)); ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); ctx.stroke(); }
+      ctx.fillStyle = alpha(C.accent, .4); ctx.beginPath(); ctx.arc(cx, cy, r * .8, 0, 7); ctx.fill();
+    } else if (o.id === 'mol') {
+      const pts = [[-.5, -.2], [-.1, -.45], [.35, -.25], [.4, .2], [0, .4], [-.45, .25]];
+      ctx.strokeStyle = alpha(C.ink2, .6); ctx.lineWidth = Math.max(1, r * .05);
+      ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(cx + p[0] * r, cy + p[1] * r) : ctx.moveTo(cx + p[0] * r, cy + p[1] * r)); ctx.closePath(); ctx.stroke();
+      pts.forEach((p, i) => sphere(ctx, cx + p[0] * r, cy + p[1] * r, r * .17, i % 3 === 1 ? C.proton : C.neutron));
+    } else if (o.id === 'atom') {
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, alpha(C.electron, .05)); g.addColorStop(.75, alpha(C.electron, .14)); g.addColorStop(1, alpha(C.electron, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+      ctx.setLineDash([5, 6]); ctx.strokeStyle = alpha(C.ink2, .5); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      if (r < w * 3) {
+        const er = clamp(r * .035, 2, 7);
+        for (let i = 0; i < 14; i++) {
+          const a = i * 2.4 + (RM.matches ? 0 : t * (.3 + (i % 3) * .1)), q = r * (.35 + .55 * ((i * 37) % 10) / 10);
+          ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(cx + q * Math.cos(a), cy + q * Math.sin(a), er, 0, 7); ctx.fill();
+        }
+      }
+    } else if (o.id === 'kern') {
+      if (r < 2.5) { ctx.fillStyle = C.proton; ctx.beginPath(); ctx.arc(cx, cy, Math.max(1, r), 0, 7); ctx.fill(); }
+      else drawNucleus(ctx, cx, cy, r / Math.sqrt(197) * .98, 79, 118);
+    }
+  }
+  visuals.push({station: 'groesse', tick(dt, t) {
+    const {ctx, w, h} = setup(cv);
+    Z.k += (Z.target - Z.k) * Math.min(1, dt * (RM.matches ? 30 : 4));
+    if (Math.abs(Z.target - Z.k) < .002) Z.k = Z.target;
+    if (+range.value !== Z.k && document.activeElement !== range) range.value = Z.k;
+    const W = fieldW(Z.k), px = w / W, cx = w / 2, cy = h / 2;
+    const vis = OBJ.map(o => ({o, r: o.d / 2 * px})).filter(x => x.r > .6 && x.r < Math.max(w, h) * 6);
+    for (const x of vis) drawObj(ctx, x.o, cx, cy, x.r, w, h, t);
+    // Beschriftungen
+    const fs = Math.max(12, w * .024);
+    let ly = 14;
+    for (const x of vis) {
+      if (x.r < 3 && x.o.id !== 'kern') continue;
+      if (x.r > Math.min(w, h) * .62 && x.o.id !== 'haar') continue;
+      const a = -Math.PI / 4, ex = cx + x.r * Math.cos(a), ey = cy + x.r * Math.sin(a);
+      const tx = w - 12;
+      ctx.strokeStyle = alpha(C.ink2, .7); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(tx - 4, ly + fs * .6); ctx.stroke();
+      ctx.font = `700 ${fs}px ${SANS}`; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+      const txt = `${x.o.name} · ${x.o.size}`, tw = ctx.measureText(txt).width;
+      ctx.fillStyle = alpha(C.surface, .88); ctx.fillRect(tx - tw - 6, ly - 2, tw + 10, fs + 6);
+      ctx.fillStyle = C.ink; ctx.fillText(txt, tx, ly + 1);
+      ly += fs + 12;
+    }
+    // Maßstab
+    const target = w * .22, raw = W * target / w, p10 = Math.pow(10, Math.floor(Math.log10(raw)));
+    const nice = [1, 2, 5, 10].map(m => m * p10).filter(m => m <= raw).pop() || p10;
+    const L = nice * px;
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(14, h - 16); ctx.lineTo(14 + L, h - 16);
+    ctx.moveTo(14, h - 22); ctx.lineTo(14, h - 10); ctx.moveTo(14 + L, h - 22); ctx.lineTo(14 + L, h - 10); ctx.stroke();
+    label(ctx, unit(nice), 14 + L / 2, h - 30, {size: Math.max(11, w * .022), font: MONO});
+    status();
+  }});
+  range.oninput = () => { Z.target = +range.value; Z.k = Z.target; };
+  $('#z-in-btn').onclick = () => { Z.target = clamp(Math.floor(Z.target + 1.0001), 0, 12); };
+  $('#z-out-btn').onclick = () => { Z.target = clamp(Math.ceil(Z.target - 1.0001), 0, 12); };
+})();
+
+/* ================= ATOMWAAGE ================= */
+(() => {
+  const cv = $('#cv-waage');
+  const W = {z: 6, u: 0, tilt: 0, show: false};
+  const setChip = elementChips($('#m-chips'), z => { W.z = z; W.u = 0; W.show = false; status(); });
+  setChip(6);
+  const A = () => W.z + NEUTRONS[W.z];
+  function status() {
+    const e = ELS[W.z - 1], a = A();
+    let txt;
+    if (W.show) txt = `<b>${e.name}</b> (${W.z} Protonen + ${NEUTRONS[W.z]} Neutronen) wiegt etwa <b>${a} u</b>. Die ${W.z} Elektronen bringen zusammen nur ${fmt(W.z / 1836, 2)} u mit.`;
+    else if (W.u === a) txt = `Gleichgewicht! Ein ${e.name}atom wiegt etwa <b>${a} u</b>. Es hat ${W.z} Protonen und ${NEUTRONS[W.z]} Neutronen im Kern.`;
+    else if (W.u < a) txt = `Auf der rechten Seite liegen <b>${W.u} u</b>. Das ${e.name}atom ist schwerer.`;
+    else txt = `Auf der rechten Seite liegen <b>${W.u} u</b>. Das ist zu viel.`;
+    $('#w-status').innerHTML = txt;
+    const he = W.z / 1836, tot = a + he, pk = 100 * a / tot, ph = 100 * he / tot;
+    $('#massbar .k').style.width = pk + '%'; $('#massbar .h').style.width = ph + '%';
+    $('#mb-k').textContent = fix(pk, 3).replace(/0+$/, '') + ' %'; $('#mb-h').textContent = fix(ph, 3) + ' %';
+  }
+  $('#w-plus').onclick = () => { W.u = Math.min(60, W.u + 1); status(); };
+  $('#w-plus10').onclick = () => { W.u = Math.min(60, W.u + 10); status(); };
+  $('#w-minus').onclick = () => { W.u = Math.max(0, W.u - 1); status(); };
+  $('#w-show').onclick = () => { W.show = true; W.u = A(); status(); };
+  visuals.push({station: 'masse', tick(dt, t) {
+    const {ctx, w, h} = setup(cv);
+    const a = A(), target = clamp((W.u - a) * .03, -.22, .22);
+    W.tilt += (target - W.tilt) * Math.min(1, dt * (RM.matches ? 30 : 5));
+    const cx = w / 2, py = h * .3, arm = w * .33, fs = Math.max(12, w * .025);
+    // Ständer
+    ctx.fillStyle = C.line; roundRect(ctx, cx - w * .12, h * .9, w * .24, h * .05, 6); ctx.fill();
+    ctx.fillStyle = C.ink2; ctx.fillRect(cx - 4, py, 8, h * .6);
+    const lx = cx - arm * Math.cos(W.tilt), ly = py - arm * Math.sin(W.tilt), rx = cx + arm * Math.cos(W.tilt), ry = py + arm * Math.sin(W.tilt);
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(rx, ry); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(cx, py - 14); ctx.lineTo(cx - 9, py + 4); ctx.lineTo(cx + 9, py + 4); ctx.fill();
+    // Zeiger
+    ctx.strokeStyle = W.u === a ? C.good : C.bad; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, py); ctx.lineTo(cx + Math.sin(W.tilt) * h * .18, py - Math.cos(W.tilt) * h * .18); ctx.stroke();
+    // Schalen
+    const pw = w * .26, ph = h * .32;
+    function pan(x, y) {
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - pw / 2, y + ph); ctx.moveTo(x, y); ctx.lineTo(x + pw / 2, y + ph); ctx.stroke();
+      ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.ellipse(x, y + ph, pw / 2, 7, 0, 0, 7); ctx.fill();
+      return y + ph - 6;
+    }
+    const lb = pan(lx, ly), rb = pan(rx, ry);
+    // Atom links
+    const e = ELS[W.z - 1], R = Math.min(pw * .32, h * .14);
+    sphere(ctx, lx, lb - R, R, C.proton, null, null, alpha('#000', .2));
+    label(ctx, e.sym, lx, lb - R, {size: R * .8, color: '#fff'});
+    // Gewichte rechts (Stapel aus 1-u-Klötzen, 10er-Blöcke)
+    const tens = Math.floor(W.u / 10), ones = W.u % 10, bw = pw * .16, bh = Math.max(6, h * .022);
+    let col = 0, row = 0;
+    const put = (big) => {
+      const cols = 5, x = rx - pw * .42 + col * bw * 1.05, y = rb - (row + 1) * (bh * (big ? 1.8 : 1) + 2);
+      ctx.fillStyle = big ? C.ink : C.neutron; roundRect(ctx, x, y, bw, bh * (big ? 1.8 : 1), 3); ctx.fill();
+      if (big) label(ctx, '10', x + bw / 2, y + bh * .9, {size: Math.max(9, bh * .9), color: C.bg, font: MONO});
+      col++; if (col >= cols) { col = 0; row++; }
+    };
+    for (let i = 0; i < tens; i++) put(true);
+    if (col) { col = 0; row++; }
+    for (let i = 0; i < ones; i++) put(false);
+    label(ctx, `${W.u} u`, rx, ry - fs, {size: fs * 1.2, font: MONO});
+    label(ctx, W.show || W.u === a ? `${a} u` : '? u', lx, ly - fs, {size: fs * 1.2, font: MONO});
+  }});
+  status();
+})();
+
+/* ================= NUKLID ================= */
+const STABLE = {1: [1, 2], 2: [3, 4], 3: [6, 7], 4: [9], 5: [10, 11], 6: [12, 13], 7: [14, 15], 8: [16, 17, 18], 9: [19], 10: [20, 21, 22], 11: [23], 12: [24, 25, 26], 13: [27], 14: [28, 29, 30], 15: [31], 16: [32, 33, 34, 36], 17: [35, 37], 18: [36, 38, 40], 19: [39, 41], 20: [40, 42, 43, 44, 46, 48]};
+const RADIO = {'1-3': 'Tritium', '6-14': 'Kohlenstoff-14', '19-40': 'Kalium-40'};
+(() => {
+  const cv = $('#cv-nuk');
+  const N = {z: 6, n: 6, rot: 0};
+  const setChip = elementChips($('#nk-chips'), z => { N.z = z; N.n = NEUTRONS[z]; update(); });
+  setChip(6);
+  $$('[data-nk]').forEach(b => b.onclick = () => { N.n = clamp(N.n + +b.dataset.nk, 0, 30); update(); });
+  function update() {
+    const e = ELS[N.z - 1], A = N.z + N.n;
+    $('#nk-A').textContent = A; $('#nk-Z').textContent = N.z; $('#nk-S').textContent = e.sym; $('#nk-n').textContent = N.n;
+    $('#nk-calc').innerHTML = `
+      <div><span><i class="sw p"></i>Protonen</span><b>${N.z}</b><small>= Ordnungszahl</small></div>
+      <div><span><i class="sw n"></i>Neutronen</span><b>${N.n}</b><small>= ${A} − ${N.z}</small></div>
+      <div><span><i class="sw e"></i>Elektronen</span><b>${N.z}</b><small>= Protonen</small></div>`;
+    const key = N.z + '-' + A;
+    let hint;
+    if (STABLE[N.z].includes(A)) hint = `<b>${e.name}-${A}</b> ist stabil und kommt in der Natur vor.`;
+    else if (RADIO[key]) hint = `<b>${RADIO[key]}</b> kommt in der Natur in Spuren vor. Es ist radioaktiv.`;
+    else hint = `<b>${e.name}-${A}</b> ist instabil und kommt in der Natur nicht vor.`;
+    if (N.n !== NEUTRONS[N.z]) hint += ` Es ist immer noch <b>${e.name}</b>, denn die Zahl der Protonen hat sich nicht geändert. Nur die Masse ist anders: ein <b>Isotop</b>.`;
+    $('#nk-hint').innerHTML = hint;
+  }
+  visuals.push({station: 'nuklid', tick(dt) {
+    const {ctx, w, h} = setup(cv);
+    if (!RM.matches) N.rot += dt * .8;
+    const sh = shellsFor(N.z), R = Math.min(w, h) * .46 / SHELL_R[Math.max(1, sh.length - 1)];
+    drawAtom(ctx, w / 2, h / 2, R, {p: N.z, n: N.n, shells: sh, t: N.rot, nucR: R * (N.z + N.n < 8 ? .07 : .045)});
+  }});
+  update();
+})();
+
+/* ================= ISOTOPE ================= */
+(() => {
+  const cv = $('#cv-iso');
+  const SETS = {
+    H: {z: 1, list: [{a: 1, name: 'Wasserstoff', ab: '99,985 %', f: .99985}, {a: 2, name: 'Deuterium', ab: '0,015 %', f: .00015}, {a: 3, name: 'Tritium', ab: 'Spuren, radioaktiv', f: 0}],
+        txt: 'Wasserstoff hat als einziges Element eigene Namen für seine Isotope. „Schweres Wasser“ enthält Deuterium statt normalem Wasserstoff.'},
+    C: {z: 6, list: [{a: 12, ab: '98,9 %', f: .989}, {a: 13, ab: '1,1 %', f: .011}, {a: 14, ab: 'Spuren, radioaktiv', f: 0}],
+        txt: 'Lebewesen nehmen ständig Kohlenstoff auf, auch etwas C-14. Nach dem Tod zerfällt das C-14 langsam. Daraus lässt sich das Alter bestimmen.'},
+    Cl: {z: 17, list: [{a: 35, ab: '75,8 %', f: .758}, {a: 37, ab: '24,2 %', f: .242}],
+        txt: 'Chlor besteht aus zwei stabilen Isotopen. Daraus ergibt sich die „krumme“ Atommasse von 35,45 u (Station 5).'},
+    O: {z: 8, list: [{a: 16, ab: '99,76 %', f: .9976}, {a: 17, ab: '0,04 %', f: .0004}, {a: 18, ab: '0,20 %', f: .002}],
+        txt: 'Aus dem Verhältnis von O-18 zu O-16 im Eis der Antarktis kann man ablesen, wie warm es vor Tausenden von Jahren war.'}
+  };
+  const I = {el: 'H', rot: 0};
+  function status() {
+    const s = SETS[I.el], e = ELS[s.z - 1];
+    $('#iso-status').innerHTML = `Alle ${e.name}-Isotope haben <b>${s.z} Proton${s.z > 1 ? 'en' : ''}</b> und ${s.z} Elektron${s.z > 1 ? 'en' : ''}. Sie unterscheiden sich nur in der Zahl der <b>Neutronen</b>.<br>${s.txt}`;
+  }
+  $$('[data-iso]').forEach(b => b.onclick = () => { I.el = b.dataset.iso; $$('[data-iso]').forEach(x => x.setAttribute('aria-pressed', x === b)); status(); });
+  visuals.push({station: 'isotope', tick(dt) {
+    const {ctx, w, h} = setup(cv);
+    if (!RM.matches) I.rot += dt * .7;
+    const s = SETS[I.el], e = ELS[s.z - 1], n = s.list.length, cw = w / n;
+    const R = Math.min(cw * .42, h * .3) / SHELL_R[shellsFor(s.z).length - 1], fs = Math.max(12, Math.min(cw, h) * .07);
+    s.list.forEach((it, i) => {
+      const cx = cw * (i + .5), cy = h * .38, nn = it.a - s.z;
+      drawAtom(ctx, cx, cy, R, {p: s.z, n: nn, shells: shellsFor(s.z), t: I.rot + i, nucR: R * (it.a < 6 ? .07 : .04), noLabels: true});
+      const y0 = cy + R * SHELL_R[shellsFor(s.z).length - 1] * 1.05 + fs * .6;
+      label(ctx, `${e.name}-${it.a}`, cx, y0 + fs * .2, {size: fs * 1.05, font: DISPLAY});
+      if (it.name && it.name !== e.name) label(ctx, `„${it.name}“`, cx, y0 + fs * 1.35, {size: fs * .85, weight: 400, color: C.ink2});
+      label(ctx, `${s.z} p · ${nn} n · ${s.z} e`, cx, y0 + fs * 2.45, {size: fs * .85, font: MONO, weight: 600, color: C.ink2});
+      // Häufigkeit
+      const bw = cw * .7, bx = cx - bw / 2, by = y0 + fs * 3.3, bh = fs * .7;
+      ctx.fillStyle = C.surface2; roundRect(ctx, bx, by, bw, bh, 4); ctx.fill();
+      if (it.f > 0) { ctx.fillStyle = C.accent; roundRect(ctx, bx, by, Math.max(4, bw * it.f), bh, 4); ctx.fill(); }
+      label(ctx, it.ab, cx, by + bh + fs * .75, {size: fs * .8, weight: 700, color: C.ink});
+    });
+  }});
+  status();
+})();
+
+/* ================= MITTLERE ATOMMASSE ================= */
+(() => {
+  const cv = $('#cv-am'), range = $('#am-range');
+  const SETS = {
+    Cl: {name: 'Chlor', sym: 'Cl', a: [35, 37], m: [34.969, 36.966], nat: 76, real: '35,45'},
+    B: {name: 'Bor', sym: 'B', a: [10, 11], m: [10.013, 11.009], nat: 20, real: '10,81'},
+    Cu: {name: 'Kupfer', sym: 'Cu', a: [63, 65], m: [62.930, 64.928], nat: 69, real: '63,55'}
+  };
+  const M = {el: 'Cl', p: 76, shown: 76};
+  const mean = s => (M.p * s.m[0] + (100 - M.p) * s.m[1]) / 100;
+  function status() {
+    const s = SETS[M.el];
+    $('#am-lab').textContent = `Anteil ${s.name}-${s.a[0]}`;
+    $('#am-out').textContent = `${M.p} % : ${100 - M.p} %`;
+    const mv = mean(s);
+    $('#am-status').innerHTML = `${M.p} Atome ${s.sym}-${s.a[0]} und ${100 - M.p} Atome ${s.sym}-${s.a[1]}. Mittlere Atommasse: <b>${fix(mv, 2)} u</b>` +
+      (M.p === s.nat ? ` – so steht es im Periodensystem (${s.real} u).` : '.');
+  }
+  $$('[data-am]').forEach(b => b.onclick = () => {
+    M.el = b.dataset.am; M.p = SETS[M.el].nat; range.value = M.p;
+    $$('[data-am]').forEach(x => x.setAttribute('aria-pressed', x === b)); status();
+  });
+  range.oninput = () => { M.p = +range.value; status(); };
+  $('#am-nat').onclick = () => { M.p = SETS[M.el].nat; range.value = M.p; status(); };
+  visuals.push({station: 'atommasse', tick(dt) {
+    const {ctx, w, h} = setup(cv);
+    const s = SETS[M.el];
+    M.shown += (M.p - M.shown) * Math.min(1, dt * 8);
+    const gh = h * .66, cell = Math.min(w * .9 / 10, gh / 10), gx = (w - cell * 10) / 2, gy = 8;
+    const colA = C.good, colB = C.accent;
+    for (let i = 0; i < 100; i++) {
+      const isA = i < M.p, x = gx + (i % 10 + .5) * cell, y = gy + (Math.floor(i / 10) + .5) * cell;
+      const r = cell * (isA ? .36 : .42);
+      sphere(ctx, x, y, r, isA ? colA : colB, null);
+      if (cell > 26) label(ctx, isA ? s.a[0] : s.a[1], x, y + 1, {size: r * .75, font: MONO, color: '#fff'});
+    }
+    // Zahlenstrahl
+    const y = gy + cell * 10 + (h - gy - cell * 10) * .55, x0 = w * .12, x1 = w * .88, fs = Math.max(11, w * .024);
+    const lo = s.a[0] - .5, hi = s.a[1] + .5, X = v => x0 + (v - lo) / (hi - lo) * (x1 - x0);
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    for (let v = Math.ceil(lo * 2) / 2; v <= hi; v += .5) {
+      const big = Number.isInteger(v);
+      ctx.beginPath(); ctx.moveTo(X(v), y - (big ? 7 : 4)); ctx.lineTo(X(v), y + (big ? 7 : 4)); ctx.stroke();
+      if (big) label(ctx, v + ' u', X(v), y + fs * 1.3, {size: fs, font: MONO, weight: 600, color: C.ink2});
+    }
+    sphere(ctx, X(s.a[0]), y, 7, colA); sphere(ctx, X(s.a[1]), y, 8, colB);
+    const mv = (M.shown * s.m[0] + (100 - M.shown) * s.m[1]) / 100, mx = X(mv);
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(mx, y - 4); ctx.lineTo(mx - 8, y - 18); ctx.lineTo(mx + 8, y - 18); ctx.fill();
+    label(ctx, `Ø ${fix(mv, 2)} u`, mx, y - 18 - fs * .9, {size: fs * 1.15, font: MONO});
+  }});
+  status();
+})();
+
+/* ================= ÜBUNGEN ================= */
+(() => {
+  const EXTRA = {79: ['Au', 'Gold'], 82: ['Pb', 'Blei'], 92: ['U', 'Uran']};
+  const el = z => z <= ELS.length ? ELS[z - 1] : {sym: EXTRA[z][0], name: EXTRA[z][1]};
+  const POOL = [[1, 2], [2, 4], [3, 7], [6, 12], [6, 14], [7, 14], [8, 16], [8, 18], [9, 19], [11, 23], [12, 24], [13, 27], [15, 31], [16, 32], [17, 35], [17, 37], [19, 39], [20, 40], [26, 56], [29, 63], [47, 107], [53, 127], [79, 197], [82, 207], [92, 235], [92, 238]];
+  let tasks = [];
+  function newTasks() {
+    tasks = shuffle(POOL.slice()).slice(0, 6).map(([z, a]) => ({z, a, ok: false}));
+    $('#tasks').innerHTML = tasks.map((t, i) => {
+      const e = el(t.z);
+      return `<article class="task" data-i="${i}">
+        <header><span class="nuc-task" aria-label="${e.name}-${t.a}"><span class="ms"><span>${t.a}</span><span>${t.z}</span></span>${e.sym}</span><span>Aufgabe ${i + 1}</span></header>
+        <p class="note" style="margin:0">${e.name}-${t.a}</p>
+        <div class="fields three">
+          <label for="t${i}-p"><i><i class="sw p"></i>Protonen</i><input type="number" min="0" max="300" inputmode="numeric" id="t${i}-p"></label>
+          <label for="t${i}-n"><i><i class="sw n"></i>Neutronen</i><input type="number" min="0" max="300" inputmode="numeric" id="t${i}-n"></label>
+          <label for="t${i}-e"><i><i class="sw e"></i>Elektronen</i><input type="number" min="0" max="300" inputmode="numeric" id="t${i}-e"></label>
+        </div>
+        <div class="actions"><button class="btn primary" data-act="check">Prüfen</button><button class="btn" data-act="solve">Lösung</button></div>
+        <p class="fb" aria-live="polite"></p></article>`;
+    }).join('');
+    score();
+  }
+  const val = id => { const x = $('#' + id); return x && x.value !== '' ? +x.value : null; };
+  const mark = (id, ok) => { const x = $('#' + id); x.classList.toggle('ok', ok); x.classList.toggle('err', !ok); };
+  function check(i) {
+    const t = tasks[i], card = $(`.task[data-i="${i}"]`), fb = $('.fb', card), n = t.a - t.z;
+    const p = val(`t${i}-p`), nn = val(`t${i}-n`), e = val(`t${i}-e`);
+    if (p === null && nn === null && e === null) { fb.className = 'fb'; fb.textContent = 'Trage zuerst deine Antworten ein.'; return; }
+    mark(`t${i}-p`, p === t.z); mark(`t${i}-n`, nn === n); mark(`t${i}-e`, e === t.z);
+    t.ok = p === t.z && nn === n && e === t.z;
+    let txt;
+    if (t.ok) txt = 'Richtig!';
+    else if (nn === t.a) txt = 'Die Massenzahl ist nicht die Neutronenzahl. Rechne: Neutronen = Massenzahl − Ordnungszahl.';
+    else if (p !== t.z) txt = 'Die Protonenzahl ist die untere Zahl, die Ordnungszahl.';
+    else if (e !== t.z) txt = 'Im ungeladenen Atom gibt es genauso viele Elektronen wie Protonen.';
+    else txt = 'Neutronen = Massenzahl − Ordnungszahl.';
+    fb.className = 'fb ' + (t.ok ? 'ok' : 'err'); fb.textContent = txt;
+    card.classList.toggle('ok', t.ok); score();
+  }
+  function solve(i) {
+    const t = tasks[i];
+    $(`#t${i}-p`).value = t.z; $(`#t${i}-n`).value = t.a - t.z; $(`#t${i}-e`).value = t.z;
+    check(i);
+    $(`.task[data-i="${i}"] .fb`).textContent = `Lösung: ${t.z} Protonen, ${t.a} − ${t.z} = ${t.a - t.z} Neutronen, ${t.z} Elektronen.`;
+  }
+  function score() { $('#score').innerHTML = `Richtig gelöst: <b>${tasks.filter(t => t.ok).length}</b> von ${tasks.length}`; }
+  $('#tasks').addEventListener('click', ev => { const b = ev.target.closest('[data-act]'); if (!b) return; const i = +b.closest('.task').dataset.i; b.dataset.act === 'check' ? check(i) : solve(i); });
+  $('#tasks').addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.matches('input')) check(+ev.target.closest('.task').dataset.i); });
+  $('#check-all').onclick = () => tasks.forEach((_, i) => { if (['p', 'n', 'e'].some(k => val(`t${i}-${k}`) !== null)) check(i); });
+  $('#new-tasks').onclick = newTasks;
+  newTasks();
+
+  const Y = 'Ja, das sind Isotope', N = 'Nein, keine Isotope';
+  mcQuiz($('#iso-quiz'), [
+    {q: '¹²C und ¹⁴C', a: [Y, N], ok: 0, why: 'Beide haben 6 Protonen (Kohlenstoff), aber 6 bzw. 8 Neutronen.'},
+    {q: '¹⁴C und ¹⁴N', a: [Y, N], ok: 1, why: 'Gleiche Massenzahl, aber verschiedene Protonenzahl (6 und 7). Das sind zwei verschiedene Elemente.'},
+    {q: '³⁵Cl und ³⁷Cl', a: [Y, N], ok: 0, why: 'Beide haben 17 Protonen, aber 18 bzw. 20 Neutronen.'},
+    {q: '⁴⁰Ar und ⁴⁰Ca', a: [Y, N], ok: 1, why: 'Argon hat 18 Protonen, Calcium 20. Gleiche Massenzahl macht noch keine Isotope.'},
+    {q: 'Ein Atom mit 8 p und 8 n und ein Atom mit 8 p und 10 n', a: [Y, N], ok: 0, why: 'Beide sind Sauerstoff (8 Protonen) mit verschiedener Neutronenzahl: O-16 und O-18.'},
+    {q: 'Ein Atom mit 6 p und 6 n und ein Atom mit 7 p und 6 n', a: [Y, N], ok: 1, why: 'Die Protonenzahl ist verschieden: Kohlenstoff und Stickstoff.'},
+    {q: '²³⁵U und ²³⁸U', a: [Y, N], ok: 0, why: 'Beide sind Uran (92 Protonen) mit 143 bzw. 146 Neutronen.'},
+    {q: '¹H und ²H', a: [Y, N], ok: 0, why: 'Wasserstoff und Deuterium: beide 1 Proton, 0 bzw. 1 Neutron.'}
+  ], {pick: 6});
+})();
+
+startApp();
+})();
+</script>
+</body>
+</html>

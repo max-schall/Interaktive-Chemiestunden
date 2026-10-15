@@ -1,0 +1,1109 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wiederholung und Selbsttest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: feste Zeitstrahl-Leiste oben, eine Station pro Bildschirm (Text links, Experiment rechts), Blätter-Leiste unten – gebaut für Beamer & Presenter */
+:root{
+  --bg:#F2F5F9; --surface:#FFFFFF; --surface-2:#E6EBF2; --ink:#121D2B; --ink-2:#4B5A6D; --line:#CBD4E0;
+  --accent:#2453C4; --accent-ink:#FFFFFF;
+  --electron:#2563EB; --proton:#D63E2B; --neutron:#7D8898; --gold:#C9952A; --good:#1C8A4C; --bad:#C2392B;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --radius:14px;
+  font-size:clamp(16px, 0.75vw + 9px, 22px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D131B; --surface:#151D28; --surface-2:#1E2836; --ink:#E8EDF4; --ink-2:#A2AEBE; --line:#2C394A;
+    --accent:#7AA2FF; --accent-ink:#0D131B;
+    --electron:#5C8DFF; --proton:#FF6B55; --neutron:#9AA6B6; --gold:#E3B24B; --good:#3DC47D; --bad:#FF6D5E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D131B; --surface:#151D28; --surface-2:#1E2836; --ink:#E8EDF4; --ink-2:#A2AEBE; --line:#2C394A;
+  --accent:#7AA2FF; --accent-ink:#0D131B;
+  --electron:#5C8DFF; --proton:#FF6B55; --neutron:#9AA6B6; --gold:#E3B24B; --good:#3DC47D; --bad:#FF6D5E;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1rem;line-height:1.55}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.app{min-height:100vh;display:flex;flex-direction:column}
+
+/* ---------- Kopfleiste mit Zeitstrahl ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:1rem;padding:.5rem 16px}
+.brand{flex:none;display:flex;flex-direction:column;line-height:1.15}
+.brand b{font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:1.05rem;letter-spacing:-.01em}
+.brand span{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.tl-scroll{flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin}
+.tl{list-style:none;margin:0 auto;padding:0;display:flex;align-items:flex-start;width:max-content}
+.tl li{position:relative;display:flex}
+.tl li.m::before{content:"";position:absolute;left:0;right:0;top:calc(.25rem + 17px);height:3px;background:var(--line);z-index:0}
+.tl li.m.first::before{left:50%}
+.tl li.m.last::before{right:50%}
+.tl li.m.done::before{background:var(--accent)}
+.tl li.m.half::before{background:linear-gradient(90deg,var(--accent) 50%,var(--line) 50%)}
+.tl li.m.first.half::before{background:var(--line)}
+.tl-stop{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:.1rem;background:none;border:0;cursor:pointer;padding:.25rem .55rem;color:var(--ink-2);min-width:4.6rem}
+.tl-stop .dot{width:37px;height:37px;border-radius:50%;background:var(--surface);border:2px solid var(--line);display:grid;place-items:center;transition:border-color .2s, transform .2s}
+.tl-stop .dot svg{width:25px;height:25px}
+.tl-stop .yr{font-family:var(--f-mono);font-size:.66rem;line-height:1.2;white-space:nowrap}
+.tl-stop .nm{font-size:.78rem;font-weight:700;line-height:1.2;white-space:nowrap}
+.tl-stop:hover .dot{border-color:var(--ink-2)}
+.tl-stop[aria-current="step"]{color:var(--ink)}
+.tl-stop[aria-current="step"] .dot{border-color:var(--accent);border-width:3px;transform:scale(1.12);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+.tl li.gap{align-self:flex-start;padding-top:calc(.25rem + 9px)}
+.tl li.gap span{display:block;position:relative;z-index:1;font-family:var(--f-mono);font-size:.62rem;color:var(--ink-2);background:var(--bg);padding:.1rem .4rem;border:1px dashed var(--line);border-radius:99px;white-space:nowrap}
+.tl li.gap::before{content:"";position:absolute;left:0;right:0;top:calc(.25rem + 17px);border-top:3px dotted var(--line)}
+.tl li.gap.done::before{border-top-color:var(--accent)}
+.tl li.sep{width:1px;background:var(--line);margin:.4rem .7rem;align-self:stretch}
+.tl-pill{align-self:center;margin-top:.35rem;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.3rem .8rem;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-2);white-space:nowrap;margin-inline:.15rem}
+.tl-pill:hover{border-color:var(--ink-2)}
+.tl-pill[aria-current="step"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.icon-btn{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.4rem .7rem;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-2)}
+.icon-btn:hover{color:var(--ink);border-color:var(--ink-2)}
+
+/* ---------- Bühne ---------- */
+main{flex:1;padding:clamp(1rem,2.6vw,2.4rem) clamp(16px,4vw,3.5rem)}
+.station{max-width:1440px;margin-inline:auto;animation:enter .35s ease-out}
+@keyframes enter{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.station{animation:none}}
+.model{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(1.5rem,3.2vw,3.2rem);align-items:start}
+@media (max-width:920px){.model{grid-template-columns:minmax(0,1fr)}}
+.txt{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.eyebrow{margin:0;font-family:var(--f-mono);font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.05}
+h1{font-size:clamp(2.3rem,5.2vw,4.4rem);font-stretch:122%;font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(2rem,4.2vw,3.5rem);font-stretch:122%;font-weight:800;letter-spacing:-.02em}
+h3{font-size:1.25rem;font-stretch:112%;font-weight:700}
+.who{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .8rem}
+.who .life{font-family:var(--f-mono);font-size:.8rem;color:var(--ink-2)}
+.modelname{display:inline-flex;align-items:center;gap:.5rem;align-self:flex-start;font-family:var(--f-display);font-stretch:110%;font-weight:700;font-size:1.05rem;color:var(--accent);border:2px solid currentColor;border-radius:99px;padding:.15rem .8rem}
+.lead{font-size:1.22rem;line-height:1.45;margin:0;max-width:34em}
+.facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55rem;max-width:38em}
+.facts li{position:relative;padding-left:1.4rem}
+.facts li::before{content:"";position:absolute;left:.2rem;top:.6em;width:.5rem;height:.5rem;border-radius:50%;background:var(--ink-2)}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+@media (max-width:560px){.pair{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.8rem 1rem;min-width:0}
+.box p{margin:.35rem 0 0}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;border-radius:6px;padding:.1rem .45rem}
+.tag.new{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.tag.lim{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.tag.info{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+blockquote{margin:0;padding:.2rem 0 .2rem 1rem;border-left:3px solid var(--line);font-style:italic;color:var(--ink-2);max-width:36em}
+blockquote cite{display:block;font-style:normal;font-family:var(--f-mono);font-size:.75rem;margin-top:.3rem}
+.fun{font-size:.92rem;color:var(--ink-2);margin:0}
+.fun b{color:var(--ink)}
+
+/* Experiment-Fläche */
+.vis{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem;display:flex;flex-direction:column;gap:.75rem;min-width:0}
+.vis-head{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+.vis-head h3{font-size:1.02rem}
+.vis canvas{display:block;width:100%;max-width:100%;aspect-ratio:4/3;border-radius:10px;background:var(--surface)}
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:.5rem .95rem;font-weight:700;cursor:pointer;font-size:.92rem;line-height:1.2}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--surface);padding:.45rem .8rem;cursor:pointer;font-weight:700;font-size:.88rem;color:var(--ink-2)}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.status{margin:0;font-size:.95rem;min-height:2.9em}
+.status b{font-family:var(--f-mono);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem 1rem;font-size:.82rem;color:var(--ink-2);margin:0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:.35rem}
+.sw{width:.85rem;height:.85rem;border-radius:50%;display:inline-block;flex:none}
+.sw.p{background:var(--proton)} .sw.n{background:var(--neutron)} .sw.e{background:var(--electron)} .sw.g{background:var(--gold)}
+.sw.pos{background:color-mix(in srgb,var(--proton) 30%,transparent);border:1.5px solid var(--proton)}
+.note{font-size:.8rem;color:var(--ink-2);margin:0}
+
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.meter{background:var(--surface-2);border-radius:10px;padding:.45rem .6rem;min-width:0}
+.meter span{display:block;font-size:.74rem;color:var(--ink-2);line-height:1.2}
+.meter b{font-family:var(--f-mono);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.meter small{font-family:var(--f-mono);color:var(--ink-2);font-size:.75rem;margin-left:.3rem}
+
+.dalton-sym{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:0;padding:0;list-style:none}
+.dalton-sym li{display:flex;flex-direction:column;align-items:center;gap:.2rem;font-size:.75rem;color:var(--ink-2)}
+.dalton-sym svg{width:34px;height:34px;color:var(--ink)}
+
+.flame{display:inline-flex;align-items:center;gap:.5rem;font-weight:700}
+.flame i{width:1.1rem;height:1.1rem;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;display:inline-block}
+
+/* ---------- Start ---------- */
+.start{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(1.5rem,4vw,4rem);align-items:center}
+@media (max-width:920px){.start{grid-template-columns:minmax(0,1fr)}}
+.start .txt{gap:1.2rem}
+.teaser{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem;max-width:34em}
+.teaser p{margin:.3rem 0 0}
+.preview{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.preview button{width:100%;display:grid;grid-template-columns:3.2rem 6.5rem minmax(0,1fr);align-items:center;gap:.9rem;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.55rem .9rem;cursor:pointer}
+.preview button:hover{border-color:var(--ink-2)}
+.preview svg{width:3.2rem;height:3.2rem}
+.preview .y{font-family:var(--f-mono);font-size:.85rem;color:var(--ink-2)}
+.preview .n{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.preview .n b{font-family:var(--f-display);font-stretch:112%;font-size:1.12rem}
+.preview .n span{font-size:.88rem;color:var(--ink-2)}
+@media (max-width:460px){.preview button{grid-template-columns:2.6rem minmax(0,1fr)}.preview .y{display:none}.preview svg{width:2.6rem;height:2.6rem}}
+
+/* ---------- Vergleich ---------- */
+.section-head{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.4rem;max-width:58em}
+.section-head p{margin:0}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+table.cmp{border-collapse:collapse;width:100%;min-width:760px}
+.cmp th,.cmp td{padding:.6rem .75rem;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.cmp thead th{vertical-align:bottom}
+.cmp thead th svg{width:3rem;height:3rem;display:block;margin:0 auto .3rem}
+.cmp thead th .y{display:block;font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);font-weight:400}
+.cmp thead th .nm{font-family:var(--f-display);font-stretch:112%;font-size:1.05rem}
+.cmp tbody th{text-align:left;font-weight:700;font-size:.92rem;width:13rem}
+.cmp tbody tr:last-child th,.cmp tbody tr:last-child td{border-bottom:0}
+.cmp tbody tr:hover{background:var(--surface-2)}
+.cmp td{font-size:.92rem}
+.yes,.no{font-family:var(--f-mono);font-weight:600;font-size:1.25rem}
+.yes{color:var(--good)} .no{color:var(--bad)}
+.cmp.quiz td.q{cursor:pointer}
+.cmp.quiz td.q:not(.shown) > *{visibility:hidden}
+.cmp.quiz td.q:not(.shown){background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,transparent 6px 12px)}
+.cmp.quiz td.q:not(.shown)::after{content:"?";font-family:var(--f-mono);font-weight:600;color:var(--ink-2)}
+.cmp.quiz td.q:not(.shown){position:relative}
+.cmp.quiz td.q:not(.shown)::after{position:absolute;inset:0;display:grid;place-items:center}
+.cmp-tools{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem;align-items:center}
+.takeaway{margin-top:1.4rem;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:820px){.takeaway{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- Bohr im Detail ---------- */
+.particles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin-bottom:1.4rem}
+@media (max-width:820px){.particles{grid-template-columns:minmax(0,1fr)}}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:.2rem .9rem;align-items:start}
+.pcard .ball{grid-row:span 2;width:3.4rem;height:3.4rem;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--f-mono);font-weight:600;font-size:1.5rem;box-shadow:inset -6px -8px 14px rgba(0,0,0,.22), inset 5px 6px 10px rgba(255,255,255,.28)}
+.pcard .ball.p{background:var(--proton)} .pcard .ball.n{background:var(--neutron)} .pcard .ball.e{background:var(--electron);width:2.6rem;height:2.6rem;margin:.4rem}
+.pcard h3{align-self:center}
+.pcard h3 small{font-family:var(--f-mono);font-weight:400;font-size:.85rem;color:var(--ink-2);margin-left:.3rem}
+.pcard dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.15rem .7rem;font-size:.9rem}
+.pcard dt{color:var(--ink-2)}
+.pcard dd{margin:0;font-weight:700}
+.pcard .say{grid-column:1 / -1;margin:.5rem 0 0;font-size:.88rem;color:var(--ink-2);border-top:1px solid var(--line);padding-top:.5rem}
+
+.kit{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.kit{grid-template-columns:minmax(0,1fr)}}
+.kit .vis canvas{aspect-ratio:1/1;max-height:72vh;width:auto;max-width:100%;margin-inline:auto}
+.kit-panel{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.chips{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:.3rem}
+@media (max-width:480px){.chips{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.chips button{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:.25rem 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.chips button small{font-family:var(--f-mono);font-size:.6rem;color:var(--ink-2)}
+.chips button b{font-size:.95rem}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips button[aria-pressed="true"] small{color:var(--bg)}
+.ctrs{display:flex;flex-direction:column;gap:.45rem}
+.ctr{display:grid;grid-template-columns:1.1rem minmax(0,1fr) 2.6rem 3rem 2.6rem;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.4rem .6rem}
+.ctr span.l{font-weight:700}
+.ctr span.l small{display:block;font-weight:400;font-size:.75rem;color:var(--ink-2)}
+.ctr button{height:2.4rem;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);font-size:1.3rem;font-weight:700;cursor:pointer;line-height:1}
+.ctr button:hover{border-color:var(--ink-2)}
+.ctr output{font-family:var(--f-mono);font-weight:600;font-size:1.4rem;text-align:center;font-variant-numeric:tabular-nums}
+.readout{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.9rem 1.2rem;align-items:center}
+.nuc{font-family:var(--f-mono);font-size:2.6rem;font-weight:600;display:inline-flex;align-items:center;line-height:1}
+.nuc .ms{display:inline-flex;flex-direction:column;align-items:flex-end;font-size:.95rem;line-height:1.15;margin-right:.15rem}
+.nuc .q{font-size:1rem;align-self:flex-start;margin-left:.1rem;color:var(--accent)}
+.readout .nm{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:1.3rem;line-height:1.15}
+.readout .sub{font-size:.88rem;color:var(--ink-2)}
+.readout dl{grid-column:1 / -1;margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem}
+.readout dl div{background:var(--surface-2);border-radius:8px;padding:.35rem .5rem;min-width:0}
+.readout dt{font-size:.72rem;color:var(--ink-2)}
+.readout dd{margin:0;font-family:var(--f-mono);font-weight:600;font-size:1.05rem}
+.shellrow{grid-column:1 / -1;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;font-size:.88rem}
+.shellrow .sh{font-family:var(--f-mono);border:1.5px solid var(--line);border-radius:8px;padding:.15rem .5rem}
+.shellrow .sh b{color:var(--electron)}
+.charge{grid-column:1 / -1;margin:0;font-weight:700}
+.charge.ion{color:var(--accent)}
+.merke{background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--radius);padding:.9rem 1.1rem}
+.merke ul{margin:.5rem 0 0;padding-left:1.1rem;display:flex;flex-direction:column;gap:.3rem}
+.merke .eq{font-family:var(--f-mono);font-weight:600}
+
+/* ---------- Übungen ---------- */
+.pse-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.7rem}
+.pse{display:grid;grid-template-columns:1.4rem repeat(18,minmax(2.35rem,1fr));gap:3px;min-width:860px}
+.pse .lab{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-2);display:grid;place-items:center}
+.pse .el{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:.12rem .2rem .18rem;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;min-width:0;text-align:left}
+.pse .el .z{font-family:var(--f-mono);font-size:.6rem;color:var(--ink-2)}
+.pse .el .s{font-weight:700;font-size:.98rem;align-self:center}
+.pse .el.tm{background:var(--surface-2)}
+.pse .el.f{background:var(--surface-2);border-style:dashed}
+.pse .el:hover{border-color:var(--ink)}
+.pse .el.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pse .el.sel .z{color:var(--bg)}
+.pse .el.found{box-shadow:inset 0 0 0 2px var(--good)}
+.pse .ph{grid-column:span 1;font-family:var(--f-mono);font-size:.58rem;color:var(--ink-2);border:1px dashed var(--line);border-radius:5px;display:grid;place-items:center;text-align:center}
+.pse-bottom{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.8rem;margin-top:.8rem}
+@media (max-width:820px){.pse-bottom{grid-template-columns:minmax(0,1fr)}}
+.pse-info{display:flex;gap:1rem;align-items:center}
+.bigcell{flex:none;width:5.6rem;height:5.6rem;border:2px solid var(--ink);border-radius:10px;display:flex;flex-direction:column;justify-content:space-between;padding:.3rem .45rem;background:var(--surface)}
+.bigcell .z{font-family:var(--f-mono);font-size:.9rem;font-weight:600}
+.bigcell .s{font-size:2rem;font-weight:700;align-self:center;line-height:1}
+.bigcell .n{font-size:.62rem;text-align:center;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pse-info p{margin:0}
+.tasks-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.8rem;margin:1.6rem 0 .9rem}
+.score{font-family:var(--f-mono);font-size:1rem}
+.score b{font-size:1.3rem}
+.tasks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:1100px){.tasks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.tasks{grid-template-columns:minmax(0,1fr)}}
+.task{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:flex;flex-direction:column;gap:.7rem;min-width:0}
+.task.ok{border-color:var(--good)}
+.task header{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+.task header span{font-family:var(--f-mono);font-size:.72rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.task h3{font-size:1.4rem}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.fields label{display:flex;flex-direction:column;gap:.2rem;font-size:.85rem;font-weight:700;color:var(--ink-2)}
+.fields label i{font-style:normal;display:inline-flex;align-items:center;gap:.3rem}
+input[type=number]{font:inherit;font-family:var(--f-mono);font-size:1.25rem;font-weight:600;width:100%;padding:.35rem .5rem;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{opacity:.4}
+input.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 10%,var(--bg))}
+input.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--bg))}
+details.pro{border-top:1px dashed var(--line);padding-top:.5rem}
+details.pro summary{cursor:pointer;font-size:.86rem;font-weight:700;color:var(--accent)}
+.shells-in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem;margin-top:.5rem}
+.shells-in label{display:flex;flex-direction:column;align-items:center;font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);gap:.15rem}
+.shells-in input{font-size:1.05rem;text-align:center;padding:.25rem}
+.task .actions{display:flex;gap:.45rem;flex-wrap:wrap}
+.task .actions .btn{padding:.4rem .75rem;font-size:.85rem}
+.fb{margin:0;font-size:.88rem;min-height:1.4em}
+.fb.ok{color:var(--good);font-weight:700}
+.fb.err{color:var(--bad)}
+.tip{margin-top:.6rem}
+.bonus{margin-top:1.2rem;display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;align-items:center}
+.bonus .found{font-family:var(--f-mono);font-weight:600}
+
+/* ---------- Blätter-Leiste ---------- */
+.pager{position:sticky;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.5rem 16px calc(.5rem + env(safe-area-inset-bottom,0px))}
+.pager .btn{min-width:0;max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pager .mid{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);text-align:center}
+@media (max-width:620px){.pager .mid .keys{display:none}.brand span{display:none}}
+
+
+/* ---------- Ergänzungen für die Unterrichtsreihe ---------- */
+a.icon-btn{text-decoration:none;display:inline-flex;align-items:center}
+.tl-stop .dot .num{font-family:var(--f-mono);font-weight:600;font-size:.9rem;line-height:1}
+.tl-stop[aria-current="step"] .dot .num{color:var(--accent)}
+.tl-stop .yr{text-transform:uppercase;letter-spacing:.06em}
+.good{color:var(--good)} .bad{color:var(--bad)}
+.vis canvas.wide{aspect-ratio:16/10}
+.vis canvas.square,.kit .vis canvas.square{aspect-ratio:1/1;width:100%;max-height:64vh}
+.vis canvas.tall{aspect-ratio:5/4}
+.preview .num{width:3.2rem;height:3.2rem;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:1.2rem;color:var(--ink-2)}
+@media (max-width:460px){.preview .num{width:2.6rem;height:2.6rem}}
+.q-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.q-list li{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.6rem .9rem;display:flex;gap:.7rem;align-items:baseline}
+.q-list li b.n{font-family:var(--f-mono);color:var(--accent)}
+.big-num{font-family:var(--f-mono);font-weight:600;font-size:clamp(1.6rem,3vw,2.4rem);line-height:1.1;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.slider{display:flex;flex-direction:column;gap:.2rem}
+.slider label{display:flex;justify-content:space-between;font-size:.85rem;font-weight:700;color:var(--ink-2)}
+.slider label output{font-family:var(--f-mono);color:var(--ink)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:.4rem}
+.kv div{background:var(--surface-2);border-radius:8px;padding:.35rem .55rem;min-width:0}
+.kv dt,.kv span{display:block;font-size:.72rem;color:var(--ink-2)}
+.kv dd,.kv b{margin:0;font-family:var(--f-mono);font-weight:600;font-size:1.05rem}
+.kv{margin:0}
+.formula{font-family:var(--f-mono);font-weight:600;font-size:1.15rem;background:var(--surface-2);border-radius:10px;padding:.55rem .8rem;overflow-x:auto;white-space:nowrap}
+.formula .arrow{color:var(--accent);padding:0 .4rem}
+.wide-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.wide-grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:1rem;min-width:0}
+
+/* Hefteintrag */
+.heft{background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--radius);padding:1.1rem 1.3rem;display:flex;flex-direction:column;gap:.8rem}
+.heft-title{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:.5rem}
+.heft-title h3{font-size:1.5rem}
+.heft-title span{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2)}
+.heft ol{margin:0;padding-left:1.3rem;display:flex;flex-direction:column;gap:.65rem}
+.heft [data-step]{transition:opacity .3s, filter .3s}
+.heft [data-step]:not(.shown){opacity:.12;filter:blur(5px);user-select:none}
+@media (prefers-reduced-motion: reduce){.heft [data-step]{transition:none}}
+.heft .eq{font-family:var(--f-mono);font-weight:600;background:var(--surface-2);padding:.05rem .35rem;border-radius:6px}
+.heft-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.heft-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Multiple Choice */
+.mc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem;display:flex;flex-direction:column;gap:.8rem}
+.mc-end{display:flex;flex-direction:column;gap:.9rem}
+.mc-head{display:flex;justify-content:space-between;align-items:baseline}
+.mc-bar{height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.mc-bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.mc-q{font-size:clamp(1.3rem,2.2vw,1.8rem);font-stretch:110%}
+.mc-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+@media (max-width:640px){.mc-opts{grid-template-columns:minmax(0,1fr)}}
+.mc-opt{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:.75rem 1rem;cursor:pointer;font-size:1.02rem;font-weight:700;line-height:1.3}
+.mc-opt:hover:not(:disabled){border-color:var(--ink-2)}
+.mc-opt:disabled{cursor:default}
+.mc-opt.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 14%,var(--surface))}
+.mc-opt.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.mc-why{margin:0;min-height:1.5em}
+.mc-end{align-items:flex-start}
+.mc-big{font-family:var(--f-mono);font-weight:600;font-size:3.5rem;margin:0;line-height:1}
+
+/* Zuordnen */
+.sort-pool{display:flex;flex-wrap:wrap;gap:.45rem;min-height:3rem;padding:.6rem;border:1.5px dashed var(--line);border-radius:var(--radius);margin-bottom:.8rem}
+.sort-cols{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:.7rem;margin-bottom:.8rem}
+@media (max-width:820px){.sort-cols{grid-template-columns:minmax(0,1fr)}}
+.sort-col{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.7rem;cursor:pointer;min-height:9rem;min-width:0}
+.sort-col:hover{border-color:var(--ink-2)}
+.sort-col h3{font-size:1.1rem;margin-bottom:.5rem}
+.sort-drop{display:flex;flex-direction:column;gap:.35rem}
+.sort-card{border:1.5px solid var(--line);background:var(--surface-2);border-radius:10px;padding:.4rem .7rem;cursor:pointer;font-size:.9rem;font-weight:700;text-align:left;line-height:1.3}
+.sort-card.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.sort-card.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 14%,var(--surface))}
+.sort-card.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.sort-fb{font-size:.92rem}
+
+/* Paare finden */
+.match{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:.8rem;margin-bottom:.8rem}
+.match-col{display:flex;flex-direction:column;gap:.45rem}
+.match-card{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:.55rem .8rem;cursor:pointer;font-size:.95rem;text-align:left;line-height:1.3}
+.match-card.term{font-weight:700;font-family:var(--f-display);font-stretch:110%;font-size:1.05rem}
+.match-card:hover{border-color:var(--ink-2)}
+.match-card.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.match-card.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--surface));cursor:default;opacity:.75}
+.match-card.err{border-color:var(--bad);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* Daten-Tabellen */
+table.data{border-collapse:collapse;width:100%}
+.data th,.data td{padding:.45rem .6rem;border-bottom:1px solid var(--line);text-align:left;font-size:.92rem}
+.data thead th{font-size:.78rem;color:var(--ink-2);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.data td.num{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.data tbody tr:last-child td,.data tbody tr:last-child th{border-bottom:0}
+.data tbody tr.sel{background:var(--surface-2)}
+.data tbody tr[data-pick]{cursor:pointer}
+.data tbody tr[data-pick]:hover{background:var(--surface-2)}
+
+/* Schritt-Leiste in Visualisierungen */
+.steps{display:flex;gap:.4rem;flex-wrap:wrap}
+.steps .btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.next-lesson{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;margin-top:1.4rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1.1rem}
+.next-lesson p{margin:0}
+a.btn{text-decoration:none;display:inline-block;color:inherit}
+a.btn.primary{color:var(--accent-ink)}
+.lw-svg{width:4.2rem;height:4.2rem;display:block}
+.lw-svg .lw-sym{font:700 40px var(--f-body);fill:var(--ink);text-anchor:middle;dominant-baseline:middle}
+.lw-svg .lw-dot{fill:var(--electron)}
+.lw-svg .lw-line{stroke:var(--electron);stroke-width:5;stroke-linecap:round}
+@media (max-width:760px){.top{flex-wrap:wrap;row-gap:.3rem}.top .brand{flex:1}.tl-scroll{order:3;flex-basis:100%}}
+
+.det-card{background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--radius);padding:1rem 1.2rem;display:flex;flex-direction:column;gap:.9rem}
+.det-head{display:flex;gap:1.2rem;align-items:center}
+.det-nuc{font-size:3.6rem}
+.det-nuc .ms{font-size:1.2rem}
+.det-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem}
+@media (max-width:640px){.det-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.det-fields label{display:flex;flex-direction:column;gap:.2rem;font-size:.8rem;font-weight:700;color:var(--ink-2)}
+.det-pse button{cursor:default}
+.check-sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;margin-bottom:1rem;max-width:640px}
+.checklist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem;counter-reset:ck}
+@media (max-width:900px){.checklist{grid-template-columns:minmax(0,1fr)}}
+.ck{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.7rem .9rem;display:flex;flex-direction:column;gap:.5rem;counter-increment:ck}
+.ck p{margin:0}
+.ck p::before{content:counter(ck) ". ";font-family:var(--f-mono);color:var(--ink-2)}
+.ck.ck-good{border-color:var(--good)}
+.ck.ck-need{border-color:var(--bad)}
+.ck-row{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center}
+.ck-seg button{padding:.35rem .7rem;font-size:.82rem}
+.ck-link{font-weight:700;color:var(--accent);font-size:.9rem}
+
+</style>
+</head>
+<body data-next="">
+<div class="app">
+<header class="top">
+  <div class="brand"><b>Wiederholung</b><span>Stunde 7 · Klasse 9</span></div>
+  <nav class="tl-scroll" aria-label="Stationen der Stunde">
+    <ol class="tl" id="tl">
+      <li><button class="tl-pill" data-go="start">Start</button></li>
+      <li class="sep" aria-hidden="true"></li>
+      <li class="m first"><button class="tl-stop" data-go="begriffe"><span class="dot"><span class="num">1</span></span><span class="yr">Wiederholen</span><span class="nm">Begriffe</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="quiz"><span class="dot"><span class="num">2</span></span><span class="yr">Testen</span><span class="nm">Quiz</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="detektiv"><span class="dot"><span class="num">3</span></span><span class="yr">Anwenden</span><span class="nm">Atom-Detektiv</span></button></li>
+      <li class="m last"><button class="tl-stop" data-go="checkliste"><span class="dot"><span class="num">4</span></span><span class="yr">Reflexion</span><span class="nm">Ich kann …</span></button></li>
+    </ol>
+  </nav>
+  <a class="icon-btn" href="00_Uebersicht.html" title="Zur Übersicht der Reihe">Übersicht</a>
+  <button class="icon-btn" id="fs" title="Vollbild (F)">Vollbild</button>
+</header>
+
+<main id="stage">
+<!-- ================= START ================= -->
+<section class="station" id="start" data-label="Start">
+  <div class="start">
+    <div class="txt">
+      <p class="eyebrow">Stunde 7 · Abschluss</p>
+      <h1>Wiederholung und Selbsttest</h1>
+      <p class="lead">Vom unteilbaren Teilchen des Demokrit bis zum Kochsalzkristall: In dieser Stunde prüft ihr, was ihr über Atombau, Periodensystem und Ionen gelernt habt.</p>
+      <div class="teaser">
+        <span class="tag info">Ablauf</span>
+        <p>Begriffe zuordnen, ein Quiz mit zufälligen Fragen, Atome als Detektiv entschlüsseln und zum Schluss eine ehrliche Selbsteinschätzung.</p>
+      </div>
+      <div class="teaser">
+        <span class="tag info">Tipp</span>
+        <p>Das Periodensystem darf benutzt werden. Bei jeder Selbsteinschätzung führt ein Link zurück zur passenden Stunde.</p>
+      </div>
+      <div class="controls"><button class="btn primary" data-go="begriffe">Los geht's →</button></div>
+    </div>
+    <ol class="preview" aria-label="Stationen dieser Stunde">
+      <li><button data-go="begriffe"><span class="num">1</span><span class="y">Wiederholen</span><span class="n"><b>Begriffe-Paare</b><span>Fachbegriff und Erklärung zuordnen</span></span></button></li>
+      <li><button data-go="quiz"><span class="num">2</span><span class="y">Testen</span><span class="n"><b>Quiz</b><span>10 Fragen aus allen Stunden</span></span></button></li>
+      <li><button data-go="detektiv"><span class="num">3</span><span class="y">Anwenden</span><span class="n"><b>Atom-Detektiv</b><span>Ein Atom komplett entschlüsseln</span></span></button></li>
+      <li><button data-go="checkliste"><span class="num">4</span><span class="y">Reflexion</span><span class="n"><b>Ich kann …</b><span>Selbsteinschätzung mit Wiederholungs-Links</span></span></button></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= BEGRIFFE ================= -->
+<section class="station" id="begriffe" data-label="Begriffe" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Station 1 · Fachbegriffe</p>
+    <h2>Begriffe-Paare</h2>
+    <p class="lead">Klicke links einen Begriff und rechts die passende Erklärung an. Richtige Paare werden grün.</p>
+  </div>
+  <div id="match-root"></div>
+  <div class="controls" style="margin-top:.6rem"><button class="btn primary" id="match-new">Andere Begriffe</button></div>
+</section>
+
+<!-- ================= QUIZ ================= -->
+<section class="station" id="quiz" data-label="Quiz" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Station 2 · Quiz</p>
+    <h2>Was weißt du noch?</h2>
+    <p class="lead">Zehn zufällige Fragen aus allen Stunden. Nach jeder Antwort gibt es eine kurze Erklärung.</p>
+  </div>
+  <div class="mc" id="big-quiz"></div>
+</section>
+
+<!-- ================= DETEKTIV ================= -->
+<section class="station" id="detektiv" data-label="Atom-Detektiv" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Station 3 · Anwenden</p>
+    <h2>Atom-Detektiv</h2>
+    <p class="lead">Ein unbekanntes Atom wurde gefunden. Nur das Symbol und die Massenzahl sind bekannt. Entschlüssele den kompletten Steckbrief. Das Periodensystem unten hilft dir.</p>
+  </div>
+  <div class="kit">
+    <div class="stack">
+      <div class="det-card">
+        <div class="det-head">
+          <span class="nuc det-nuc" id="det-nuc"></span>
+          <div><span class="tag info">Fundstück</span><p class="note" style="margin:.3rem 0 0">Name: <b id="det-name">?</b></p></div>
+        </div>
+        <div class="det-fields" id="det-fields"></div>
+        <div class="controls">
+          <button class="btn primary" id="det-check">Prüfen</button>
+          <button class="btn" id="det-solve">Lösung</button>
+          <button class="btn" id="det-new">Neues Atom</button>
+        </div>
+        <p class="fb" id="det-fb" aria-live="polite"></p>
+        <div class="score" id="det-score"></div>
+      </div>
+      <div>
+        <p class="note" style="margin-bottom:.35rem">Periodensystem (Ordnungszahl und Symbol):</p>
+        <div class="chips det-pse" id="det-pse"></div>
+      </div>
+    </div>
+    <div class="kit-panel">
+      <div class="vis">
+        <div class="vis-head"><h3>Beweisfoto</h3><span class="note" id="det-photo-note">wird nach dem Lösen sichtbar</span></div>
+        <canvas id="cv-det" class="square" aria-label="Schalenmodell des gesuchten Atoms"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CHECKLISTE ================= -->
+<section class="station" id="checkliste" data-label="Ich kann …" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Station 4 · Selbsteinschätzung</p>
+    <h2>Ich kann …</h2>
+    <p class="lead">Schätze dich ehrlich ein. Bei allem, was noch nicht sitzt, führt dich der Link direkt zur passenden Stelle in der Präsentation.</p>
+  </div>
+  <div class="check-sum" id="check-sum"></div>
+  <ol class="checklist" id="checklist"></ol>
+  <div class="controls" style="margin-top:1rem"><button class="btn" id="check-reset">Alles zurücksetzen</button><a class="btn primary" href="00_Uebersicht.html">Zur Übersicht der Reihe</a></div>
+  <p class="note" style="margin-top:.5rem">Deine Auswahl wird nur in diesem Browser gespeichert.</p>
+</section>
+
+</main>
+
+<footer class="pager">
+  <button class="btn" id="prev">←</button>
+  <div class="mid"><span id="pos"></span><span class="keys"> · Pfeiltasten ← → oder Presenter</span></div>
+  <button class="btn primary" id="next">→</button>
+</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const MONO = '"IBM Plex Mono", ui-monospace, monospace';
+const SANS = '"Atkinson Hyperlegible", system-ui, sans-serif';
+const DISPLAY = '"Archivo", "Arial Narrow", system-ui, sans-serif';
+
+/* ---------------- Farben aus den Tokens ---------------- */
+const C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  ['bg','surface','surface-2','ink','ink-2','line','accent','electron','proton','neutron','gold','good','bad']
+    .forEach(k => C[k.replace('-2','2')] = cs.getPropertyValue('--' + k).trim() || '#888888');
+}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
+function rgb(h) { h = h.replace('#',''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function alpha(h, a) { return `rgba(${rgb(h).join(',')},${a})`; }
+function mix(a, b, t) { const A = rgb(a), B = rgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; }
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+const fmt = (v, d = 3) => v.toLocaleString('de-DE', {maximumSignificantDigits: d});
+const fix = (v, d = 1) => v.toLocaleString('de-DE', {minimumFractionDigits: d, maximumFractionDigits: d});
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const SUP = s => String(s).replace(/[0-9+\-−]/g, c => ({'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻','−':'⁻'})[c]);
+const SUB = s => String(s).replace(/[0-9]/g, c => '₀₁₂₃₄₅₆₇₈₉'[+c]);
+function chargeStr(q) { return q === 0 ? '' : (Math.abs(q) > 1 ? Math.abs(q) : '') + (q > 0 ? '+' : '−'); }
+
+function setup(cv) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return {ctx, w, h};
+}
+function sphere(ctx, x, y, r, col, label, lc, stroke) {
+  const g = ctx.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+  g.addColorStop(0, mix(col, '#ffffff', .45)); g.addColorStop(1, col);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+  if (label) {
+    ctx.fillStyle = lc || '#fff'; ctx.font = `700 ${Math.max(9, r * .95)}px ${MONO}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + r * .06);
+  }
+}
+function sign(ctx, x, y, r, plus) {
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.4, r * .22); ctx.lineCap = 'round';
+  const s = r * .48; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y);
+  if (plus) { ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); }
+  ctx.stroke();
+}
+function label(ctx, txt, x, y, o = {}) {
+  ctx.font = `${o.weight || 700} ${o.size || 14}px ${o.font || SANS}`;
+  ctx.fillStyle = o.color || C.ink; ctx.textAlign = o.align || 'center'; ctx.textBaseline = o.base || 'middle';
+  ctx.fillText(txt, x, y);
+}
+function roundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/* ---------------- Navigation ---------------- */
+const STATIONS = $$('.station').map(s => s.id);
+const LABEL = Object.fromEntries($$('.station').map(s => [s.id, s.dataset.label || s.id]));
+const NEXT_LESSON = document.body.dataset.next ? JSON.parse(document.body.dataset.next) : null;
+let cur = 0;
+function go(id) { const i = STATIONS.indexOf(id); if (i >= 0 && i !== cur) { cur = i; render(true); } }
+function render(scroll) {
+  const id = STATIONS[cur];
+  $$('.station').forEach(s => s.hidden = s.id !== id);
+  $$('[data-go]', $('#tl')).forEach(b => b.dataset.go === id ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
+  const stops = $$('#tl li.m');
+  const idx = stops.map(li => STATIONS.indexOf($('[data-go]', li).dataset.go));
+  stops.forEach((li, i) => { li.classList.toggle('done', idx[i] < cur); li.classList.toggle('half', idx[i] === cur); });
+  const prev = STATIONS[cur - 1], next = STATIONS[cur + 1];
+  $('#prev').textContent = prev ? '← ' + LABEL[prev] : '←';
+  $('#prev').disabled = !prev;
+  if (next) { $('#next').textContent = LABEL[next] + ' →'; $('#next').disabled = false; }
+  else if (NEXT_LESSON) { $('#next').textContent = NEXT_LESSON.label + ' →'; $('#next').disabled = false; }
+  else { $('#next').textContent = '→'; $('#next').disabled = true; }
+  $('#pos').textContent = `${cur + 1} / ${STATIONS.length}`;
+  try { history.replaceState(null, '', '#' + id); } catch (e) {}
+  if (scroll) {
+    window.scrollTo({top: 0});
+    const b = $(`#tl [data-go="${id}"]`);
+    if (b) { const sc = $('.tl-scroll'); sc.scrollLeft = b.offsetLeft - sc.clientWidth / 2 + b.offsetWidth / 2; }
+  }
+  lastT = performance.now();
+  for (const f of onShow) f(id);
+}
+const onShow = [];
+document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+$('#prev').onclick = () => { if (cur > 0) { cur--; render(true); } };
+$('#next').onclick = () => {
+  if (cur < STATIONS.length - 1) { cur++; render(true); }
+  else if (NEXT_LESSON) location.href = NEXT_LESSON.href;
+};
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, select, textarea') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (['ArrowRight','PageDown'].includes(e.key)) { e.preventDefault(); if (cur < STATIONS.length - 1) $('#next').click(); }
+  else if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); $('#prev').click(); }
+  else if (e.key === 'f' || e.key === 'F') toggleFs();
+});
+function toggleFs() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+}
+$('#fs').onclick = toggleFs;
+document.addEventListener('fullscreenchange', () => $('#fs').textContent = document.fullscreenElement ? 'Vollbild beenden' : 'Vollbild');
+
+/* ---------------- Render-Schleife ---------------- */
+const visuals = [];
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  const id = STATIONS[cur];
+  for (const v of visuals) if (v.station === id) v.tick(dt, now / 1000);
+  requestAnimationFrame(frame);
+}
+function startApp() {
+  const h0 = (location.hash || '').slice(1);
+  if (STATIONS.includes(h0)) cur = STATIONS.indexOf(h0);
+  render(false);
+  requestAnimationFrame(frame);
+}
+
+/* ================= Bohr-Atom zeichnen ================= */
+const SHELL_R = [.42, .62, .81, 1.0, 1.19], SHELL_N = ['K', 'L', 'M', 'N', 'O'];
+function shellsFor(e) { const out = []; let r = e; for (const c of [2, 8, 8, 99]) { if (r <= 0) break; const k = Math.min(c, r); out.push(k); r -= k; } return out; }
+function drawNucleus(ctx, cx, cy, rn, p, n) {
+  const N = p + n, pts = [];
+  for (let i = 0; i < N; i++) {
+    const r = rn * 1.02 * Math.sqrt(i), a = i * 2.399963;
+    const isP = Math.floor((i + 1) * p / N) > Math.floor(i * p / N);
+    pts.push({x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), isP});
+  }
+  for (let i = N - 1; i >= 0; i--) {
+    const q = pts[i]; sphere(ctx, q.x, q.y, rn, q.isP ? C.proton : C.neutron, null, null, alpha('#000000', .18));
+    if (q.isP && rn > 5) sign(ctx, q.x, q.y, rn * .8, true);
+  }
+}
+/* o: {p, n, shells, t, excite, hiOuter, fadeInner, rings (Anzahl gezeichneter Ringe), ghost: [Schale,...] leere Plätze, nucR} */
+function drawAtom(ctx, cx, cy, R, o) {
+  const shells = o.shells, S = shells.length, rings = Math.max(S, o.rings || 0);
+  const fs = Math.max(11, R * .065);
+  for (let s = 0; s < rings; s++) {
+    const r = R * SHELL_R[s], outer = o.hiOuter && s === S - 1;
+    ctx.lineWidth = outer ? 3 : 1.5;
+    ctx.strokeStyle = outer ? alpha(C.accent, .8) : alpha(C.ink2, o.fadeInner && s < S - 1 ? .2 : .45);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+  }
+  if (o.excite > 0 && S) {
+    ctx.setLineDash([5, 6]); ctx.lineWidth = 1.5; ctx.strokeStyle = alpha(C.ink2, .45 * Math.min(1, o.excite * 3));
+    ctx.beginPath(); ctx.arc(cx, cy, R * SHELL_R[S], 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (!o.noLabels) {
+    ctx.font = `600 ${fs}px ${MONO}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let s = 0; s < rings; s++) {
+      const r = R * SHELL_R[s], a = -Math.PI * .75;
+      const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+      ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(x, y, fs * .85, 0, 7); ctx.fill();
+      ctx.fillStyle = C.ink2; ctx.fillText(SHELL_N[s], x, y + 1);
+    }
+  }
+  drawNucleus(ctx, cx, cy, o.nucR || R * .046, o.p, o.n);
+  const er = Math.max(4.5, R * .042);
+  let ex = null;
+  for (let s = 0; s < S; s++) {
+    const k = shells[s], cap = o.ghost ? (o.ghost[s] || k) : k, a0 = o.t * (.9 / (s + 1)) + s * .7;
+    for (let j = 0; j < Math.max(k, cap); j++) {
+      const slots = Math.max(k, cap);
+      const ang = a0 + Math.PI * 2 * j / slots + (s === 0 ? Math.PI / 2 : 0);
+      let r = R * SHELL_R[s];
+      const isEx = o.excite > 0 && s === S - 1 && j === k - 1;
+      if (isEx) r = lerp(R * SHELL_R[s], R * SHELL_R[s + 1], o.excite);
+      const x = cx + r * Math.cos(ang), y = cy + r * Math.sin(ang);
+      if (j >= k) {
+        ctx.setLineDash([3, 3]); ctx.strokeStyle = alpha(C.electron, .7); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, er, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+        continue;
+      }
+      if (isEx) ex = {x, y, ang};
+      ctx.globalAlpha = o.fadeInner && s < S - 1 ? .35 : 1;
+      ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, er, 0, 7); ctx.fill();
+      sign(ctx, x, y, er, false);
+      ctx.globalAlpha = 1;
+    }
+  }
+  return ex;
+}
+/* Lewis-Schreibweise: Symbol mit Valenzelektronen als Punkte (oder Paare als Striche) */
+function lewisSlots(v) {
+  // Reihenfolge der Seiten: oben, rechts, unten, links – erst einzeln, dann paaren
+  const sides = [0, 0, 0, 0];
+  if (v === 2 && arguments[1] === 'He') { sides[0] = 2; return sides; }
+  for (let i = 0; i < v; i++) sides[i % 4]++;
+  return sides;
+}
+function drawLewis(ctx, x, y, sym, v, size, o = {}) {
+  const sides = o.sides || lewisSlots(v, sym);
+  ctx.font = `700 ${size}px ${SANS}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(sym).width;
+  ctx.fillStyle = o.color || C.ink; ctx.fillText(sym, x, y + size * .04);
+  const dx = tw / 2 + size * .28, dy = size * .62, d = size * .1, gap = size * .17;
+  const dir = [[0, -dy, 1, 0], [dx, 0, 0, 1], [0, dy, 1, 0], [-dx, 0, 0, 1]];
+  ctx.fillStyle = o.dot || C.electron; ctx.strokeStyle = o.dot || C.electron; ctx.lineWidth = Math.max(2, size * .07); ctx.lineCap = 'round';
+  sides.forEach((k, i) => {
+    const [px, py, ux, uy] = dir[i];
+    if (k === 1) { ctx.beginPath(); ctx.arc(x + px, y + py, d, 0, 7); ctx.fill(); }
+    if (k === 2) {
+      if (o.lines) {
+        const L = size * .32; ctx.beginPath(); ctx.moveTo(x + px - ux * L, y + py - uy * L); ctx.lineTo(x + px + ux * L, y + py + uy * L); ctx.stroke();
+      } else for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + px + ux * gap * s, y + py + uy * gap * s, d, 0, 7); ctx.fill(); }
+    }
+  });
+  let right = x + dx + size * .2;
+  if (o.charge) {
+    if (o.brackets) {
+      ctx.strokeStyle = C.ink; ctx.lineWidth = Math.max(1.5, size * .05);
+      const bx = dx + size * .3, by = dy + size * .3;
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * bx + -s * size * .12, y - by); ctx.lineTo(x + s * bx, y - by); ctx.lineTo(x + s * bx, y + by); ctx.lineTo(x + s * bx - s * size * .12, y + by); ctx.stroke(); }
+      right = x + bx + size * .05;
+      ctx.font = `700 ${size * .5}px ${SANS}`; ctx.fillStyle = C.accent; ctx.textAlign = 'left';
+      ctx.fillText(o.charge, right, y - by + size * .1);
+    } else {
+      ctx.font = `700 ${size * .5}px ${SANS}`; ctx.fillStyle = C.accent; ctx.textAlign = 'left';
+      ctx.fillText(o.charge, x + tw / 2 + size * .05, y - size * .45);
+    }
+  }
+}
+
+/* Lewis-Schreibweise als SVG (für Tabellen und Aufgaben) */
+function lewisSVG(sym, v, o = {}) {
+  const sides = lewisSlots(v, sym), wide = sym.length > 1;
+  const P = lewisPos(wide);
+  let dots = '';
+  sides.forEach((k, s) => {
+    if (k === 1) dots += `<circle cx="${P[s][2][0]}" cy="${P[s][2][1]}" r="5" class="lw-dot"/>`;
+    if (k === 2) {
+      if (o.lines) { const [a, b] = [P[s][0], P[s][1]]; dots += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" class="lw-line"/>`; }
+      else dots += `<circle cx="${P[s][0][0]}" cy="${P[s][0][1]}" r="5" class="lw-dot"/><circle cx="${P[s][1][0]}" cy="${P[s][1][1]}" r="5" class="lw-dot"/>`;
+    }
+  });
+  return `<svg viewBox="0 0 120 120" class="lw-svg" role="img" aria-label="${sym} mit ${v} Valenzelektronen"><text x="60" y="62" class="lw-sym">${sym}</text>${dots}</svg>`;
+}
+/* je Seite: [Paarplatz 1, Paarplatz 2, Einzelplatz] */
+function lewisPos(wide) {
+  const xr = wide ? 104 : 96, xl = wide ? 16 : 24;
+  return [[[50, 24], [70, 24], [60, 24]], [[xr, 50], [xr, 70], [xr, 60]], [[50, 98], [70, 98], [60, 98]], [[xl, 50], [xl, 70], [xl, 60]]];
+}
+
+/* ================= Periodensystem-Daten ================= */
+const PSE_RAW = 'H Wasserstoff|He Helium|Li Lithium|Be Beryllium|B Bor|C Kohlenstoff|N Stickstoff|O Sauerstoff|F Fluor|Ne Neon|Na Natrium|Mg Magnesium|Al Aluminium|Si Silicium|P Phosphor|S Schwefel|Cl Chlor|Ar Argon|K Kalium|Ca Calcium|Sc Scandium|Ti Titan|V Vanadium|Cr Chrom|Mn Mangan|Fe Eisen|Co Cobalt|Ni Nickel|Cu Kupfer|Zn Zink|Ga Gallium|Ge Germanium|As Arsen|Se Selen|Br Brom|Kr Krypton|Rb Rubidium|Sr Strontium|Y Yttrium|Zr Zirconium|Nb Niob|Mo Molybdän|Tc Technetium|Ru Ruthenium|Rh Rhodium|Pd Palladium|Ag Silber|Cd Cadmium|In Indium|Sn Zinn|Sb Antimon|Te Tellur|I Iod|Xe Xenon|Cs Caesium|Ba Barium';
+const ELS = PSE_RAW.split('|').map((s, i) => { const [sym, ...nm] = s.split(' '); return {z: i + 1, sym, name: nm.join(' ')}; });
+const BY_SYM = Object.fromEntries(ELS.map(e => [e.sym, e]));
+const NEUTRONS = [0, 0, 2, 4, 5, 6, 6, 7, 8, 10, 10, 12, 12, 14, 14, 16, 16, 18, 22, 20, 20];
+const MASS = [0, 1.008, 4.003, 6.94, 9.012, 10.81, 12.01, 14.01, 16.00, 19.00, 20.18, 22.99, 24.31, 26.98, 28.09, 30.97, 32.06, 35.45, 39.95, 39.10, 40.08];
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+/* Hauptgruppe und Periode der ersten 20 Elemente */
+function hgOf(z) { if (z === 1) return 1; if (z === 2) return 8; const v = shellsFor(z).at(-1); return v; }
+function perOf(z) { return shellsFor(z).length; }
+const IONS = { // häufige Ionen
+  1: null, 3: 1, 4: 2, 5: null, 6: null, 7: -3, 8: -2, 9: -1, 11: 1, 12: 2, 13: 3, 14: null, 15: -3, 16: -2, 17: -1, 19: 1, 20: 2
+};
+const ANION_NAME = {N: 'Nitrid', O: 'Oxid', F: 'Fluorid', P: 'Phosphid', S: 'Sulfid', Cl: 'Chlorid', Br: 'Bromid', I: 'Iodid', Se: 'Selenid'};
+function ionName(sym) { return ANION_NAME[sym] ? ANION_NAME[sym] + '-Ion' : BY_SYM[sym].name + '-Ion'; }
+
+/* ================= Bausteine ================= */
+/* Hefteintrag: Punkte nacheinander aufdecken */
+$$('.heft').forEach(h => {
+  const items = $$('[data-step]', h), btn = $('[data-heft-next]', h), all = $('[data-heft-all]', h);
+  let k = 0;
+  const upd = () => { items.forEach((it, i) => it.classList.toggle('shown', i < k)); if (btn) { btn.disabled = k >= items.length; btn.textContent = k >= items.length ? 'Alles aufgedeckt' : `Nächster Punkt (${k + 1}/${items.length})`; } if (all) all.textContent = k >= items.length ? 'Wieder verdecken' : 'Alles zeigen'; };
+  if (btn) btn.onclick = () => { k = Math.min(items.length, k + 1); upd(); };
+  if (all) all.onclick = () => { k = k >= items.length ? 0 : items.length; upd(); };
+  upd();
+});
+
+/* Multiple-Choice-Quiz. qs: [{q, a:[...], ok: index, why}] */
+function mcQuiz(root, qs, o = {}) {
+  let list = [], i = 0, score = 0, answered = false;
+  function start() { list = o.pick ? shuffle(qs.slice()).slice(0, o.pick) : qs.slice(); i = 0; score = 0; show(); }
+  function show() {
+    if (i >= list.length) {
+      const pct = score / list.length;
+      root.innerHTML = `<div class="mc-end"><p class="eyebrow">Ergebnis</p><p class="mc-big">${score} / ${list.length}</p>
+        <p class="lead">${pct === 1 ? 'Perfekt! Alles richtig.' : pct >= .7 ? 'Sehr gut! Fast alles richtig.' : pct >= .4 ? 'Ordentlich. Schau dir die Fehler noch einmal an.' : 'Wiederhole die Inhalte und versuch es noch einmal.'}</p>
+        <button class="btn primary" data-mc="again">Neue Runde</button></div>`;
+      return;
+    }
+    const q = list[i]; answered = false;
+    const order = shuffle(q.a.map((t, k) => k));
+    root.innerHTML = `<div class="mc-head"><span class="eyebrow">Frage ${i + 1} von ${list.length}</span><span class="score">Punkte: <b>${score}</b></span></div>
+      <div class="mc-bar"><i style="width:${100 * i / list.length}%"></i></div>
+      <h3 class="mc-q">${q.q}</h3>
+      <div class="mc-opts">${order.map(k => `<button class="mc-opt" data-k="${k}">${q.a[k]}</button>`).join('')}</div>
+      <p class="mc-why" aria-live="polite"></p>
+      <div class="controls"><button class="btn primary" data-mc="next" hidden>${i + 1 < list.length ? 'Nächste Frage →' : 'Ergebnis anzeigen'}</button></div>`;
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('.mc-opt, [data-mc]'); if (!b) return;
+    if (b.dataset.mc === 'again') return start();
+    if (b.dataset.mc === 'next') { i++; return show(); }
+    if (answered) return;
+    answered = true;
+    const q = list[i], k = +b.dataset.k, ok = k === q.ok;
+    if (ok) score++;
+    $$('.mc-opt', root).forEach(x => { x.disabled = true; if (+x.dataset.k === q.ok) x.classList.add('ok'); });
+    if (!ok) b.classList.add('err');
+    $('.mc-why', root).innerHTML = (ok ? '<b class="good">Richtig!</b> ' : '<b class="bad">Leider falsch.</b> ') + (q.why || '');
+    $('[data-mc="next"]', root).hidden = false;
+    $('.score b', root).textContent = score;
+  });
+  start();
+}
+
+/* Zuordnen: Karten in Spalten sortieren. cats: [{id, name}], items: [{t, c}] */
+function sorter(root, cats, items) {
+  let sel = null;
+  function build() {
+    const its = shuffle(items.map((it, k) => ({...it, k})));
+    root.innerHTML = `<div class="sort-pool" data-pool>${its.map(it => `<button class="sort-card" data-k="${it.k}">${it.t}</button>`).join('')}</div>
+      <div class="sort-cols" style="--n:${cats.length}">${cats.map(c => `<div class="sort-col" data-c="${c.id}"><h3>${c.name}</h3><div class="sort-drop"></div></div>`).join('')}</div>
+      <div class="controls"><button class="btn primary" data-s="check">Prüfen</button><button class="btn" data-s="reset">Neu mischen</button><span class="sort-fb" aria-live="polite"></span></div>`;
+  }
+  root.addEventListener('click', e => {
+    const card = e.target.closest('.sort-card'), col = e.target.closest('.sort-col'), act = e.target.closest('[data-s]');
+    if (act) {
+      if (act.dataset.s === 'reset') { build(); sel = null; return; }
+      let ok = 0, placed = 0;
+      $$('.sort-col .sort-card', root).forEach(c => { placed++; const good = items[+c.dataset.k].c === c.closest('.sort-col').dataset.c; c.classList.toggle('ok', good); c.classList.toggle('err', !good); if (good) ok++; });
+      const left = $$('[data-pool] .sort-card', root).length;
+      $('.sort-fb', root).innerHTML = `<b>${ok}</b> von ${items.length} richtig zugeordnet${left ? ` · ${left} noch nicht einsortiert` : ''}${ok === items.length ? ' – perfekt!' : ''}`;
+      return;
+    }
+    if (card) {
+      if (sel === card) { card.classList.remove('sel'); sel = null; return; }
+      if (sel) sel.classList.remove('sel');
+      if (card.closest('.sort-col') && !sel) { /* zurück in den Pool bei erneutem Klick */ }
+      sel = card; card.classList.add('sel'); card.classList.remove('ok', 'err');
+      return;
+    }
+    if (col && sel) { $('.sort-drop', col).appendChild(sel); sel.classList.remove('sel'); sel = null; return; }
+    if (e.target.closest('[data-pool]') && sel) { $('[data-pool]', root).appendChild(sel); sel.classList.remove('sel'); sel = null; }
+  });
+  build();
+}
+
+/* Paare finden: Begriff ↔ Erklärung. pairs: [[begriff, erklärung], ...] */
+function matcher(root, pairs) {
+  let selL = null, selR = null, done = 0, tries = 0;
+  function build() {
+    done = 0; tries = 0;
+    const L = shuffle(pairs.map((p, k) => k)), R = shuffle(pairs.map((p, k) => k));
+    root.innerHTML = `<div class="match"><div class="match-col">${L.map(k => `<button class="match-card term" data-k="${k}">${pairs[k][0]}</button>`).join('')}</div>
+      <div class="match-col">${R.map(k => `<button class="match-card def" data-k="${k}">${pairs[k][1]}</button>`).join('')}</div></div>
+      <div class="controls"><span class="score">Gefunden: <b>0</b> / ${pairs.length}</span><button class="btn" data-m="reset">Neu mischen</button><span class="sort-fb" aria-live="polite"></span></div>`;
+  }
+  root.addEventListener('click', e => {
+    if (e.target.closest('[data-m="reset"]')) return build();
+    const c = e.target.closest('.match-card'); if (!c || c.classList.contains('ok')) return;
+    const isL = c.classList.contains('term');
+    if (isL) { if (selL) selL.classList.remove('sel'); selL = selL === c ? null : c; } else { if (selR) selR.classList.remove('sel'); selR = selR === c ? null : c; }
+    if (selL) selL.classList.add('sel'); if (selR) selR.classList.add('sel');
+    if (selL && selR) {
+      tries++;
+      const a = selL, b = selR;
+      if (a.dataset.k === b.dataset.k) { a.classList.add('ok'); b.classList.add('ok'); done++; $('.sort-fb', root).textContent = done === pairs.length ? `Alle Paare gefunden – mit ${tries} Versuchen!` : 'Passt!'; }
+      else { a.classList.add('err'); b.classList.add('err'); setTimeout(() => { a.classList.remove('err'); b.classList.remove('err'); }, 650); $('.sort-fb', root).textContent = 'Passt nicht. Versuch es noch einmal.'; }
+      a.classList.remove('sel'); b.classList.remove('sel'); selL = selR = null;
+      $('.score b', root).textContent = done;
+    }
+  });
+  build();
+}
+
+/* Kleine Element-Auswahl (Chips 1–20) */
+function elementChips(root, onPick, o = {}) {
+  const list = o.list || ELS.slice(0, 20).map(e => e.z);
+  root.innerHTML = list.map(z => { const e = ELS[z - 1]; return `<button data-z="${z}" title="${e.name}" aria-pressed="false"><small>${z}</small><b>${e.sym}</b></button>`; }).join('');
+  const set = z => $$('button', root).forEach(b => b.setAttribute('aria-pressed', +b.dataset.z === z));
+  root.onclick = ev => { const b = ev.target.closest('[data-z]'); if (!b) return; set(+b.dataset.z); onPick(+b.dataset.z); };
+  return set;
+}
+
+/* ================= BEGRIFFE ================= */
+(() => {
+  const PAIRS = [
+    ['Atomkern', 'enthält Protonen und Neutronen und fast die gesamte Masse'],
+    ['Atomhülle', 'Bereich, in dem sich die Elektronen bewegen'],
+    ['Proton', 'positiv geladenes Teilchen im Kern, Masse ≈ 1 u'],
+    ['Neutron', 'ungeladenes Teilchen im Kern, Masse ≈ 1 u'],
+    ['Elektron', 'negativ geladenes, fast masseloses Teilchen'],
+    ['Ordnungszahl', 'Anzahl der Protonen im Kern'],
+    ['Massenzahl', 'Summe aus Protonen und Neutronen'],
+    ['Isotope', 'Atome eines Elements mit unterschiedlicher Neutronenzahl'],
+    ['Valenzelektronen', 'Elektronen auf der äußersten Schale'],
+    ['Ionisierungsenergie', 'Energie, um ein Elektron aus einem Atom zu entfernen'],
+    ['Periode', 'Zeile im Periodensystem, gibt die Zahl der Schalen an'],
+    ['Hauptgruppe', 'Spalte im Periodensystem, gibt die Zahl der Valenzelektronen an'],
+    ['Edelgaskonfiguration', 'voll besetzte Außenschale, meist mit 8 Elektronen'],
+    ['Kation', 'positiv geladenes Ion'],
+    ['Anion', 'negativ geladenes Ion'],
+    ['Ionengitter', 'regelmäßige Anordnung von Kationen und Anionen in einem Salz']
+  ];
+  const root = $('#match-root');
+  function newSet() { const box = document.createElement('div'); root.replaceChildren(box); matcher(box, shuffle(PAIRS.slice()).slice(0, 8)); }
+  $('#match-new').onclick = newSet;
+  newSet();
+})();
+
+/* ================= QUIZ ================= */
+mcQuiz($('#big-quiz'), [
+  {q: 'Was bedeutet das griechische Wort „átomos“?', a: ['unteilbar', 'winzig', 'Teilchen', 'Kugel'], ok: 0, why: 'Demokrit nannte die kleinsten Teilchen átomos, das Unteilbare.'},
+  {q: 'Welches Experiment führte zum Kern-Hülle-Modell?', a: ['Rutherfords Streuversuch mit Goldfolie', 'Thomsons Kathodenstrahlen', 'Daltons Massenmessungen', 'Die Flammenfärbung'], ok: 0, why: 'Einige α-Teilchen prallten zurück. Daraus schloss Rutherford auf einen winzigen, positiven Kern.'},
+  {q: 'Wo befindet sich fast die gesamte Masse eines Atoms?', a: ['im Atomkern', 'in der Atomhülle', 'gleichmäßig verteilt', 'in den Elektronen'], ok: 0, why: 'Protonen und Neutronen wiegen je etwa 1 u, Elektronen nur etwa 1/1836 u.'},
+  {q: 'Wie viele Neutronen hat ein ³⁷Cl-Atom (Ordnungszahl 17)?', a: ['20', '17', '37', '54'], ok: 0, why: 'Neutronen = Massenzahl − Ordnungszahl = 37 − 17 = 20.'},
+  {q: 'Was unterscheidet Isotope eines Elements?', a: ['die Zahl der Neutronen', 'die Zahl der Protonen', 'die Zahl der Elektronen', 'die Ordnungszahl'], ok: 0, why: 'Isotope haben gleich viele Protonen, aber unterschiedlich viele Neutronen.'},
+  {q: 'Warum steht bei Chlor im PSE die Atommasse 35,45 u?', a: ['Es ist der Mittelwert der Isotope Cl-35 und Cl-37.', 'Weil Elektronen so viel wiegen.', 'Weil Chlor halbe Neutronen hat.', 'Das ist ein Messfehler.'], ok: 0, why: 'Natürliches Chlor ist ein Gemisch aus etwa 76 % Cl-35 und 24 % Cl-37.'},
+  {q: 'Wie viele Elektronen fasst die L-Schale höchstens?', a: ['8', '2', '18', '4'], ok: 0, why: 'K: 2, L: 8, M: 8 (bei den ersten 20 Elementen).'},
+  {q: 'Wie sind die Elektronen beim Schwefel (Z = 16) verteilt?', a: ['K 2 · L 8 · M 6', 'K 2 · L 6 · M 8', 'K 8 · L 8', 'K 2 · L 7 · M 7'], ok: 0, why: '16 Elektronen: 2 auf K, 8 auf L, der Rest (6) auf M.'},
+  {q: 'Woran erkennt man beim Abtrennen der Elektronen eine neue Schale?', a: ['an einem großen Sprung der Ionisierungsenergie', 'an einer Farbänderung', 'daran, dass die Energie sinkt', 'an einem Knall'], ok: 0, why: 'Elektronen einer inneren Schale sind viel näher am Kern und viel fester gebunden.'},
+  {q: 'Welche Elektronen werden in der Lewis-Schreibweise als Punkte gezeichnet?', a: ['nur die Valenzelektronen', 'alle Elektronen', 'nur die Elektronen der K-Schale', 'die Protonen'], ok: 0, why: 'Das Symbol steht für den Atomrumpf, die Punkte für die Außenelektronen.'},
+  {q: 'Wie viele Valenzelektronen hat Stickstoff (Hauptgruppe V)?', a: ['5', '7', '3', '2'], ok: 0, why: 'Die Hauptgruppennummer entspricht der Zahl der Valenzelektronen.'},
+  {q: 'Was gibt die Periodennummer an?', a: ['die Zahl der besetzten Schalen', 'die Zahl der Valenzelektronen', 'die Zahl der Neutronen', 'die Atommasse'], ok: 0, why: 'Periode 3 → drei besetzte Schalen (K, L, M).'},
+  {q: 'Wer sagte 1871 die Eigenschaften des noch unbekannten Germaniums voraus?', a: ['Dmitri Mendelejew', 'Niels Bohr', 'John Dalton', 'Ernest Rutherford'], ok: 0, why: 'Mendelejew ließ Lücken in seinem System und nannte das Element Eka-Silicium.'},
+  {q: 'Wie ändert sich der Atomradius in einer Hauptgruppe von oben nach unten?', a: ['Er nimmt zu.', 'Er nimmt ab.', 'Er bleibt gleich.', 'Er schwankt zufällig.'], ok: 0, why: 'Mit jeder Periode kommt eine Schale hinzu.'},
+  {q: 'Welches Element hat die größte Ionisierungsenergie?', a: ['Helium', 'Natrium', 'Kalium', 'Chlor'], ok: 0, why: 'Edelgase halten ihre Elektronen am festesten, Helium ganz besonders.'},
+  {q: 'Was entsteht, wenn Natrium mit Wasser reagiert?', a: ['Natronlauge und Wasserstoff', 'Kochsalz und Sauerstoff', 'Natriumchlorid', 'nur Wasserdampf'], ok: 0, why: '2 Na + 2 H₂O → 2 NaOH + H₂. Phenolphthalein färbt die Lauge pink.'},
+  {q: 'Warum reagiert Kalium heftiger mit Wasser als Lithium?', a: ['Sein Valenzelektron ist weiter vom Kern entfernt und wird leichter abgegeben.', 'Kalium hat mehr Valenzelektronen.', 'Kalium ist schwerer.', 'Lithium ist ein Nichtmetall.'], ok: 0, why: 'Kalium hat vier Schalen, Lithium nur zwei.'},
+  {q: 'Was bedeutet „Halogen“?', a: ['Salzbildner', 'Säurebildner', 'Lichtbringer', 'Edelstoff'], ok: 0, why: 'Griechisch hals = Salz, gennan = erzeugen. Halogene bilden mit Metallen Salze.'},
+  {q: 'Welches Halogen ist bei Raumtemperatur flüssig?', a: ['Brom', 'Chlor', 'Iod', 'Fluor'], ok: 0, why: 'Brom ist eine rotbraune Flüssigkeit (Siedetemperatur 59 °C).'},
+  {q: 'Warum sind Edelgase so reaktionsträge?', a: ['Ihre Außenschale ist voll besetzt.', 'Sie haben keine Elektronen.', 'Sie sind zu schwer.', 'Sie haben keinen Kern.'], ok: 0, why: 'Die Edelgaskonfiguration ist besonders stabil.'},
+  {q: 'Welche Ladung hat das Ion des Magnesiums?', a: ['2+', '2−', '1+', '6−'], ok: 0, why: 'Magnesium (Hauptgruppe II) gibt 2 Elektronen ab.'},
+  {q: 'Welche Ladung hat das Oxid-Ion?', a: ['2−', '2+', '6−', '1−'], ok: 0, why: 'Sauerstoff (VI) nimmt 2 Elektronen auf, um das Oktett zu erreichen.'},
+  {q: 'Wie heißt ein negativ geladenes Ion?', a: ['Anion', 'Kation', 'Isotop', 'Proton'], ok: 0, why: 'Anionen entstehen, wenn Atome Elektronen aufnehmen.'},
+  {q: 'Was passiert bei der Bildung von Natriumchlorid?', a: ['Ein Elektron geht vom Natrium- zum Chloratom über.', 'Ein Proton geht vom Chlor zum Natrium über.', 'Die Atome teilen sich alle Elektronen.', 'Die Kerne verschmelzen.'], ok: 0, why: 'Es entstehen Na⁺ und Cl⁻, die sich anziehen (Ionenbindung).'},
+  {q: 'Wie lautet die Verhältnisformel von Aluminiumoxid?', a: ['Al₂O₃', 'AlO', 'Al₃O₂', 'AlO₃'], ok: 0, why: 'Al³⁺ und O²⁻: 2 × (+3) + 3 × (−2) = 0.'},
+  {q: 'Wie lautet die Verhältnisformel von Calciumchlorid?', a: ['CaCl₂', 'CaCl', 'Ca₂Cl', 'CaCl₃'], ok: 0, why: 'Ca²⁺ braucht zwei Cl⁻, damit sich die Ladungen ausgleichen.'},
+  {q: 'Ein Ion hat 12 Protonen und 10 Elektronen. Welches Ion ist es?', a: ['Mg²⁺', 'Ne', 'Na⁺', 'O²⁻'], ok: 0, why: '12 Protonen → Magnesium. Ladung = 12 − 10 = +2.'},
+  {q: 'Welches Teilchen entdeckte J. J. Thomson 1897?', a: ['das Elektron', 'das Proton', 'das Neutron', 'den Atomkern'], ok: 0, why: 'Bei Versuchen mit Kathodenstrahlen fand er winzige, negativ geladene Teilchen.'}
+], {pick: 10});
+
+/* ================= ATOM-DETEKTIV ================= */
+(() => {
+  const cv = $('#cv-det');
+  const POOL = [3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+  const FIELDS = [['z', 'Ordnungszahl'], ['p', 'Protonen'], ['n', 'Neutronen'], ['e', 'Elektronen'], ['per', 'Periode'], ['hg', 'Hauptgruppe (Zahl)'], ['v', 'Valenzelektronen'], ['q', 'Ionenladung (0 = keine)']];
+  const D = {z: 0, solved: false, count: 0, rot: 0};
+  elementChips($('#det-pse'), () => {});
+  $('#det-fields').innerHTML = FIELDS.map(([k, l]) => `<label for="d-${k}">${l}<input type="number" id="d-${k}" min="-4" max="40" inputmode="numeric"></label>`).join('');
+  const truth = z => ({z, p: z, n: NEUTRONS[z], e: z, per: perOf(z), hg: hgOf(z), v: shellsFor(z).at(-1), q: IONS[z] ?? 0});
+  function pick() {
+    let z; do { z = POOL[Math.floor(Math.random() * POOL.length)]; } while (z === D.z);
+    D.z = z; D.solved = false;
+    const e = ELS[z - 1];
+    $('#det-nuc').innerHTML = `<span class="ms"><span>${z + NEUTRONS[z]}</span><span>?</span></span>${e.sym}`;
+    $('#det-name').textContent = '?';
+    FIELDS.forEach(([k]) => { const x = $('#d-' + k); x.value = ''; x.classList.remove('ok', 'err'); });
+    $('#det-fb').className = 'fb'; $('#det-fb').textContent = '';
+    $('#det-photo-note').textContent = 'wird nach dem Lösen sichtbar';
+  }
+  function reveal() {
+    const e = ELS[D.z - 1];
+    D.solved = true; $('#det-name').textContent = e.name;
+    $('#det-nuc').innerHTML = `<span class="ms"><span>${D.z + NEUTRONS[D.z]}</span><span>${D.z}</span></span>${e.sym}`;
+    $('#det-photo-note').textContent = e.name;
+  }
+  $('#det-check').onclick = () => {
+    const t = truth(D.z);
+    let ok = 0, filled = 0;
+    FIELDS.forEach(([k]) => { const x = $('#d-' + k); if (x.value === '') { x.classList.remove('ok', 'err'); return; } filled++; const good = +x.value === t[k]; x.classList.toggle('ok', good); x.classList.toggle('err', !good); if (good) ok++; });
+    const fb = $('#det-fb');
+    if (!filled) { fb.className = 'fb'; fb.textContent = 'Fülle zuerst die Felder aus.'; return; }
+    if (ok === FIELDS.length) { if (!D.solved) D.count++; reveal(); fb.className = 'fb ok'; fb.innerHTML = `Fall gelöst! Es ist <b>${ELS[D.z - 1].name}</b>.`; }
+    else { fb.className = 'fb err'; fb.textContent = `${ok} von ${FIELDS.length} Angaben stimmen.` + (ok >= 4 ? ' Fast geschafft!' : ' Tipp: Beginne mit der Ordnungszahl aus dem Periodensystem.'); }
+    $('#det-score').innerHTML = `Gelöste Fälle: <b>${D.count}</b>`;
+  };
+  $('#det-solve').onclick = () => { const t = truth(D.z); FIELDS.forEach(([k]) => { $('#d-' + k).value = t[k]; }); $('#det-check').click(); };
+  $('#det-new').onclick = pick;
+  $('#det-fields').addEventListener('keydown', ev => { if (ev.key === 'Enter') $('#det-check').click(); });
+  visuals.push({station: 'detektiv', tick(dt) {
+    const {ctx, w, h} = setup(cv);
+    if (!RM.matches) D.rot += dt * .6;
+    if (!D.solved) {
+      ctx.fillStyle = C.surface2; roundRect(ctx, 10, 10, w - 20, h - 20, 12); ctx.fill();
+      label(ctx, '?', w / 2, h / 2, {size: Math.min(w, h) * .4, color: C.ink2, font: DISPLAY});
+      return;
+    }
+    const sh = shellsFor(D.z), R = Math.min(w, h) * .46 / SHELL_R[Math.max(1, sh.length - 1)];
+    drawAtom(ctx, w / 2, h / 2, R, {p: D.z, n: NEUTRONS[D.z], shells: sh, t: D.rot, hiOuter: true, nucR: R * .05});
+  }});
+  pick(); $('#det-score').innerHTML = 'Gelöste Fälle: <b>0</b>';
+})();
+
+/* ================= CHECKLISTE ================= */
+(() => {
+  const ITEMS = [
+    ['die Entwicklung der Atommodelle von Demokrit bis Bohr beschreiben und begründen, warum Modelle verändert wurden.', '01_Atommodelle.html#start', 'Stunde 1'],
+    ['die Elementarteilchen mit Ladung, Masse und Ort im Atom nennen.', '01_Atommodelle.html#bohr-detail', 'Stunde 1'],
+    ['die Größen- und Masseverhältnisse im Atom beschreiben.', '02_Atombau.html#groesse', 'Stunde 2'],
+    ['aus der Nuklidschreibweise die Zahl der Protonen, Neutronen und Elektronen bestimmen.', '02_Atombau.html#nuklid', 'Stunde 2'],
+    ['erklären, was Isotope sind und warum Atommassen meist keine ganzen Zahlen sind.', '02_Atombau.html#isotope', 'Stunde 2'],
+    ['erklären, wie die Ionisierungsenergien das Schalenmodell belegen.', '03_Schalenmodell.html#ionisierung', 'Stunde 3'],
+    ['die Elektronen der ersten 20 Elemente auf die Schalen verteilen.', '03_Schalenmodell.html#besetzung', 'Stunde 3'],
+    ['Atome in der Lewis-Schreibweise darstellen.', '03_Schalenmodell.html#lewis', 'Stunde 3'],
+    ['den Zusammenhang zwischen Periode, Hauptgruppe und Atombau erklären.', '04_Periodensystem.html#aufbau', 'Stunde 4'],
+    ['Trends im Periodensystem (Atomradius, Ionisierungsenergie) mit dem Schalenmodell erklären.', '04_Periodensystem.html#trends', 'Stunde 4'],
+    ['Eigenschaften der Alkalimetalle, Halogene und Edelgase nennen und mit dem Atombau erklären.', '05_Elementfamilien.html#start', 'Stunde 5'],
+    ['die Edelgasregel erklären und die Ionenladung aus dem Periodensystem ableiten.', '06_Ionen.html#ladung', 'Stunde 6'],
+    ['die Bildung von Natriumchlorid mit dem Elektronenübergang erklären.', '06_Ionen.html#kochsalz', 'Stunde 6'],
+    ['Verhältnisformeln von Salzen aufstellen.', '06_Ionen.html#formeln', 'Stunde 6']
+  ];
+  const KEY = 'atombau-checkliste-v1';
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+  const LV = [['2', 'sicher'], ['1', 'teilweise'], ['0', 'noch nicht']];
+  function render() {
+    $('#checklist').innerHTML = ITEMS.map((it, i) => {
+      const s = state[i];
+      return `<li class="ck ${s === '0' ? 'ck-need' : s === '2' ? 'ck-good' : ''}"><p><b>Ich kann</b> ${it[0]}</p>
+        <div class="ck-row"><div class="seg ck-seg" role="group" aria-label="Einschätzung">${LV.map(([v, l]) => `<button data-i="${i}" data-v="${v}" aria-pressed="${s === v}">${l}</button>`).join('')}</div>
+        ${s === '0' || s === '1' ? `<a class="ck-link" href="${it[1]}">Wiederholen: ${it[2]} →</a>` : ''}</div></li>`;
+    }).join('');
+    const c = {2: 0, 1: 0, 0: 0}; Object.values(state).forEach(v => c[v]++);
+    const done = c[2] + c[1] + c[0];
+    $('#check-sum').innerHTML = `<div class="meter"><span>sicher</span><b>${c[2]}</b></div><div class="meter"><span>teilweise</span><b>${c[1]}</b></div><div class="meter"><span>noch nicht</span><b>${c[0]}</b></div><div class="meter"><span>eingeschätzt</span><b>${done}</b><small>/ ${ITEMS.length}</small></div>`;
+  }
+  $('#checklist').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; const i = b.dataset.i; state[i] = state[i] === b.dataset.v ? undefined : b.dataset.v; if (state[i] === undefined) delete state[i]; save(); render(); });
+  $('#check-reset').onclick = () => { state = {}; save(); render(); };
+  render();
+})();
+
+startApp();
+})();
+</script>
+</body>
+</html>

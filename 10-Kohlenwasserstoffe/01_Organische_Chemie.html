@@ -1,0 +1,1924 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kohlenstoff – Baustein der organischen Chemie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: feste Zeitstrahl-Leiste oben, eine Station pro Bildschirm (Text links, Experiment rechts), Blätter-Leiste unten – gebaut für Beamer & Presenter */
+:root{
+  --bg:#EFF5F0; --surface:#FFFFFF; --surface-2:#E0ECE3; --ink:#102219; --ink-2:#47604F; --line:#C3D7C9;
+  --accent:#0B7A5F; --accent-ink:#FFFFFF;
+  --electron:#2563EB; --proton:#D63E2B; --neutron:#7D8898; --gold:#B8860B; --good:#2E8B1E; --bad:#C2392B;
+  --atom-c:#3C454D; --atom-h:#F3F5F4; --atom-o:#D63E2B; --atom-br:#9A4A1E; --atom-cl:#2BA84A; --atom-f:#86B817; --atom-i:#6B3FA0; --bromine:#C2541A;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --radius:14px;
+  font-size:clamp(16px, 0.75vw + 9px, 22px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A1A12; --surface:#10251A; --surface-2:#173323; --ink:#E5F2E9; --ink-2:#9DBBA8; --line:#264A35;
+    --accent:#4FD8B0; --accent-ink:#0A1A12;
+    --electron:#5C8DFF; --proton:#FF6B55; --neutron:#9AA6B6; --gold:#E3B24B; --good:#8BDB4F; --bad:#FF6D5E;
+    --atom-c:#55606A; --atom-h:#F3F5F4; --atom-o:#FF5A45; --atom-br:#C2602A; --atom-cl:#3CC85E; --atom-f:#A6D93A; --atom-i:#9A6BD6; --bromine:#E0702E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A1A12; --surface:#10251A; --surface-2:#173323; --ink:#E5F2E9; --ink-2:#9DBBA8; --line:#264A35;
+  --accent:#4FD8B0; --accent-ink:#0A1A12;
+  --electron:#5C8DFF; --proton:#FF6B55; --neutron:#9AA6B6; --gold:#E3B24B; --good:#8BDB4F; --bad:#FF6D5E;
+  --atom-c:#55606A; --atom-h:#F3F5F4; --atom-o:#FF5A45; --atom-br:#C2602A; --atom-cl:#3CC85E; --atom-f:#A6D93A; --atom-i:#9A6BD6; --bromine:#E0702E;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1rem;line-height:1.55}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.app{min-height:100vh;display:flex;flex-direction:column}
+
+/* ---------- Kopfleiste mit Zeitstrahl ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:1rem;padding:.5rem 16px}
+.brand{flex:none;display:flex;flex-direction:column;line-height:1.15}
+.brand b{font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:1.05rem;letter-spacing:-.01em}
+.brand span{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.tl-scroll{flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin}
+.tl{list-style:none;margin:0 auto;padding:0;display:flex;align-items:flex-start;width:max-content}
+.tl li{position:relative;display:flex}
+.tl li.m::before{content:"";position:absolute;left:0;right:0;top:calc(.25rem + 17px);height:3px;background:var(--line);z-index:0}
+.tl li.m.first::before{left:50%}
+.tl li.m.last::before{right:50%}
+.tl li.m.done::before{background:var(--accent)}
+.tl li.m.half::before{background:linear-gradient(90deg,var(--accent) 50%,var(--line) 50%)}
+.tl li.m.first.half::before{background:var(--line)}
+.tl-stop{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:.1rem;background:none;border:0;cursor:pointer;padding:.25rem .55rem;color:var(--ink-2);min-width:4.6rem}
+.tl-stop .dot{width:37px;height:37px;border-radius:50%;background:var(--surface);border:2px solid var(--line);display:grid;place-items:center;transition:border-color .2s, transform .2s}
+.tl-stop .dot svg{width:25px;height:25px}
+.tl-stop .yr{font-family:var(--f-mono);font-size:.66rem;line-height:1.2;white-space:nowrap}
+.tl-stop .nm{font-size:.78rem;font-weight:700;line-height:1.2;white-space:nowrap}
+.tl-stop:hover .dot{border-color:var(--ink-2)}
+.tl-stop[aria-current="step"]{color:var(--ink)}
+.tl-stop[aria-current="step"] .dot{border-color:var(--accent);border-width:3px;transform:scale(1.12);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+.tl li.gap{align-self:flex-start;padding-top:calc(.25rem + 9px)}
+.tl li.gap span{display:block;position:relative;z-index:1;font-family:var(--f-mono);font-size:.62rem;color:var(--ink-2);background:var(--bg);padding:.1rem .4rem;border:1px dashed var(--line);border-radius:99px;white-space:nowrap}
+.tl li.gap::before{content:"";position:absolute;left:0;right:0;top:calc(.25rem + 17px);border-top:3px dotted var(--line)}
+.tl li.gap.done::before{border-top-color:var(--accent)}
+.tl li.sep{width:1px;background:var(--line);margin:.4rem .7rem;align-self:stretch}
+.tl-pill{align-self:center;margin-top:.35rem;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.3rem .8rem;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-2);white-space:nowrap;margin-inline:.15rem}
+.tl-pill:hover{border-color:var(--ink-2)}
+.tl-pill[aria-current="step"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.icon-btn{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:.4rem .7rem;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-2)}
+.icon-btn:hover{color:var(--ink);border-color:var(--ink-2)}
+
+/* ---------- Bühne ---------- */
+main{flex:1;padding:clamp(1rem,2.6vw,2.4rem) clamp(16px,4vw,3.5rem)}
+.station{max-width:1440px;margin-inline:auto;animation:enter .35s ease-out}
+@keyframes enter{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.station{animation:none}}
+.model{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(1.5rem,3.2vw,3.2rem);align-items:start}
+@media (max-width:920px){.model{grid-template-columns:minmax(0,1fr)}}
+.txt{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.eyebrow{margin:0;font-family:var(--f-mono);font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.05}
+h1{font-size:clamp(2.3rem,5.2vw,4.4rem);font-stretch:122%;font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(2rem,4.2vw,3.5rem);font-stretch:122%;font-weight:800;letter-spacing:-.02em}
+h3{font-size:1.25rem;font-stretch:112%;font-weight:700}
+.who{display:flex;flex-wrap:wrap;align-items:baseline;gap:.2rem .8rem}
+.who .life{font-family:var(--f-mono);font-size:.8rem;color:var(--ink-2)}
+.modelname{display:inline-flex;align-items:center;gap:.5rem;align-self:flex-start;font-family:var(--f-display);font-stretch:110%;font-weight:700;font-size:1.05rem;color:var(--accent);border:2px solid currentColor;border-radius:99px;padding:.15rem .8rem}
+.lead{font-size:1.22rem;line-height:1.45;margin:0;max-width:34em}
+.facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.55rem;max-width:38em}
+.facts li{position:relative;padding-left:1.4rem}
+.facts li::before{content:"";position:absolute;left:.2rem;top:.6em;width:.5rem;height:.5rem;border-radius:50%;background:var(--ink-2)}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+@media (max-width:560px){.pair{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.8rem 1rem;min-width:0}
+.box p{margin:.35rem 0 0}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;border-radius:6px;padding:.1rem .45rem}
+.tag.new{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.tag.lim{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.tag.info{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+blockquote{margin:0;padding:.2rem 0 .2rem 1rem;border-left:3px solid var(--line);font-style:italic;color:var(--ink-2);max-width:36em}
+blockquote cite{display:block;font-style:normal;font-family:var(--f-mono);font-size:.75rem;margin-top:.3rem}
+.fun{font-size:.92rem;color:var(--ink-2);margin:0}
+.fun b{color:var(--ink)}
+
+/* Experiment-Fläche */
+.vis{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem;display:flex;flex-direction:column;gap:.75rem;min-width:0}
+.vis-head{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+.vis-head h3{font-size:1.02rem}
+.vis canvas{display:block;width:100%;max-width:100%;aspect-ratio:4/3;border-radius:10px;background:var(--surface)}
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.btn{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:.5rem .95rem;font-weight:700;cursor:pointer;font-size:.92rem;line-height:1.2}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--surface);padding:.45rem .8rem;cursor:pointer;font-weight:700;font-size:.88rem;color:var(--ink-2)}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.status{margin:0;font-size:.95rem;min-height:2.9em}
+.status b{font-family:var(--f-mono);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem 1rem;font-size:.82rem;color:var(--ink-2);margin:0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:.35rem}
+.sw{width:.85rem;height:.85rem;border-radius:50%;display:inline-block;flex:none}
+.sw.p{background:var(--proton)} .sw.n{background:var(--neutron)} .sw.e{background:var(--electron)} .sw.g{background:var(--gold)}
+.sw.pos{background:color-mix(in srgb,var(--proton) 30%,transparent);border:1.5px solid var(--proton)}
+.note{font-size:.8rem;color:var(--ink-2);margin:0}
+
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.meter{background:var(--surface-2);border-radius:10px;padding:.45rem .6rem;min-width:0}
+.meter span{display:block;font-size:.74rem;color:var(--ink-2);line-height:1.2}
+.meter b{font-family:var(--f-mono);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.meter small{font-family:var(--f-mono);color:var(--ink-2);font-size:.75rem;margin-left:.3rem}
+
+.dalton-sym{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:0;padding:0;list-style:none}
+.dalton-sym li{display:flex;flex-direction:column;align-items:center;gap:.2rem;font-size:.75rem;color:var(--ink-2)}
+.dalton-sym svg{width:34px;height:34px;color:var(--ink)}
+
+.flame{display:inline-flex;align-items:center;gap:.5rem;font-weight:700}
+.flame i{width:1.1rem;height:1.1rem;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;display:inline-block}
+
+/* ---------- Start ---------- */
+.start{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(1.5rem,4vw,4rem);align-items:center}
+@media (max-width:920px){.start{grid-template-columns:minmax(0,1fr)}}
+.start .txt{gap:1.2rem}
+.teaser{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem;max-width:34em}
+.teaser p{margin:.3rem 0 0}
+.preview{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.preview button{width:100%;display:grid;grid-template-columns:3.2rem 6.5rem minmax(0,1fr);align-items:center;gap:.9rem;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.55rem .9rem;cursor:pointer}
+.preview button:hover{border-color:var(--ink-2)}
+.preview svg{width:3.2rem;height:3.2rem}
+.preview .y{font-family:var(--f-mono);font-size:.85rem;color:var(--ink-2)}
+.preview .n{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.preview .n b{font-family:var(--f-display);font-stretch:112%;font-size:1.12rem}
+.preview .n span{font-size:.88rem;color:var(--ink-2)}
+@media (max-width:460px){.preview button{grid-template-columns:2.6rem minmax(0,1fr)}.preview .y{display:none}.preview svg{width:2.6rem;height:2.6rem}}
+
+/* ---------- Vergleich ---------- */
+.section-head{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.4rem;max-width:58em}
+.section-head p{margin:0}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+table.cmp{border-collapse:collapse;width:100%;min-width:760px}
+.cmp th,.cmp td{padding:.6rem .75rem;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.cmp thead th{vertical-align:bottom}
+.cmp thead th svg{width:3rem;height:3rem;display:block;margin:0 auto .3rem}
+.cmp thead th .y{display:block;font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);font-weight:400}
+.cmp thead th .nm{font-family:var(--f-display);font-stretch:112%;font-size:1.05rem}
+.cmp tbody th{text-align:left;font-weight:700;font-size:.92rem;width:13rem}
+.cmp tbody tr:last-child th,.cmp tbody tr:last-child td{border-bottom:0}
+.cmp tbody tr:hover{background:var(--surface-2)}
+.cmp td{font-size:.92rem}
+.yes,.no{font-family:var(--f-mono);font-weight:600;font-size:1.25rem}
+.yes{color:var(--good)} .no{color:var(--bad)}
+.cmp.quiz td.q{cursor:pointer}
+.cmp.quiz td.q:not(.shown) > *{visibility:hidden}
+.cmp.quiz td.q:not(.shown){background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,transparent 6px 12px)}
+.cmp.quiz td.q:not(.shown)::after{content:"?";font-family:var(--f-mono);font-weight:600;color:var(--ink-2)}
+.cmp.quiz td.q:not(.shown){position:relative}
+.cmp.quiz td.q:not(.shown)::after{position:absolute;inset:0;display:grid;place-items:center}
+.cmp-tools{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem;align-items:center}
+.takeaway{margin-top:1.4rem;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:820px){.takeaway{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- Bohr im Detail ---------- */
+.particles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;margin-bottom:1.4rem}
+@media (max-width:820px){.particles{grid-template-columns:minmax(0,1fr)}}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:grid;grid-template-columns:3.4rem minmax(0,1fr);gap:.2rem .9rem;align-items:start}
+.pcard .ball{grid-row:span 2;width:3.4rem;height:3.4rem;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--f-mono);font-weight:600;font-size:1.5rem;box-shadow:inset -6px -8px 14px rgba(0,0,0,.22), inset 5px 6px 10px rgba(255,255,255,.28)}
+.pcard .ball.p{background:var(--proton)} .pcard .ball.n{background:var(--neutron)} .pcard .ball.e{background:var(--electron);width:2.6rem;height:2.6rem;margin:.4rem}
+.pcard h3{align-self:center}
+.pcard h3 small{font-family:var(--f-mono);font-weight:400;font-size:.85rem;color:var(--ink-2);margin-left:.3rem}
+.pcard dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.15rem .7rem;font-size:.9rem}
+.pcard dt{color:var(--ink-2)}
+.pcard dd{margin:0;font-weight:700}
+.pcard .say{grid-column:1 / -1;margin:.5rem 0 0;font-size:.88rem;color:var(--ink-2);border-top:1px solid var(--line);padding-top:.5rem}
+
+.kit{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.kit{grid-template-columns:minmax(0,1fr)}}
+.kit .vis canvas{aspect-ratio:1/1;max-height:72vh;width:auto;max-width:100%;margin-inline:auto}
+.kit-panel{display:flex;flex-direction:column;gap:1rem;min-width:0}
+.chips{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:.3rem}
+@media (max-width:480px){.chips{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.chips button{border:1.5px solid var(--line);background:var(--surface);border-radius:8px;padding:.25rem 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.chips button small{font-family:var(--f-mono);font-size:.6rem;color:var(--ink-2)}
+.chips button b{font-size:.95rem}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chips button[aria-pressed="true"] small{color:var(--bg)}
+.ctrs{display:flex;flex-direction:column;gap:.45rem}
+.ctr{display:grid;grid-template-columns:1.1rem minmax(0,1fr) 2.6rem 3rem 2.6rem;align-items:center;gap:.5rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.4rem .6rem}
+.ctr span.l{font-weight:700}
+.ctr span.l small{display:block;font-weight:400;font-size:.75rem;color:var(--ink-2)}
+.ctr button{height:2.4rem;border-radius:8px;border:1.5px solid var(--line);background:var(--surface-2);font-size:1.3rem;font-weight:700;cursor:pointer;line-height:1}
+.ctr button:hover{border-color:var(--ink-2)}
+.ctr output{font-family:var(--f-mono);font-weight:600;font-size:1.4rem;text-align:center;font-variant-numeric:tabular-nums}
+.readout{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:grid;grid-template-columns:auto minmax(0,1fr);gap:.9rem 1.2rem;align-items:center}
+.nuc{font-family:var(--f-mono);font-size:2.6rem;font-weight:600;display:inline-flex;align-items:center;line-height:1}
+.nuc .ms{display:inline-flex;flex-direction:column;align-items:flex-end;font-size:.95rem;line-height:1.15;margin-right:.15rem}
+.nuc .q{font-size:1rem;align-self:flex-start;margin-left:.1rem;color:var(--accent)}
+.readout .nm{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:1.3rem;line-height:1.15}
+.readout .sub{font-size:.88rem;color:var(--ink-2)}
+.readout dl{grid-column:1 / -1;margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem}
+.readout dl div{background:var(--surface-2);border-radius:8px;padding:.35rem .5rem;min-width:0}
+.readout dt{font-size:.72rem;color:var(--ink-2)}
+.readout dd{margin:0;font-family:var(--f-mono);font-weight:600;font-size:1.05rem}
+.shellrow{grid-column:1 / -1;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;font-size:.88rem}
+.shellrow .sh{font-family:var(--f-mono);border:1.5px solid var(--line);border-radius:8px;padding:.15rem .5rem}
+.shellrow .sh b{color:var(--electron)}
+.charge{grid-column:1 / -1;margin:0;font-weight:700}
+.charge.ion{color:var(--accent)}
+.merke{background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--radius);padding:.9rem 1.1rem}
+.merke ul{margin:.5rem 0 0;padding-left:1.1rem;display:flex;flex-direction:column;gap:.3rem}
+.merke .eq{font-family:var(--f-mono);font-weight:600}
+
+/* ---------- Übungen ---------- */
+.pse-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.7rem}
+.pse{display:grid;grid-template-columns:1.4rem repeat(18,minmax(2.35rem,1fr));gap:3px;min-width:860px}
+.pse .lab{font-family:var(--f-mono);font-size:.68rem;color:var(--ink-2);display:grid;place-items:center}
+.pse .el{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:.12rem .2rem .18rem;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;min-width:0;text-align:left}
+.pse .el .z{font-family:var(--f-mono);font-size:.6rem;color:var(--ink-2)}
+.pse .el .s{font-weight:700;font-size:.98rem;align-self:center}
+.pse .el.tm{background:var(--surface-2)}
+.pse .el.f{background:var(--surface-2);border-style:dashed}
+.pse .el:hover{border-color:var(--ink)}
+.pse .el.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pse .el.sel .z{color:var(--bg)}
+.pse .el.found{box-shadow:inset 0 0 0 2px var(--good)}
+.pse .ph{grid-column:span 1;font-family:var(--f-mono);font-size:.58rem;color:var(--ink-2);border:1px dashed var(--line);border-radius:5px;display:grid;place-items:center;text-align:center}
+.pse-bottom{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.8rem;margin-top:.8rem}
+@media (max-width:820px){.pse-bottom{grid-template-columns:minmax(0,1fr)}}
+.pse-info{display:flex;gap:1rem;align-items:center}
+.bigcell{flex:none;width:5.6rem;height:5.6rem;border:2px solid var(--ink);border-radius:10px;display:flex;flex-direction:column;justify-content:space-between;padding:.3rem .45rem;background:var(--surface)}
+.bigcell .z{font-family:var(--f-mono);font-size:.9rem;font-weight:600}
+.bigcell .s{font-size:2rem;font-weight:700;align-self:center;line-height:1}
+.bigcell .n{font-size:.62rem;text-align:center;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pse-info p{margin:0}
+.tasks-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.8rem;margin:1.6rem 0 .9rem}
+.score{font-family:var(--f-mono);font-size:1rem}
+.score b{font-size:1.3rem}
+.tasks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:1100px){.tasks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.tasks{grid-template-columns:minmax(0,1fr)}}
+.task{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem;display:flex;flex-direction:column;gap:.7rem;min-width:0}
+.task.ok{border-color:var(--good)}
+.task header{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+.task header span{font-family:var(--f-mono);font-size:.72rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+.task h3{font-size:1.4rem}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.fields label{display:flex;flex-direction:column;gap:.2rem;font-size:.85rem;font-weight:700;color:var(--ink-2)}
+.fields label i{font-style:normal;display:inline-flex;align-items:center;gap:.3rem}
+input[type=number]{font:inherit;font-family:var(--f-mono);font-size:1.25rem;font-weight:600;width:100%;padding:.35rem .5rem;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{opacity:.4}
+input.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 10%,var(--bg))}
+input.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--bg))}
+details.pro{border-top:1px dashed var(--line);padding-top:.5rem}
+details.pro summary{cursor:pointer;font-size:.86rem;font-weight:700;color:var(--accent)}
+.shells-in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem;margin-top:.5rem}
+.shells-in label{display:flex;flex-direction:column;align-items:center;font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);gap:.15rem}
+.shells-in input{font-size:1.05rem;text-align:center;padding:.25rem}
+.task .actions{display:flex;gap:.45rem;flex-wrap:wrap}
+.task .actions .btn{padding:.4rem .75rem;font-size:.85rem}
+.fb{margin:0;font-size:.88rem;min-height:1.4em}
+.fb.ok{color:var(--good);font-weight:700}
+.fb.err{color:var(--bad)}
+.tip{margin-top:.6rem}
+.bonus{margin-top:1.2rem;display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;align-items:center}
+.bonus .found{font-family:var(--f-mono);font-weight:600}
+
+/* ---------- Blätter-Leiste ---------- */
+.pager{position:sticky;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.5rem 16px calc(.5rem + env(safe-area-inset-bottom,0px))}
+.pager .btn{min-width:0;max-width:44vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pager .mid{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2);text-align:center}
+@media (max-width:620px){.pager .mid .keys{display:none}.brand span{display:none}}
+
+
+/* ---------- Ergänzungen für die Unterrichtsreihe ---------- */
+a.icon-btn{text-decoration:none;display:inline-flex;align-items:center}
+.tl-stop .dot .num{font-family:var(--f-mono);font-weight:600;font-size:.9rem;line-height:1}
+.tl-stop[aria-current="step"] .dot .num{color:var(--accent)}
+.tl-stop .yr{text-transform:uppercase;letter-spacing:.06em}
+.good{color:var(--good)} .bad{color:var(--bad)}
+.vis canvas.wide{aspect-ratio:16/10}
+.vis canvas.square,.kit .vis canvas.square{aspect-ratio:1/1;width:100%;max-height:64vh}
+.vis canvas.tall{aspect-ratio:5/4}
+.preview .num{width:3.2rem;height:3.2rem;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:1.2rem;color:var(--ink-2)}
+@media (max-width:460px){.preview .num{width:2.6rem;height:2.6rem}}
+.q-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.q-list li{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.6rem .9rem;display:flex;gap:.7rem;align-items:baseline}
+.q-list li b.n{font-family:var(--f-mono);color:var(--accent)}
+.big-num{font-family:var(--f-mono);font-weight:600;font-size:clamp(1.6rem,3vw,2.4rem);line-height:1.1;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.slider{display:flex;flex-direction:column;gap:.2rem}
+.slider label{display:flex;justify-content:space-between;font-size:.85rem;font-weight:700;color:var(--ink-2)}
+.slider label output{font-family:var(--f-mono);color:var(--ink)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr));gap:.4rem}
+.kv div{background:var(--surface-2);border-radius:8px;padding:.35rem .55rem;min-width:0}
+.kv dt,.kv span{display:block;font-size:.72rem;color:var(--ink-2)}
+.kv dd,.kv b{margin:0;font-family:var(--f-mono);font-weight:600;font-size:1.05rem}
+.kv{margin:0}
+.formula{font-family:var(--f-mono);font-weight:600;font-size:1.15rem;background:var(--surface-2);border-radius:10px;padding:.55rem .8rem;overflow-x:auto;white-space:nowrap}
+.formula .arrow{color:var(--accent);padding:0 .4rem}
+.wide-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.wide-grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:1rem;min-width:0}
+
+/* Hefteintrag */
+.heft{background:var(--surface);border:1.5px solid var(--ink);border-radius:var(--radius);padding:1.1rem 1.3rem;display:flex;flex-direction:column;gap:.8rem}
+.heft-title{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:.5rem}
+.heft-title h3{font-size:1.5rem}
+.heft-title span{font-family:var(--f-mono);font-size:.75rem;color:var(--ink-2)}
+.heft ol{margin:0;padding-left:1.3rem;display:flex;flex-direction:column;gap:.65rem}
+.heft [data-step]{transition:opacity .3s, filter .3s}
+.heft [data-step]:not(.shown){opacity:.12;filter:blur(5px);user-select:none}
+@media (prefers-reduced-motion: reduce){.heft [data-step]{transition:none}}
+.heft .eq{font-family:var(--f-mono);font-weight:600;background:var(--surface-2);padding:.05rem .35rem;border-radius:6px}
+.heft-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:clamp(1rem,2.5vw,2rem);align-items:start}
+@media (max-width:920px){.heft-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Multiple Choice */
+.mc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem;display:flex;flex-direction:column;gap:.8rem}
+.mc-end{display:flex;flex-direction:column;gap:.9rem}
+.mc-head{display:flex;justify-content:space-between;align-items:baseline}
+.mc-bar{height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.mc-bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.mc-q{font-size:clamp(1.3rem,2.2vw,1.8rem);font-stretch:110%}
+.mc-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+@media (max-width:640px){.mc-opts{grid-template-columns:minmax(0,1fr)}}
+.mc-opt{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:.75rem 1rem;cursor:pointer;font-size:1.02rem;font-weight:700;line-height:1.3}
+.mc-opt:hover:not(:disabled){border-color:var(--ink-2)}
+.mc-opt:disabled{cursor:default}
+.mc-opt.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 14%,var(--surface))}
+.mc-opt.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.mc-why{margin:0;min-height:1.5em}
+.mc-end{align-items:flex-start}
+.mc-big{font-family:var(--f-mono);font-weight:600;font-size:3.5rem;margin:0;line-height:1}
+
+/* Zuordnen */
+.sort-pool{display:flex;flex-wrap:wrap;gap:.45rem;min-height:3rem;padding:.6rem;border:1.5px dashed var(--line);border-radius:var(--radius);margin-bottom:.8rem}
+.sort-cols{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:.7rem;margin-bottom:.8rem}
+@media (max-width:820px){.sort-cols{grid-template-columns:minmax(0,1fr)}}
+.sort-col{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.7rem;cursor:pointer;min-height:9rem;min-width:0}
+.sort-col:hover{border-color:var(--ink-2)}
+.sort-col h3{font-size:1.1rem;margin-bottom:.5rem}
+.sort-drop{display:flex;flex-direction:column;gap:.35rem}
+.sort-card{border:1.5px solid var(--line);background:var(--surface-2);border-radius:10px;padding:.4rem .7rem;cursor:pointer;font-size:.9rem;font-weight:700;text-align:left;line-height:1.3}
+.sort-card.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.sort-card.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 14%,var(--surface))}
+.sort-card.err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.sort-fb{font-size:.92rem}
+
+/* Paare finden */
+.match{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:.8rem;margin-bottom:.8rem}
+.match-col{display:flex;flex-direction:column;gap:.45rem}
+.match-card{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:.55rem .8rem;cursor:pointer;font-size:.95rem;text-align:left;line-height:1.3}
+.match-card.term{font-weight:700;font-family:var(--f-display);font-stretch:110%;font-size:1.05rem}
+.match-card:hover{border-color:var(--ink-2)}
+.match-card.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.match-card.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,var(--surface));cursor:default;opacity:.75}
+.match-card.err{border-color:var(--bad);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* Daten-Tabellen */
+table.data{border-collapse:collapse;width:100%}
+.data th,.data td{padding:.45rem .6rem;border-bottom:1px solid var(--line);text-align:left;font-size:.92rem}
+.data thead th{font-size:.78rem;color:var(--ink-2);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.data td.num{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.data tbody tr:last-child td,.data tbody tr:last-child th{border-bottom:0}
+.data tbody tr.sel{background:var(--surface-2)}
+.data tbody tr[data-pick]{cursor:pointer}
+.data tbody tr[data-pick]:hover{background:var(--surface-2)}
+
+/* Schritt-Leiste in Visualisierungen */
+.steps{display:flex;gap:.4rem;flex-wrap:wrap}
+.steps .btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.next-lesson{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;margin-top:1.4rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1.1rem}
+.next-lesson p{margin:0}
+a.btn{text-decoration:none;display:inline-block;color:inherit}
+a.btn.primary{color:var(--accent-ink)}
+.lw-svg{width:4.2rem;height:4.2rem;display:block}
+.lw-svg .lw-sym{font:700 40px var(--f-body);fill:var(--ink);text-anchor:middle;dominant-baseline:middle}
+.lw-svg .lw-dot{fill:var(--electron)}
+.lw-svg .lw-line{stroke:var(--electron);stroke-width:5;stroke-linecap:round}
+@media (max-width:760px){.top{flex-wrap:wrap;row-gap:.3rem}.top .brand{flex:1}.tl-scroll{order:3;flex-basis:100%}}
+
+/* ---------- Ergänzungen Kohlenwasserstoffe ---------- */
+.mol2d{display:block;max-width:100%;height:auto;max-height:var(--mol-h,46vh);overflow:visible}
+.mol2d .bd{stroke:var(--ink);stroke-width:2.2;stroke-linecap:round}
+.mol2d.skelett .bd{stroke-width:2.6}
+.mol2d .bd.hl{stroke:var(--accent);stroke-width:3.5}
+.mol2d .at{font-family:var(--f-body);font-weight:700;fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.mol2d.struktur .at.h{fill:var(--ink-2);font-weight:400}
+.mol2d .at.el-br{fill:var(--atom-br)} .mol2d .at.el-cl{fill:var(--atom-cl)} .mol2d .at.el-f{fill:var(--atom-f)} .mol2d .at.el-i{fill:var(--atom-i)} .mol2d .at.el-o{fill:var(--atom-o)}
+.mol2d .hlc2{fill:color-mix(in srgb,var(--gold) 26%,transparent);stroke:var(--gold);stroke-width:1.5}
+.mol2d .hlc{fill:color-mix(in srgb,var(--accent) 16%,transparent);stroke:var(--accent);stroke-width:1.5}
+.mol2d .loc{font-family:var(--f-mono);font-weight:600;fill:var(--accent);text-anchor:middle;dominant-baseline:central}
+.molbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.8rem;display:flex;flex-direction:column;gap:.5rem;min-width:0}
+.molbox .mol2d{margin:auto}
+.molbox > .tag,.vis > .tag{align-self:flex-start}
+.mol-cap{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+.mol-cap b{font-family:var(--f-display);font-stretch:112%;font-size:1.15rem}
+.mol-cap span{font-family:var(--f-mono);font-size:.9rem;color:var(--ink-2)}
+.vis canvas.mol3d{aspect-ratio:4/3;cursor:grab;touch-action:none}
+.vis canvas.mol3d.sq{aspect-ratio:1/1;max-height:62vh;width:auto;max-width:100%;margin-inline:auto}
+.hint-drag{font-size:.78rem;color:var(--ink-2);margin:0}
+.legend .sw.c{background:var(--atom-c)} .legend .sw.h{background:var(--atom-h);border:1px solid var(--ink-2)} .legend .sw.br{background:var(--atom-br)} .legend .sw.cl{background:var(--atom-cl)} .legend .sw.o{background:var(--atom-o)}
+.name-big{font-family:var(--f-display);font-stretch:115%;font-weight:800;font-size:clamp(1.6rem,3vw,2.4rem);line-height:1.1;margin:0;overflow-wrap:anywhere}
+.chem{font-family:var(--f-mono);font-weight:600}
+.eq-line{font-family:var(--f-mono);font-weight:600;font-size:clamp(1rem,1.8vw,1.35rem);background:var(--surface-2);border-radius:10px;padding:.6rem .9rem;overflow-x:auto;white-space:nowrap}
+.eq-line .arrow{color:var(--accent);padding:0 .5rem}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+@media (max-width:820px){.three{grid-template-columns:minmax(0,1fr)}}
+.four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem}
+@media (max-width:900px){.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cardbtn{text-align:left;cursor:pointer;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:.6rem .8rem;display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.cardbtn:hover{border-color:var(--ink-2)}
+.cardbtn[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.cardbtn b{font-family:var(--f-display);font-stretch:110%}
+.cardbtn small{font-family:var(--f-mono);color:var(--ink-2)}
+
+/* Baukasten */
+.builder{display:flex;flex-direction:column;gap:.6rem}
+.bgrid{width:100%;height:auto;display:block;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);touch-action:manipulation;user-select:none}
+.bgrid .cell{fill:transparent;cursor:pointer}
+.bgrid .cell.can{fill:color-mix(in srgb,var(--accent) 6%,transparent);stroke:var(--line);stroke-dasharray:4 4}
+.bgrid .cell.can:hover{fill:color-mix(in srgb,var(--accent) 18%,transparent);stroke:var(--accent)}
+.bgrid .plus{fill:var(--ink-2);font:600 18px var(--f-mono);text-anchor:middle;dominant-baseline:central;pointer-events:none;opacity:.55}
+.bgrid .gc{fill:var(--atom-c);stroke:var(--surface);stroke-width:2;cursor:pointer}
+.bgrid .gc:hover{stroke:var(--accent);stroke-width:3}
+.bgrid .gc.sel{stroke:var(--accent);stroke-width:5}
+.bgrid .gcl{fill:#fff;font:700 20px var(--f-body);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.bgrid .gb{stroke:var(--ink);stroke-width:4;stroke-linecap:round;pointer-events:none}
+.bgrid .gbhit{stroke:transparent;stroke-width:22;cursor:pointer}
+.bgrid .gbhit:hover + .gbv .gb{stroke:var(--accent)}
+.bgrid .gbhit.off{cursor:default}
+.b-msg{min-height:1.4em;margin:0;font-size:.9rem;color:var(--ink-2)}
+.b-out{display:flex;flex-direction:column;gap:.6rem}
+
+/* Reihenfolge */
+.ord-pool,.ord-line{display:flex;flex-wrap:wrap;gap:.45rem;min-height:3rem;padding:.6rem;border:1.5px dashed var(--line);border-radius:var(--radius)}
+.ord-line{border-style:solid;background:var(--surface);counter-reset:ord}
+.ord-line .sort-card{counter-increment:ord}
+.ord-line .sort-card::before{content:counter(ord) ". ";font-family:var(--f-mono);color:var(--ink-2)}
+.ord-lab{display:flex;justify-content:space-between;font-size:.8rem;color:var(--ink-2);font-family:var(--f-mono);margin:.6rem 0 .3rem}
+
+/* Namensaufgaben */
+.task .molwrap{background:var(--surface-2);border-radius:10px;padding:.4rem;min-height:7rem;display:grid;place-items:center}
+.task .molwrap .mol2d{max-height:11rem}
+input[type=text]{font:inherit;font-weight:700;font-size:1.05rem;width:100%;padding:.4rem .55rem;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=text].ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 10%,var(--bg))}
+input[type=text].err{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--bg))}
+.mc-q .mol2d{max-height:9rem;width:auto;max-width:100%;display:inline-block;vertical-align:middle}
+.mc-q .molq{display:block;margin-top:.4rem}
+
+/* Reagenzgläser & Diagramme */
+.vis canvas.tubes{aspect-ratio:16/10}
+.vis canvas.chart{aspect-ratio:16/10}
+.chkrow{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.88rem}
+.chkrow label{display:inline-flex;align-items:center;gap:.35rem;cursor:pointer}
+.chkrow input{accent-color:var(--accent);width:1.05rem;height:1.05rem}
+.coef{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;font-family:var(--f-mono);font-weight:600;font-size:clamp(1rem,1.8vw,1.3rem)}
+.coef input[type=number]{width:3.6rem;text-align:center;font-size:1.15rem;padding:.25rem}
+.coef .arrow{color:var(--accent);padding:0 .3rem}
+.balance{display:grid;grid-template-columns:auto repeat(2,minmax(0,1fr)) auto;gap:.3rem .7rem;align-items:center;font-family:var(--f-mono);font-size:.95rem}
+.balance .bar{height:.9rem;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.balance .bar i{display:block;height:100%;border-radius:99px}
+.balance .okm{font-weight:700}
+
+/* Formeln mit tiefgestellten Zahlen: Schrift mit passenden Glyphen */
+.chem,.sumf,.task .given,.kv dd,.cardbtn small,.eq-line,.formula,.heft .eq,.gen-formula,.status b,.meter b,.molbox .note{font-family:var(--f-body)}
+.chem,.task .given:not(.name),.eq-line,.formula{font-weight:700}
+
+.mol2d .hit{fill:transparent;cursor:pointer;pointer-events:all}
+.mol2d .hit:hover{fill:color-mix(in srgb,var(--accent) 25%,transparent);stroke:var(--accent);stroke-width:1.5}
+.mol2d .hit.hx:hover{fill:color-mix(in srgb,var(--bad) 18%,transparent);stroke:var(--bad)}
+.mol2d text{pointer-events:none}
+
+/* kompaktere Zeitleiste für Stunden mit sechs Stationen */
+.tl-stop{padding:.25rem .38rem;min-width:4.2rem}
+.tl-pill{padding:.3rem .65rem}
+
+#sort-org .sort-col{min-height:7rem}
+.lewis-count{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem}
+.gallery .cardbtn{padding:.35rem .55rem;gap:0}
+.gallery .cardbtn b{font-size:.92rem}
+.gallery .cardbtn small{font-size:.78rem}
+@media (max-width:560px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body data-next="{&quot;href&quot;: &quot;02_Alkane.html&quot;, &quot;label&quot;: &quot;Stunde 2: Alkane&quot;}">
+<div class="app">
+<header class="top">
+  <div class="brand"><b>Kohlenstoff</b><span>Stunde 1 · Klasse 10</span></div>
+  <nav class="tl-scroll" aria-label="Stationen der Stunde">
+    <ol class="tl" id="tl">
+      <li><button class="tl-pill" data-go="start">Start</button></li>
+      <li class="sep" aria-hidden="true"></li>
+      <li class="m first"><button class="tl-stop" data-go="organisch"><span class="dot"><span class="num">1</span></span><span class="yr">Einstieg</span><span class="nm">Organisch?</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="nachweis"><span class="dot"><span class="num">2</span></span><span class="yr">Experiment</span><span class="nm">Nachweis</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="vierbindig"><span class="dot"><span class="num">3</span></span><span class="yr">Erarbeitung</span><span class="nm">Vierbindig</span></button></li>
+      <li class="m"><button class="tl-stop" data-go="tetraeder"><span class="dot"><span class="num">4</span></span><span class="yr">Erarbeitung</span><span class="nm">Tetraeder</span></button></li>
+      <li class="m last"><button class="tl-stop" data-go="vielfalt"><span class="dot"><span class="num">5</span></span><span class="yr">Ausblick</span><span class="nm">Vielfalt</span></button></li>
+      <li class="sep" aria-hidden="true"></li>
+      <li><button class="tl-pill" data-go="merke">Hefteintrag</button></li>
+      <li><button class="tl-pill" data-go="uebungen">Übungen</button></li>
+    </ol>
+  </nav>
+  <a class="icon-btn" href="00_Uebersicht.html" title="Zur Übersicht der Reihe">Übersicht</a>
+  <button class="icon-btn" id="fs" title="Vollbild (F)">Vollbild</button>
+</header>
+
+<main id="stage">
+<!-- ================= START ================= -->
+<section class="station" id="start" data-label="Start">
+  <div class="start">
+    <div class="txt">
+      <p class="eyebrow">Stunde 1 · Organische Chemie</p>
+      <h1>Die Chemie des Kohlenstoffs</h1>
+      <p class="lead">Erdgas, Benzin, Kerzenwachs, Zucker, Kunststoffe und sogar unsere DNA: Alle diese Stoffe enthalten Kohlenstoff. Kein anderes Element bildet so viele verschiedene Verbindungen.</p>
+      <div class="teaser">
+        <span class="tag info">Wiederholung</span>
+        <p>Wie viele Valenzelektronen hat ein Kohlenstoffatom? Wie entsteht eine Elektronenpaarbindung?</p>
+      </div>
+      <div class="teaser">
+        <span class="tag info">Leitfrage</span>
+        <p>Was haben Erdgas, Benzin und Kerzenwachs gemeinsam? Und warum kann gerade Kohlenstoff so viele verschiedene Moleküle bilden?</p>
+      </div>
+      <div class="controls"><button class="btn primary" data-go="organisch">Los geht's →</button></div>
+    </div>
+    <ol class="preview" aria-label="Stationen dieser Stunde">
+      <li><button data-go="organisch"><span class="num">1</span><span class="y">Einstieg</span><span class="n"><b>Organisch – was heißt das?</b><span>Stoffe sortieren, Wöhlers Entdeckung</span></span></button></li>
+      <li><button data-go="nachweis"><span class="num">2</span><span class="y">Experiment</span><span class="n"><b>Was steckt im Kerzenwachs?</b><span>Nachweis von Kohlenstoff und Wasserstoff</span></span></button></li>
+      <li><button data-go="vierbindig"><span class="num">3</span><span class="y">Erarbeitung</span><span class="n"><b>Kohlenstoff ist vierbindig</b><span>Das Methanmolekül in Lewis-Schreibweise</span></span></button></li>
+      <li><button data-go="tetraeder"><span class="num">4</span><span class="y">Erarbeitung</span><span class="n"><b>Der Tetraeder</b><span>Wie das Methanmolekül räumlich aussieht</span></span></button></li>
+      <li><button data-go="vielfalt"><span class="num">5</span><span class="y">Ausblick</span><span class="n"><b>Vielfalt aus Kohlenstoff</b><span>Ketten, Verzweigungen, Mehrfachbindungen</span></span></button></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= ORGANISCH ================= -->
+<section class="station" id="organisch" data-label="Organisch?" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 1 · Organische und anorganische Chemie</p>
+      <h2>Organisch – was heißt das?</h2>
+      <p class="lead">Früher glaubte man, bestimmte Stoffe könnten nur in Lebewesen entstehen, durch eine besondere „Lebenskraft“. Man nannte sie <b>organische Stoffe</b>.</p>
+      <ul class="facts">
+        <li>1828 stellte <b>Friedrich Wöhler</b> im Labor Harnstoff her, einen Stoff aus dem Urin. Er brauchte dafür kein Lebewesen.</li>
+        <li>Damit war die Lebenskraft-Theorie widerlegt. Der Name „organisch“ blieb trotzdem.</li>
+        <li>Heute gilt: Die <b>organische Chemie</b> ist die Chemie der <b>Kohlenstoffverbindungen</b>.</li>
+        <li>Ausnahmen: Kohlenstoffdioxid, Kohlenstoffmonoxid, Kohlensäure und Carbonate wie Kalk zählt man zur anorganischen Chemie.</li>
+      </ul>
+      <blockquote>„Ich kann Harnstoff machen, ohne dazu Nieren oder überhaupt ein Tier, sei es Mensch oder Hund, nötig zu haben.“<cite>Friedrich Wöhler, Brief an Berzelius, 1828</cite></blockquote>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Organisch oder anorganisch?</h3><span class="note">Karte antippen, dann Spalte antippen</span></div>
+      <div id="sort-org"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= NACHWEIS ================= -->
+<section class="station" id="nachweis" data-label="Nachweis" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 2 · Experiment</p>
+      <h2>Was steckt im Kerzenwachs?</h2>
+      <p class="lead">Kerzenwachs (Paraffin) wird verbrannt. Eine Pumpe saugt die Verbrennungsgase erst durch ein gekühltes U-Rohr und dann durch Kalkwasser.</p>
+      <div class="pair">
+        <div class="box"><span class="tag info">Nachweis Wasser</span><p>Am kalten U-Rohr kondensiert eine farblose Flüssigkeit. <b>Watesmo-Papier</b> färbt sich damit blau: Es ist <b>Wasser</b>.</p></div>
+        <div class="box"><span class="tag info">Nachweis Kohlenstoffdioxid</span><p><b>Kalkwasser</b> wird trüb. Das zeigt <b>Kohlenstoffdioxid</b> an.</p></div>
+      </div>
+      <div class="box"><span class="tag new">Schlussfolgerung</span>
+        <p>Wasser (H₂O) enthält Wasserstoff, Kohlenstoffdioxid (CO₂) enthält Kohlenstoff. Der Sauerstoff kann aus der Luft stammen. Also enthält Paraffin die Elemente <b>Kohlenstoff</b> und <b>Wasserstoff</b>.</p></div>
+      <p class="fun"><b>Kohlenwasserstoffe</b> sind Verbindungen, die nur aus Kohlenstoff- und Wasserstoffatomen bestehen. Paraffin, Erdgas und Benzin sind Gemische aus Kohlenwasserstoffen.</p>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Verbrennung von Paraffin</h3><span class="note">Versuchsaufbau, schematisch</span></div>
+      <canvas id="cv-nach" class="wide" aria-label="Versuchsaufbau: Kerze, U-Rohr in Eiswasser, Waschflasche mit Kalkwasser"></canvas>
+      <div class="controls">
+        <button class="btn primary" id="n-lit">Kerze anzünden</button>
+        <button class="btn" id="n-pump">Pumpe einschalten</button>
+        <button class="btn" id="n-wat">Watesmo-Test</button>
+        <button class="btn" id="n-reset">Zurücksetzen</button>
+      </div>
+      <p class="status" id="n-status" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VIERBINDIG ================= -->
+<section class="station" id="vierbindig" data-label="Vierbindig" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 3 · Elektronenpaarbindung</p>
+      <h2>Kohlenstoff ist vierbindig</h2>
+      <p class="lead">Ein Kohlenstoffatom hat <b>4 Valenzelektronen</b>. Zur Edelgaskonfiguration (wie Neon) fehlen ihm 4 Elektronen. Es bildet deshalb <b>vier Elektronenpaarbindungen</b>.</p>
+      <ul class="facts">
+        <li>Bei einer <b>Elektronenpaarbindung</b> teilen sich zwei Atome ein Elektronenpaar. Jedes Atom steuert ein Elektron bei.</li>
+        <li>Ein Wasserstoffatom hat 1 Valenzelektron. Es bildet <b>eine</b> Bindung und erreicht so 2 Elektronen wie Helium.</li>
+        <li>Im <b>Methanmolekül</b> CH₄ ist das C-Atom an vier H-Atome gebunden.</li>
+        <li>In der <b>Valenzstrichformel</b> schreibt man jedes bindende Elektronenpaar als Strich.</li>
+      </ul>
+      <div class="box"><span class="tag info">Bindigkeit</span><p>Die Zahl der Bindungen, die ein Atom eingeht: <b>H einbindig</b>, <b>O zweibindig</b>, <b>C vierbindig</b>.</p></div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Methan entsteht (Modell)</h3></div>
+      <canvas id="cv-lewis" aria-label="Lewis-Schreibweise: Kohlenstoffatom bindet vier Wasserstoffatome"></canvas>
+      <div class="controls">
+        <button class="btn primary" id="lw-add">H-Atom binden</button>
+        <div class="seg" role="group" aria-label="Darstellung"><button data-lw="dots" aria-pressed="true">Elektronen als Punkte</button><button data-lw="lines" aria-pressed="false">Valenzstriche</button></div>
+        <button class="btn" id="lw-reset">Von vorn</button>
+      </div>
+      <div class="lewis-count">
+        <div class="meter"><span>Bindungen am C-Atom</span><b id="lw-b">0</b></div>
+        <div class="meter"><span>Elektronen um das C-Atom</span><b id="lw-e">4</b><small>Ziel 8</small></div>
+        <div class="meter"><span>Elektronen um jedes H</span><b id="lw-h">–</b><small>Ziel 2</small></div>
+      </div>
+      <p class="status" id="lw-status" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TETRAEDER ================= -->
+<section class="station" id="tetraeder" data-label="Tetraeder" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 4 · Räumlicher Bau</p>
+      <h2>Das Methanmolekül ist ein Tetraeder</h2>
+      <p class="lead">Auf dem Papier zeichnen wir Methan flach mit Winkeln von 90°. In Wirklichkeit ist das Molekül <b>räumlich</b> gebaut.</p>
+      <ul class="facts">
+        <li>Elektronenpaare sind negativ geladen und <b>stoßen sich ab</b>.</li>
+        <li>Die vier bindenden Elektronenpaare richten sich deshalb so aus, dass sie <b>möglichst weit voneinander entfernt</b> sind.</li>
+        <li>Die H-Atome bilden die Ecken eines <b>Tetraeders</b> (Vierflächners). Das C-Atom sitzt in der Mitte.</li>
+        <li>Der Bindungswinkel beträgt <b>109,5°</b>, der <b>Tetraederwinkel</b>.</li>
+      </ul>
+      <div class="box"><span class="tag info">Elektronenpaarabstoßungs-Modell</span><p>Mit diesem Modell (kurz <b>EPA-Modell</b>) kann man die räumliche Gestalt vieler Moleküle vorhersagen.</p></div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Methan in 3D</h3><span class="note">Zum Drehen ziehen</span></div>
+      <canvas id="cv-tet" class="mol3d" aria-label="Drehbares 3D-Modell des Methanmoleküls"></canvas>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Form"><button data-tf="0" aria-pressed="false">flach wie auf dem Papier</button><button data-tf="1" aria-pressed="true">räumlich</button></div>
+      </div>
+      <div class="chkrow">
+        <label><input type="checkbox" id="tet-edges" checked> Tetraeder einzeichnen</label>
+        <label><input type="checkbox" id="tet-pairs"> Elektronenpaare</label>
+        <label><input type="checkbox" id="tet-kal"> Kalottenmodell</label>
+        <label><input type="checkbox" id="tet-spin" checked> drehen</label>
+      </div>
+      <p class="status" id="tet-status" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VIELFALT ================= -->
+<section class="station" id="vielfalt" data-label="Vielfalt" hidden>
+  <div class="model">
+    <div class="txt">
+      <p class="eyebrow">Station 5 · Ausblick</p>
+      <h2>Vielfalt aus Kohlenstoff</h2>
+      <p class="lead">Kohlenstoffatome können sich <b>untereinander</b> verbinden. So entstehen Ketten mit Tausenden von Atomen.</p>
+      <ul class="facts">
+        <li><b>Ketten</b> können unverzweigt oder <b>verzweigt</b> sein.</li>
+        <li>Zwischen zwei C-Atomen sind <b>Einfach-, Doppel- und Dreifachbindungen</b> möglich.</li>
+        <li>Kohlenstoffketten können sich auch zu <b>Ringen</b> schließen.</li>
+        <li>Dazu kommen andere Atome wie Sauerstoff, Stickstoff oder Chlor.</li>
+      </ul>
+      <div class="box"><span class="tag info">Zum Staunen</span><p>Man kennt heute weit über 100 Millionen chemische Verbindungen. Der allergrößte Teil davon sind Kohlenstoffverbindungen.</p></div>
+    </div>
+    <div class="vis">
+      <div class="vis-head"><h3>Kohlenwasserstoffe aus dem Alltag</h3></div>
+      <div class="gallery" id="gal"></div>
+      <canvas id="cv-gal" class="mol3d" aria-label="3D-Modell des gewählten Moleküls"></canvas>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Modell"><button data-gm="kugel" aria-pressed="true">Kugel-Stab</button><button data-gm="kalotte" aria-pressed="false">Kalotten</button></div>
+      </div>
+      <ul class="legend"><li><i class="sw c"></i>Kohlenstoff</li><li><i class="sw h"></i>Wasserstoff</li></ul>
+      <p class="status" id="gal-status"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HEFTEINTRAG ================= -->
+<section class="station" id="merke" data-label="Hefteintrag" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Sicherung</p>
+    <h2>Hefteintrag: Organische Chemie</h2>
+  </div>
+  <div class="heft-grid">
+    <div class="heft">
+      <div class="heft-title"><h3>Kohlenstoff und Kohlenwasserstoffe</h3><span>Chemie · Klasse 10</span></div>
+      <ol>
+        <li data-step>Die <b>organische Chemie</b> ist die Chemie der Kohlenstoffverbindungen (Ausnahmen: CO₂, CO, Carbonate).</li>
+        <li data-step>Beim Verbrennen von Paraffin entstehen <b>Wasser</b> (Watesmo-Papier wird blau) und <b>Kohlenstoffdioxid</b> (Kalkwasser wird trüb). Paraffin enthält also Kohlenstoff und Wasserstoff.</li>
+        <li data-step><b>Kohlenwasserstoffe</b> sind Verbindungen, die nur aus C- und H-Atomen bestehen.</li>
+        <li data-step>Das C-Atom hat 4 Valenzelektronen und ist <b>vierbindig</b>. Das H-Atom ist einbindig.</li>
+        <li data-step>Im Methanmolekül <span class="eq">CH₄</span> zeigen die Bindungen in die Ecken eines <b>Tetraeders</b>. Der Bindungswinkel beträgt <b>109,5°</b>, weil sich die Elektronenpaare abstoßen.</li>
+        <li data-step>C-Atome können Ketten, Verzweigungen, Ringe und Mehrfachbindungen bilden. Deshalb gibt es so viele organische Verbindungen.</li>
+      </ol>
+      <div class="controls"><button class="btn primary" data-heft-next>Nächster Punkt</button><button class="btn" data-heft-all>Alles zeigen</button></div>
+    </div>
+    <div class="stack">
+      <div class="molbox"><span class="tag info">Skizze: Methan</span><div id="heft-ch4" style="--mol-h:13rem"></div><p class="note">Valenzstrichformel (flach gezeichnet, in Wirklichkeit tetraedrisch)</p></div>
+      <div class="box"><span class="tag info">Merksatz</span><p>Kohlenstoff ist <b>vierbindig</b>, Wasserstoff ist <b>einbindig</b>. An jedem C-Atom einer Strukturformel müssen genau vier Striche enden.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ÜBUNGEN ================= -->
+<section class="station" id="uebungen" data-label="Übungen" hidden>
+  <div class="section-head">
+    <p class="eyebrow">Jetzt seid ihr dran</p>
+    <h2>Teste dein Wissen</h2>
+  </div>
+  <div class="mc" id="quiz1"></div>
+  <div class="section-head" style="margin-top:2rem">
+    <h3>Begriffe-Paare</h3>
+    <p>Ordne jedem Fachbegriff die passende Erklärung zu.</p>
+  </div>
+  <div id="match1"></div>
+  <div class="next-lesson"><p><b>Nächste Stunde:</b> Methan, Ethan, Propan … Die Alkane und ihre homologe Reihe.</p><a class="btn primary" href="02_Alkane.html">Zu Stunde 2 →</a></div>
+</section>
+</main>
+
+<footer class="pager">
+  <button class="btn" id="prev">←</button>
+  <div class="mid"><span id="pos"></span><span class="keys"> · Pfeiltasten ← → oder Presenter</span></div>
+  <button class="btn primary" id="next">→</button>
+</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const MONO = '"IBM Plex Mono", ui-monospace, monospace';
+const SANS = '"Atkinson Hyperlegible", system-ui, sans-serif';
+const DISPLAY = '"Archivo", "Arial Narrow", system-ui, sans-serif';
+
+/* ---------------- Farben aus den Tokens ---------------- */
+const C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  ['bg','surface','surface-2','ink','ink-2','line','accent','electron','proton','neutron','gold','good','bad','atom-c','atom-h','atom-o','atom-br','atom-cl','atom-f','atom-i','bromine']
+    .forEach(k => C[k.replace(/-/g, '')] = cs.getPropertyValue('--' + k).trim() || '#888888');
+}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
+function rgb(h) { h = h.replace('#',''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function alpha(h, a) { return `rgba(${rgb(h).join(',')},${a})`; }
+function mix(a, b, t) { const A = rgb(a), B = rgb(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; }
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+const fmt = (v, d = 3) => v.toLocaleString('de-DE', {maximumSignificantDigits: d});
+const fix = (v, d = 1) => v.toLocaleString('de-DE', {minimumFractionDigits: d, maximumFractionDigits: d});
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const SUP = s => String(s).replace(/[0-9+\-−]/g, c => ({'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻','−':'⁻'})[c]);
+const SUB = s => String(s).replace(/[0-9]/g, c => '₀₁₂₃₄₅₆₇₈₉'[+c]);
+function chargeStr(q) { return q === 0 ? '' : (Math.abs(q) > 1 ? Math.abs(q) : '') + (q > 0 ? '+' : '−'); }
+
+function setup(cv) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return {ctx, w, h};
+}
+function sphere(ctx, x, y, r, col, label, lc, stroke) {
+  const g = ctx.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+  g.addColorStop(0, mix(col, '#ffffff', .45)); g.addColorStop(1, col);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+  if (label) {
+    ctx.fillStyle = lc || '#fff'; ctx.font = `700 ${Math.max(9, r * .95)}px ${MONO}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x, y + r * .06);
+  }
+}
+function sign(ctx, x, y, r, plus) {
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1.4, r * .22); ctx.lineCap = 'round';
+  const s = r * .48; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y);
+  if (plus) { ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); }
+  ctx.stroke();
+}
+function label(ctx, txt, x, y, o = {}) {
+  ctx.font = `${o.weight || 700} ${o.size || 14}px ${o.font || SANS}`;
+  ctx.fillStyle = o.color || C.ink; ctx.textAlign = o.align || 'center'; ctx.textBaseline = o.base || 'middle';
+  ctx.fillText(txt, x, y);
+}
+function roundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/* ---------------- Navigation ---------------- */
+const STATIONS = $$('.station').map(s => s.id);
+const LABEL = Object.fromEntries($$('.station').map(s => [s.id, s.dataset.label || s.id]));
+const NEXT_LESSON = document.body.dataset.next ? JSON.parse(document.body.dataset.next) : null;
+let cur = 0;
+function go(id) { const i = STATIONS.indexOf(id); if (i >= 0 && i !== cur) { cur = i; render(true); } }
+function render(scroll) {
+  const id = STATIONS[cur];
+  $$('.station').forEach(s => s.hidden = s.id !== id);
+  $$('[data-go]', $('#tl')).forEach(b => b.dataset.go === id ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
+  const stops = $$('#tl li.m');
+  const idx = stops.map(li => STATIONS.indexOf($('[data-go]', li).dataset.go));
+  stops.forEach((li, i) => { li.classList.toggle('done', idx[i] < cur); li.classList.toggle('half', idx[i] === cur); });
+  const prev = STATIONS[cur - 1], next = STATIONS[cur + 1];
+  $('#prev').textContent = prev ? '← ' + LABEL[prev] : '←';
+  $('#prev').disabled = !prev;
+  if (next) { $('#next').textContent = LABEL[next] + ' →'; $('#next').disabled = false; }
+  else if (NEXT_LESSON) { $('#next').textContent = NEXT_LESSON.label + ' →'; $('#next').disabled = false; }
+  else { $('#next').textContent = '→'; $('#next').disabled = true; }
+  $('#pos').textContent = `${cur + 1} / ${STATIONS.length}`;
+  try { history.replaceState(null, '', '#' + id); } catch (e) {}
+  if (scroll) {
+    window.scrollTo({top: 0});
+    const b = $(`#tl [data-go="${id}"]`);
+    if (b) { const sc = $('.tl-scroll'); sc.scrollLeft = b.offsetLeft - sc.clientWidth / 2 + b.offsetWidth / 2; }
+  }
+  lastT = performance.now();
+  for (const f of onShow) f(id);
+}
+const onShow = [];
+document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
+$('#prev').onclick = () => { if (cur > 0) { cur--; render(true); } };
+$('#next').onclick = () => {
+  if (cur < STATIONS.length - 1) { cur++; render(true); }
+  else if (NEXT_LESSON) location.href = NEXT_LESSON.href;
+};
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, select, textarea') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (['ArrowRight','PageDown'].includes(e.key)) { e.preventDefault(); if (cur < STATIONS.length - 1) $('#next').click(); }
+  else if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); $('#prev').click(); }
+  else if (e.key === 'f' || e.key === 'F') toggleFs();
+});
+function toggleFs() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); }
+  } catch (e) {}
+}
+$('#fs').onclick = toggleFs;
+document.addEventListener('fullscreenchange', () => $('#fs').textContent = document.fullscreenElement ? 'Vollbild beenden' : 'Vollbild');
+
+/* ---------------- Render-Schleife ---------------- */
+const visuals = [];
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  const id = STATIONS[cur];
+  for (const v of visuals) if (v.station === id) v.tick(dt, now / 1000);
+  requestAnimationFrame(frame);
+}
+function startApp() {
+  const h0 = (location.hash || '').slice(1);
+  if (STATIONS.includes(h0)) cur = STATIONS.indexOf(h0);
+  render(false);
+  requestAnimationFrame(frame);
+}
+
+/* ================= Bausteine ================= */
+/* Hefteintrag: Punkte nacheinander aufdecken */
+$$('.heft').forEach(h => {
+  const items = $$('[data-step]', h), btn = $('[data-heft-next]', h), all = $('[data-heft-all]', h);
+  let k = 0;
+  const upd = () => { items.forEach((it, i) => it.classList.toggle('shown', i < k)); if (btn) { btn.disabled = k >= items.length; btn.textContent = k >= items.length ? 'Alles aufgedeckt' : `Nächster Punkt (${k + 1}/${items.length})`; } if (all) all.textContent = k >= items.length ? 'Wieder verdecken' : 'Alles zeigen'; };
+  if (btn) btn.onclick = () => { k = Math.min(items.length, k + 1); upd(); };
+  if (all) all.onclick = () => { k = k >= items.length ? 0 : items.length; upd(); };
+  upd();
+});
+
+/* Multiple-Choice-Quiz. qs: [{q, a:[...], ok: index, why}] */
+function mcQuiz(root, qs, o = {}) {
+  let list = [], i = 0, score = 0, answered = false;
+  function start() { list = o.pick ? shuffle(qs.slice()).slice(0, o.pick) : qs.slice(); i = 0; score = 0; show(); }
+  function show() {
+    if (i >= list.length) {
+      const pct = score / list.length;
+      root.innerHTML = `<div class="mc-end"><p class="eyebrow">Ergebnis</p><p class="mc-big">${score} / ${list.length}</p>
+        <p class="lead">${pct === 1 ? 'Perfekt! Alles richtig.' : pct >= .7 ? 'Sehr gut! Fast alles richtig.' : pct >= .4 ? 'Ordentlich. Schau dir die Fehler noch einmal an.' : 'Wiederhole die Inhalte und versuch es noch einmal.'}</p>
+        <button class="btn primary" data-mc="again">Neue Runde</button></div>`;
+      return;
+    }
+    const q = list[i]; answered = false;
+    const order = shuffle(q.a.map((t, k) => k));
+    root.innerHTML = `<div class="mc-head"><span class="eyebrow">Frage ${i + 1} von ${list.length}</span><span class="score">Punkte: <b>${score}</b></span></div>
+      <div class="mc-bar"><i style="width:${100 * i / list.length}%"></i></div>
+      <h3 class="mc-q">${q.q}</h3>
+      <div class="mc-opts">${order.map(k => `<button class="mc-opt" data-k="${k}">${q.a[k]}</button>`).join('')}</div>
+      <p class="mc-why" aria-live="polite"></p>
+      <div class="controls"><button class="btn primary" data-mc="next" hidden>${i + 1 < list.length ? 'Nächste Frage →' : 'Ergebnis anzeigen'}</button></div>`;
+  }
+  root.addEventListener('click', e => {
+    const b = e.target.closest('.mc-opt, [data-mc]'); if (!b) return;
+    if (b.dataset.mc === 'again') return start();
+    if (b.dataset.mc === 'next') { i++; return show(); }
+    if (answered) return;
+    answered = true;
+    const q = list[i], k = +b.dataset.k, ok = k === q.ok;
+    if (ok) score++;
+    $$('.mc-opt', root).forEach(x => { x.disabled = true; if (+x.dataset.k === q.ok) x.classList.add('ok'); });
+    if (!ok) b.classList.add('err');
+    $('.mc-why', root).innerHTML = (ok ? '<b class="good">Richtig!</b> ' : '<b class="bad">Leider falsch.</b> ') + (q.why || '');
+    $('[data-mc="next"]', root).hidden = false;
+    $('.score b', root).textContent = score;
+  });
+  start();
+}
+
+/* Zuordnen: Karten in Spalten sortieren. cats: [{id, name}], items: [{t, c}] */
+function sorter(root, cats, items) {
+  let sel = null;
+  function build() {
+    const its = shuffle(items.map((it, k) => ({...it, k})));
+    root.innerHTML = `<div class="sort-pool" data-pool>${its.map(it => `<button class="sort-card" data-k="${it.k}">${it.t}</button>`).join('')}</div>
+      <div class="sort-cols" style="--n:${cats.length}">${cats.map(c => `<div class="sort-col" data-c="${c.id}"><h3>${c.name}</h3><div class="sort-drop"></div></div>`).join('')}</div>
+      <div class="controls"><button class="btn primary" data-s="check">Prüfen</button><button class="btn" data-s="reset">Neu mischen</button><span class="sort-fb" aria-live="polite"></span></div>`;
+  }
+  root.addEventListener('click', e => {
+    const card = e.target.closest('.sort-card'), col = e.target.closest('.sort-col'), act = e.target.closest('[data-s]');
+    if (act) {
+      if (act.dataset.s === 'reset') { build(); sel = null; return; }
+      let ok = 0, placed = 0;
+      $$('.sort-col .sort-card', root).forEach(c => { placed++; const good = items[+c.dataset.k].c === c.closest('.sort-col').dataset.c; c.classList.toggle('ok', good); c.classList.toggle('err', !good); if (good) ok++; });
+      const left = $$('[data-pool] .sort-card', root).length;
+      $('.sort-fb', root).innerHTML = `<b>${ok}</b> von ${items.length} richtig zugeordnet${left ? ` · ${left} noch nicht einsortiert` : ''}${ok === items.length ? ' – perfekt!' : ''}`;
+      return;
+    }
+    if (card) {
+      if (sel === card) { card.classList.remove('sel'); sel = null; return; }
+      if (sel) sel.classList.remove('sel');
+      if (card.closest('.sort-col') && !sel) { /* zurück in den Pool bei erneutem Klick */ }
+      sel = card; card.classList.add('sel'); card.classList.remove('ok', 'err');
+      return;
+    }
+    if (col && sel) { $('.sort-drop', col).appendChild(sel); sel.classList.remove('sel'); sel = null; return; }
+    if (e.target.closest('[data-pool]') && sel) { $('[data-pool]', root).appendChild(sel); sel.classList.remove('sel'); sel = null; }
+  });
+  build();
+}
+
+/* Paare finden: Begriff ↔ Erklärung. pairs: [[begriff, erklärung], ...] */
+function matcher(root, pairs) {
+  let selL = null, selR = null, done = 0, tries = 0;
+  function build() {
+    done = 0; tries = 0;
+    const L = shuffle(pairs.map((p, k) => k)), R = shuffle(pairs.map((p, k) => k));
+    root.innerHTML = `<div class="match"><div class="match-col">${L.map(k => `<button class="match-card term" data-k="${k}">${pairs[k][0]}</button>`).join('')}</div>
+      <div class="match-col">${R.map(k => `<button class="match-card def" data-k="${k}">${pairs[k][1]}</button>`).join('')}</div></div>
+      <div class="controls"><span class="score">Gefunden: <b>0</b> / ${pairs.length}</span><button class="btn" data-m="reset">Neu mischen</button><span class="sort-fb" aria-live="polite"></span></div>`;
+  }
+  root.addEventListener('click', e => {
+    if (e.target.closest('[data-m="reset"]')) return build();
+    const c = e.target.closest('.match-card'); if (!c || c.classList.contains('ok')) return;
+    const isL = c.classList.contains('term');
+    if (isL) { if (selL) selL.classList.remove('sel'); selL = selL === c ? null : c; } else { if (selR) selR.classList.remove('sel'); selR = selR === c ? null : c; }
+    if (selL) selL.classList.add('sel'); if (selR) selR.classList.add('sel');
+    if (selL && selR) {
+      tries++;
+      const a = selL, b = selR;
+      if (a.dataset.k === b.dataset.k) { a.classList.add('ok'); b.classList.add('ok'); done++; $('.sort-fb', root).textContent = done === pairs.length ? `Alle Paare gefunden – mit ${tries} Versuchen!` : 'Passt!'; }
+      else { a.classList.add('err'); b.classList.add('err'); setTimeout(() => { a.classList.remove('err'); b.classList.remove('err'); }, 650); $('.sort-fb', root).textContent = 'Passt nicht. Versuch es noch einmal.'; }
+      a.classList.remove('sel'); b.classList.remove('sel'); selL = selR = null;
+      $('.score b', root).textContent = done;
+    }
+  });
+  build();
+}
+
+/* ================= Molekül-Kern: Einlesen, Benennen, Formeln ================= */
+/* Ein Molekül wird über seine Schweratome beschrieben (C, O, Halogene); H wird über die Bindigkeit ergänzt.
+   mol = {a: [{el, x, y}], b: [[i, j, Ordnung]]}  – x/y sind Rasterpositionen (Abstand 2 zwischen Schweratomen). */
+const VAL = {C: 4, O: 2, N: 3, F: 1, Cl: 1, Br: 1, I: 1, H: 1};
+const HAL_NAME = {F: 'Fluor', Cl: 'Chlor', Br: 'Brom', I: 'Iod'};
+const STEM = ['', 'Meth', 'Eth', 'Prop', 'But', 'Pent', 'Hex', 'Hept', 'Oct', 'Non', 'Dec', 'Undec', 'Dodec', 'Tridec', 'Tetradec', 'Pentadec', 'Hexadec', 'Heptadec', 'Octadec', 'Nonadec', 'Icos'];
+const MULT = ['', '', 'di', 'tri', 'tetra', 'penta', 'hexa', 'hepta', 'octa'];
+const MULT_C = ['', '', 'bis', 'tris', 'tetrakis'];
+
+/* Mini-SMILES: C, O, F, Cl, Br, I, Klammern, = und # (keine Ringe) */
+function parseSmiles(s) {
+  const a = [], b = [], stack = [];
+  let prev = -1, order = 1, i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === '(') { stack.push(prev); i++; continue; }
+    if (c === ')') { prev = stack.pop(); i++; continue; }
+    if (c === '=') { order = 2; i++; continue; }
+    if (c === '#') { order = 3; i++; continue; }
+    let el = null;
+    for (const e of ['Cl', 'Br', 'C', 'O', 'F', 'I', 'N']) if (s.startsWith(e, i)) { el = e; break; }
+    if (!el) throw new Error('SMILES: ' + s);
+    a.push({el});
+    const k = a.length - 1;
+    if (prev >= 0) b.push([prev, k, order]);
+    prev = k; order = 1; i += el.length;
+  }
+  return {a, b};
+}
+function nbrs(m, i) { const out = []; for (const [p, q, o] of m.b) { if (p === i) out.push([q, o]); else if (q === i) out.push([p, o]); } return out; }
+function hCount(m, i) { return Math.max(0, VAL[m.a[i].el] - nbrs(m, i).reduce((s, [, o]) => s + o, 0)); }
+function bondOrder(m, i, j) { for (const [p, q, o] of m.b) if ((p === i && q === j) || (p === j && q === i)) return o; return 0; }
+function cloneMol(m) { return {a: m.a.map(x => ({...x})), b: m.b.map(x => x.slice())}; }
+
+/* Summenformel, z. B. C₄H₁₀ oder C₂H₄Br₂ */
+function sumFormula(m, plain) {
+  const cnt = {};
+  m.a.forEach((x, i) => { cnt[x.el] = (cnt[x.el] || 0) + 1; cnt.H = (cnt.H || 0) + hCount(m, i); });
+  const order = ['C', 'H', ...Object.keys(cnt).filter(k => k !== 'C' && k !== 'H').sort()];
+  return order.filter(k => cnt[k]).map(k => k + (cnt[k] > 1 ? (plain ? cnt[k] : SUB(cnt[k])) : '')).join('');
+}
+function countAtoms(m) {
+  const cnt = {C: 0, H: 0};
+  m.a.forEach((x, i) => { cnt[x.el] = (cnt[x.el] || 0) + 1; cnt.H += hCount(m, i); });
+  return cnt;
+}
+
+/* ---------- Benennung nach IUPAC (Schulregeln) ---------- */
+function pathBetween(adj, s, t) {
+  const prev = {[s]: -1}, q = [s];
+  while (q.length) { const u = q.shift(); if (u === t) break; for (const v of adj[u]) if (!(v in prev)) { prev[v] = u; q.push(v); } }
+  const p = []; for (let u = t; u !== -1; u = prev[u]) p.unshift(u);
+  return p;
+}
+function carbonAdj(m, allowed) {
+  const adj = {};
+  allowed.forEach(i => adj[i] = []);
+  for (const [p, q] of m.b) if (p in adj && q in adj) { adj[p].push(q); adj[q].push(p); }
+  return adj;
+}
+/* Analysiert die Kette ab root (ohne parent). asSub: als Substituent (…yl), Kette beginnt bei root.
+   Ergebnis: {name, ch (nummerierte Hauptkette), D, T (Locants der Doppel-/Dreifachbindungen), subs} */
+function analyze(m, root, parent, asSub) {
+  const comp = [], seen = new Set([parent]), st = [root];
+  while (st.length) { const u = st.pop(); if (seen.has(u)) continue; seen.add(u); if (m.a[u].el === 'C') { comp.push(u); for (const [v] of nbrs(m, u)) st.push(v); } }
+  const adj = carbonAdj(m, comp);
+  const leaves = comp.filter(u => adj[u].length <= 1);
+  const cands = [];
+  if (asSub) { for (const t of comp) cands.push(pathBetween(adj, root, t)); }
+  else if (comp.length === 1) cands.push([comp[0]]);
+  else for (const s of leaves) for (const t of leaves) if (s !== t) cands.push(pathBetween(adj, s, t));
+  let best = null;
+  for (const ch of cands) {
+    const inCh = new Set(ch), D = [], T = [], subs = [];
+    for (let k = 0; k < ch.length - 1; k++) { const o = bondOrder(m, ch[k], ch[k + 1]); if (o === 2) D.push(k + 1); if (o === 3) T.push(k + 1); }
+    ch.forEach((u, k) => {
+      for (const [v] of nbrs(m, u)) {
+        if (inCh.has(v) || v === parent) continue;
+        if (m.a[v].el === 'C') subs.push({loc: k + 1, name: analyze(m, v, u, true).name, at: v});
+        else if (HAL_NAME[m.a[v].el]) subs.push({loc: k + 1, name: HAL_NAME[m.a[v].el].toLowerCase(), at: v});
+        else if (m.a[v].el === 'O') subs.push({loc: k + 1, name: 'hydroxy', at: v});
+      }
+    });
+    const nMB = D.length + T.length;
+    const alpha = subs.slice().sort((x, y) => alphaKey(x.name).localeCompare(alphaKey(y.name)) || x.loc - y.loc);
+    const mbL = [...D, ...T].sort((x, y) => x - y), sL = subs.map(s => s.loc).sort((x, y) => x - y);
+    const key = asSub
+      ? [-ch.length, -nMB, -subs.length, ...mbL, ...sL, ...alpha.map(s => s.loc)]
+      : [-nMB, -ch.length, -subs.length, ...mbL, ...D, ...sL, ...alpha.map(s => s.loc)];
+    if (!best || cmpKey(key, best.key) < 0) best = {key, ch, D, T, subs};
+  }
+  const {ch, D, T, subs} = best, n = ch.length;
+  const pre = prefixString(subs);
+  let base = STEM[n] || ('C' + n);
+  if (asSub) {
+    if (D.length || T.length) base += (D.length ? `-${D.join(',')}-${MULT[D.length]}en` : '') + (T.length ? `-${T.join(',')}-${MULT[T.length]}in` : '');
+    base = (pre + base + 'yl').toLowerCase();
+    best.name = subs.length || D.length || T.length ? '(' + base + ')' : base;
+    return best;
+  }
+  if (!D.length && !T.length) base += 'an';
+  else {
+    const noLoc = n <= 3 && D.length + T.length === 1;
+    if (D.length > 1 || (!D.length && T.length > 1)) base += 'a';
+    if (D.length) base += noLoc ? 'en' : `-${D.join(',')}-${MULT[D.length]}en`;
+    if (T.length) base += noLoc ? 'in' : `-${T.join(',')}-${MULT[T.length]}in`;
+  }
+  let nm = pre + base.toLowerCase();
+  // überflüssige Locants: Methan-Derivate, einfach substituiertes Ethan/Ethen/Ethin
+  if (n === 1) nm = nm.replace(/[\d,]+-/g, '').replace(/-/g, '');
+  else if (n === 2 && subs.length === 1) nm = nm.replace(/^1-/, '');
+  best.name = cap(nm);
+  return best;
+}
+function alphaKey(n) { return n.replace(/[()\d,\-]/g, '').toLowerCase(); }
+function cmpKey(a, b) { for (let i = 0; i < Math.max(a.length, b.length); i++) { const x = a[i] ?? -1e9, y = b[i] ?? -1e9; if (x !== y) return x < y ? -1 : 1; } return 0; }
+function cap(s) { const i = s.search(/[a-zäöü]/i); return i < 0 ? s : s.slice(0, i) + s[i].toUpperCase() + s.slice(i + 1); }
+function prefixString(subs) {
+  const g = {};
+  subs.forEach(s => { (g[s.name] = g[s.name] || {name: s.name, locs: []}).locs.push(s.loc); });
+  return Object.values(g).sort((x, y) => alphaKey(x.name).localeCompare(alphaKey(y.name))).map(x => {
+    x.locs.sort((p, q) => p - q);
+    const k = x.locs.length, complex = x.name.startsWith('(');
+    return `${x.locs.join(',')}-${k > 1 ? (complex ? MULT_C[k] : MULT[k]) : ''}${x.name}`;
+  }).join('-');
+}
+/* Ergebnis der Benennung für das ganze Molekül (Alkanole über einen Umweg) */
+function nameInfo(m) {
+  const C = m.a.map((x, i) => i).filter(i => m.a[i].el === 'C');
+  if (!C.length) return {name: '', ch: [], D: [], T: [], subs: []};
+  const O = m.a.findIndex(x => x.el === 'O');
+  if (O < 0) return analyze(m, C[0], -1, false);
+  const m2 = cloneMol(m); m2.a[O].el = 'I';
+  const r = analyze(m2, C[0], -1, false);
+  const sub = r.subs.find(s => s.at === O);
+  const rest = r.subs.filter(s => s.at !== O);
+  let base = STEM[r.ch.length] + 'an';
+  const pre = prefixString(rest);
+  const nm = r.ch.length <= 2 && !rest.length ? base + 'ol' : base + '-' + sub.loc + '-ol';
+  return {...r, name: cap((pre + nm).toLowerCase())};
+}
+function iupac(m) { return nameInfo(m).name; }
+function mainChain(m) { return nameInfo(m).ch; }
+
+/* Halbstrukturformel als Text entlang der Hauptkette, z. B. CH₃–CH(CH₃)–CH₂–CH₃ */
+function condensed(m) {
+  const ch = mainChain(m);
+  if (!ch.length) return '';
+  const inCh = new Set(ch), BOND = {1: '–', 2: '=', 3: '≡'};
+  const isTerm = v => m.a[v].el !== 'C';
+  const grp = (u, skip) => {
+    const h = hCount(m, u);
+    let t = 'C' + (h ? 'H' + (h > 1 ? SUB(h) : '') : '');
+    const term = {};
+    nbrs(m, u).forEach(([v]) => { if (!skip.has(v) && isTerm(v)) term[m.a[v].el] = (term[m.a[v].el] || 0) + 1; });
+    for (const [el, k] of Object.entries(term)) t += (el === 'O' ? 'OH' : el) + (k > 1 ? SUB(k) : '');
+    return t;
+  };
+  const branch = (u, par) => {
+    let t = grp(u, new Set([par]));
+    const kids = nbrs(m, u).filter(([v]) => v !== par && !isTerm(v));
+    kids.forEach(([v, o], idx) => { const inner = (o > 1 ? BOND[o] : '') + branch(v, u); t += idx === kids.length - 1 ? '–' + inner : '(' + inner + ')'; });
+    return t;
+  };
+  const hetero = ch.filter(u => nbrs(m, u).some(([v]) => isTerm(v)));
+  const seq = ch.length > 1 && hetero.length === 1 && hetero[0] === ch[0] ? ch.slice().reverse() : ch;
+  return seq.map((u, k) => {
+    let t = (k ? BOND[bondOrder(m, seq[k - 1], u)] : '') + grp(u, new Set(ch));
+    const br = {};
+    for (const [v, o] of nbrs(m, u)) if (!inCh.has(v) && !isTerm(v)) { const x = (o > 1 ? BOND[o] : '') + branch(v, u); br[x] = (br[x] || 0) + 1; }
+    for (const [x, k2] of Object.entries(br)) t += '(' + x + ')' + (k2 > 1 ? SUB(k2) : '');
+    return t;
+  }).join('');
+}
+
+/* ---------- 2D-Anordnung im Raster ---------- */
+const DIRS = [[2, 0], [0, -2], [0, 2], [-2, 0]];
+function layout2D(m) {
+  if (m.a.every(x => x.x !== undefined)) return m;
+  let ch = mainChain(m); if (!ch.length) ch = [0];
+  const pos = {}, occ = new Map();
+  const key = (x, y) => x + ',' + y;
+  const free = (x, y, self) => {
+    if (occ.has(key(x, y))) return false;
+    for (const [dx, dy] of DIRS) { const o = occ.get(key(x + dx, y + dy)); if (o !== undefined && o !== self) return false; }
+    return true;
+  };
+  const place = (i, x, y) => { pos[i] = [x, y]; occ.set(key(x, y), i); };
+  ch.forEach((u, k) => place(u, 2 * k, 0));
+  const inCh = new Set(ch);
+  const grow = (u, par, dir) => {
+    const kids = nbrs(m, u).filter(([v]) => v !== par && !(v in pos)).map(([v]) => v);
+    // längster Ast geradeaus, die anderen seitlich
+    kids.sort((p, q) => depth(m, q, u) - depth(m, p, u));
+    const [x, y] = pos[u];
+    const order = [dir, [dir[1], dir[0]], [-dir[1], -dir[0]], [-dir[0], -dir[1]]];
+    for (const v of kids) {
+      for (const d of order) { const nx = x + d[0], ny = y + d[1]; if (free(nx, ny, u)) { place(v, nx, ny); grow(v, u, d); break; } }
+      if (!(v in pos)) { place(v, x + dir[0], y + 4); grow(v, u, dir); }
+    }
+  };
+  ch.forEach((u, k) => {
+    const subs = nbrs(m, u).filter(([v]) => !inCh.has(v)).map(([v]) => v);
+    subs.sort((p, q) => (m.a[p].el === 'C' ? 0 : 1) - (m.a[q].el === 'C' ? 0 : 1) || depth(m, q, u) - depth(m, p, u));
+    const up = k % 2 === 1;
+    let pref = up ? [[0, -2], [0, 2]] : [[0, 2], [0, -2]];
+    if (ch.length === 1) pref = [[2, 0], [-2, 0], [0, -2], [0, 2]];
+    else if (k === 0) pref = [[-2, 0], ...pref];
+    else if (k === ch.length - 1) pref = [[2, 0], ...pref];
+    // Halogene am Kettenende bevorzugt in Kettenrichtung, Alkylreste nach oben/unten
+    for (const v of subs) {
+      let ds = pref;
+      if (m.a[v].el === 'C' && (k === 0 || k === ch.length - 1) && ch.length > 1) ds = [...pref.slice(1), pref[0]];
+      for (const d of ds) { const [x, y] = pos[u]; if (free(x + d[0], y + d[1], u)) { place(v, x + d[0], y + d[1]); grow(v, u, d); break; } }
+      if (!(v in pos)) { const [x, y] = pos[u]; place(v, x, y - 4); grow(v, u, [0, -2]); }
+    }
+  });
+  m.a.forEach((a, i) => { a.x = pos[i][0]; a.y = pos[i][1]; });
+  return m;
+}
+function depth(m, u, par) { let d = 0; for (const [v] of nbrs(m, u)) if (v !== par) d = Math.max(d, depth(m, v, u)); return d + 1; }
+
+/* Atome inkl. H mit 2D-Positionen (für Valenzstrichformel und 3D-Start) */
+function expandH(m) {
+  layout2D(m);
+  const A = m.a.map(a => ({el: a.el, x: a.x, y: a.y, heavy: true})), B = m.b.map(b => b.slice());
+  m.a.forEach((a, i) => {
+    const used = nbrs(m, i).map(([j]) => [Math.sign(m.a[j].x - a.x), Math.sign(m.a[j].y - a.y)]);
+    const dirs = [[0, -1], [0, 1], [1, 0], [-1, 0]].filter(d => !used.some(u => u[0] === d[0] && u[1] === d[1]));
+    let h = hCount(m, i);
+    // bei O-H: H nach außen
+    for (let k = 0; k < h; k++) {
+      const d = dirs[k] || [0.6 * Math.cos(k), 0.6 * Math.sin(k)];
+      A.push({el: 'H', x: a.x + d[0], y: a.y + d[1], parent: i});
+      B.push([i, A.length - 1, 1]);
+    }
+  });
+  return {a: A, b: B};
+}
+
+/* ---------- Formeln als SVG ---------- */
+/* mode: 'struktur' (Valenzstrichformel), 'halb' (Halbstrukturformel), 'skelett' (Skelettformel) */
+function formulaSVG(m0, mode = 'struktur', o = {}) {
+  const m = layout2D(m0);
+  const U = o.unit || 30;
+  let A, B;
+  if (mode === 'struktur') ({a: A, b: B} = expandH(m));
+  else { A = m.a.map(a => ({...a, heavy: true})); B = m.b; }
+  const P = A.map(a => mode === 'skelett' ? [a.x * .5 * 0.87 * 2 * U / 2 * 1.0 + 0, (a.y / 2 + skZig(a, m)) * U * 0.95] : [a.x * U, a.y * U]);
+  if (mode === 'skelett') A.forEach((a, i) => { P[i][0] = a.x / 2 * U * 1.25; });
+  if (mode === 'struktur') A.forEach((a, i) => { if (a.el === 'H' && a.parent !== undefined) { const q = A[a.parent]; P[i] = [(q.x + (a.x - q.x) * 1.3) * U, (q.y + (a.y - q.y) * 1.3) * U]; } });
+  const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+  const pad = U * 1.0;
+  const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, W = Math.max(...xs) - x0 + pad, H = Math.max(...ys) - y0 + pad;
+  const hl = o.highlight || new Set(), num = o.numbers || {};
+  const labelOf = (a, i) => {
+    if (mode === 'struktur') return a.el;
+    if (mode === 'skelett') return a.el === 'C' ? '' : (a.el === 'O' ? 'OH' : a.el);
+    if (a.el !== 'C') return a.el === 'O' ? 'OH' : a.el;
+    const h = hCount(m, i); const hs = h ? 'H' + (h > 1 ? SUB(h) : '') : '';
+    const nb = nbrs(m, i);
+    const leftEnd = nb.length === 1 && m.a[nb[0][0]].x > a.x && h;
+    return leftEnd ? hs + 'C' : 'C' + hs;
+  };
+  const lab = A.map(labelOf);
+  const fs = mode === 'struktur' ? U * .62 : U * .62;
+  const halfW = (t, el) => !t ? 0 : (el === 'H' ? fs * .36 : t.length > 1 ? fs * (t.replace(/[₀-₉]/g, '').length * .34 + (t.match(/[₀-₉]/g) || []).length * .2) : fs * .4);
+  let s = `<svg viewBox="${f1(x0)} ${f1(y0)} ${f1(W)} ${f1(H)}" width="${Math.round(W)}" height="${Math.round(H)}" class="mol2d ${mode}" role="img" aria-label="${o.label || 'Formel'}">`;
+  // Bindungen
+  for (const [i, j, ord] of B) {
+    let [x1, y1] = P[i], [x2, y2] = P[j];
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+    const r1 = lab[i] ? Math.max(halfW(lab[i], A[i].el) * Math.abs(ux), fs * .42 * Math.abs(uy)) + U * .12 : 0;
+    const r2 = lab[j] ? Math.max(halfW(lab[j], A[j].el) * Math.abs(ux), fs * .42 * Math.abs(uy)) + U * .12 : 0;
+    x1 += ux * r1; y1 += uy * r1; x2 -= ux * r2; y2 -= uy * r2;
+    const nx = -uy, ny = ux, g = U * .13;
+    const cls = (hl.has(i) && hl.has(j)) ? 'bd hl' : 'bd';
+    const offs = ord === 1 ? [0] : ord === 2 ? (mode === 'skelett' ? [0, skSide(P, i, j, m) * 2 * g] : [-g, g]) : [-1.6 * g, 0, 1.6 * g];
+    for (const k of offs) {
+      let a1 = x1 + nx * k, b1 = y1 + ny * k, a2 = x2 + nx * k, b2 = y2 + ny * k;
+      if (mode === 'skelett' && k !== 0) { a1 += ux * U * .15; b1 += uy * U * .15; a2 -= ux * U * .15; b2 -= uy * U * .15; }
+      s += `<line x1="${f1(a1)}" y1="${f1(b1)}" x2="${f1(a2)}" y2="${f1(b2)}" class="${cls}"/>`;
+    }
+  }
+  // Atome
+  A.forEach((a, i) => {
+    const [x, y] = P[i];
+    if ((hl.has(i) || (o.hl2 && o.hl2.has(i))) && a.heavy) s += mode === 'halb' ? `<rect x="${f1(x - halfW(lab[i], a.el) - U * .12)}" y="${f1(y - fs * .62)}" width="${f1(2 * halfW(lab[i], a.el) + U * .24)}" height="${f1(fs * 1.24)}" rx="${f1(fs * .3)}" class="${hl.has(i) ? 'hlc' : 'hlc2'}"/>` : `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(U * .45)}" class="${hl.has(i) ? 'hlc' : 'hlc2'}"/>`;
+    if (o.clickH && a.el === 'H') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(U * .42)}" class="hit" data-h="${a.parent}"/>`;
+    if (o.clickH && a.heavy && a.el !== 'C') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(U * .5)}" class="hit hx" data-x="${i}"/>`;
+    if (lab[i]) {
+      const cls = a.el === 'H' ? 'at h' : a.el === 'C' ? 'at c' : 'at x el-' + a.el.toLowerCase();
+      s += `<text x="${f1(x)}" y="${f1(y)}" class="${cls}" style="font-size:${f1(a.el === 'H' && mode === 'struktur' ? fs * .9 : fs)}px">${lab[i]}</text>`;
+    }
+    if (num[i] !== undefined) s += `<text x="${f1(x + U * .5)}" y="${f1(y + (a.y < 0 ? -U * .62 : U * .7))}" class="loc" style="font-size:${f1(U * .42)}px">${num[i]}</text>`;
+  });
+  return s + '</svg>';
+}
+function f1(v) { return Math.round(v * 10) / 10; }
+function skZig(a, m) { return (Math.round(a.x / 2) % 2 === 0) ? 0 : -0.5; }
+function skSide(P, i, j, m) {
+  // Doppelbindung im Skelett: zweite Linie zur Innenseite des Zickzacks
+  const cx = P.reduce((s, p) => s + p[0], 0) / P.length, cy = P.reduce((s, p) => s + p[1], 0) / P.length;
+  const [x1, y1] = P[i], [x2, y2] = P[j], mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const nx = -(y2 - y1), ny = x2 - x1;
+  return ((cx - mx) * nx + (cy - my) * ny) >= 0 ? 1 : -1;
+}
+
+/* Halbstrukturformel mit zusammengefassten CH₂-Gruppen, z. B. CH₃–(CH₂)₈–CH₃ */
+function condensedShort(m) { return condensed(m).replace(/(–CH₂){3,}/g, x => '–(CH₂)' + SUB(x.length / 4)); }
+
+/* ================= 3D-Molekülmodelle ================= */
+const R_COV = {C: .77, H: .37, O: .73, N: .75, F: .71, Cl: .99, Br: 1.14, I: 1.33};
+const R_VDW = {C: 1.7, H: 1.2, O: 1.52, N: 1.55, F: 1.47, Cl: 1.75, Br: 1.85, I: 1.98};
+const ATOM_COL = el => ({C: C.atomc, H: C.atomh, O: C.atomo, Br: C.atombr, Cl: C.atomcl, F: C.atomf, I: C.atomi, N: C.electron})[el] || C.ink2;
+const bondLen = (e1, e2, o) => (R_COV[e1] + R_COV[e2]) * (o === 2 ? .87 : o === 3 ? .78 : 1);
+const geoCache = new Map();
+
+/* Erzeugt 3D-Koordinaten über Abstands-Bedingungen (Bindungslängen, Bindungswinkel, Planarität an C=C) */
+function build3D(m0) {
+  const key = JSON.stringify([m0.a.map(a => [a.el, a.x, a.y]), m0.b, m0.cis || null]);
+  if (geoCache.has(key)) return geoCache.get(key);
+  const m = cloneMol(m0); m.cis = m0.cis;
+  const {a: A, b: B} = expandH(m);
+  const n = A.length, adj = A.map(() => []);
+  B.forEach(([i, j, o]) => { adj[i].push([j, o]); adj[j].push([i, o]); });
+  // Startpositionen: Zickzack in der Ebene, H leicht aus der Ebene heraus
+  const rnd = rng(7 + n);
+  const P = A.map((a, i) => {
+    const zig = a.heavy ? skZig(a) : (A[a.parent] ? skZig(A[a.parent]) : 0);
+    return [a.x * .66, (a.y / 2 + zig) * 1.3, a.heavy ? (rnd() - .5) * .2 : 0];
+  });
+  A.forEach((a, i) => { if (!a.heavy) { const k = adj[a.parent].filter(([j]) => !A[j].heavy).findIndex(([j]) => j === i); P[i][2] = [0.9, -0.9, 0.1][k] ?? 0; } });
+  const cons = [], pairKey = new Set();
+  const add = (i, j, d, w = 1) => { cons.push([i, j, d, w]); pairKey.add(Math.min(i, j) + ':' + Math.max(i, j)); };
+  B.forEach(([i, j, o]) => add(i, j, bondLen(A[i].el, A[j].el, o)));
+  const ang = i => { const os = adj[i].map(([, o]) => o); if (os.includes(3) || os.filter(o => o === 2).length > 1) return 180; if (os.includes(2)) return 120; return A[i].el === 'O' ? 104.5 : 109.47; };
+  const blen = (i, j) => { const o = adj[i].find(([k]) => k === j)[1]; return bondLen(A[i].el, A[j].el, o); };
+  for (let c = 0; c < n; c++) {
+    const nb = adj[c], th = ang(c) * Math.PI / 180;
+    for (let x = 0; x < nb.length; x++) for (let y = x + 1; y < nb.length; y++) {
+      const p = nb[x][0], q = nb[y][0], dp = blen(c, p), dq = blen(c, q);
+      add(p, q, Math.sqrt(dp * dp + dq * dq - 2 * dp * dq * Math.cos(th)));
+    }
+  }
+  // Doppelbindungen: alle Nachbarn in einer Ebene (cis/trans aus der 2D-Lage)
+  B.forEach(([c1, c2, o]) => {
+    if (o === 1) return;
+    const L = bondLen(A[c1].el, A[c2].el, o);
+    // Seiten der Substituenten: am selben C-Atom immer gegenüber; Schweratome bestimmen die Lage
+    const sides = {};
+    const geoSide = (i) => { const [x1, y1] = P[c1], [x2, y2] = P[c2], [x, y] = P[i]; return Math.sign((x2 - x1) * (y - y1) - (y2 - y1) * (x - x1)) || 1; };
+    for (const c of [c1, c2]) {
+      const subs = adj[c].map(([k]) => k).filter(k => k !== c1 && k !== c2).sort((u, v) => (A[v].heavy ? 1 : 0) - (A[u].heavy ? 1 : 0));
+      if (subs.length) { sides[subs[0]] = geoSide(subs[0]); if (subs[1] !== undefined) sides[subs[1]] = -sides[subs[0]]; }
+    }
+    if (m.cis) for (const [u, v] of m.cis) if (u in sides && v in sides && sides[u] !== sides[v]) {
+      const c = adj[v].map(([k]) => k).find(k => k === c1 || k === c2);
+      for (const [k] of adj[c]) if (k in sides) sides[k] = -sides[k];
+    }
+    for (const [p] of adj[c1]) if (p !== c2) for (const [q] of adj[c2]) if (q !== c1) {
+      const dp = blen(c1, p), dq = blen(c2, q);
+      if (o === 3) { add(p, q, dp + L + dq); continue; }
+      const cis = sides[p] === sides[q];
+      const px = -dp * .5, py = dp * Math.sin(Math.PI / 3), qx = L + dq * .5, qy = (cis ? 1 : -1) * dq * Math.sin(Math.PI / 3);
+      add(p, q, Math.hypot(qx - px, qy - py));
+    }
+  });
+  const minD = (i, j) => (A[i].heavy && A[j].heavy) ? 3.2 : (A[i].heavy || A[j].heavy) ? 2.5 : 2.2;
+  for (let it = 0; it < 900; it++) {
+    const k = it < 600 ? .5 : .9;
+    for (const [i, j, d, w] of cons) relax(P, i, j, d, k * w);
+    if (it % 2 === 0) for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      if (pairKey.has(i + ':' + j)) continue;
+      const dx = P[j][0] - P[i][0], dy = P[j][1] - P[i][1], dz = P[j][2] - P[i][2], d = Math.hypot(dx, dy, dz) || 1e-3, md = minD(i, j);
+      if (d < md) relax(P, i, j, md, .08);
+    }
+  }
+  // zentrieren und längste Ausdehnung waagerecht legen
+  const cen = [0, 1, 2].map(k => P.reduce((s, p) => s + p[k], 0) / n);
+  P.forEach(p => { p[0] -= cen[0]; p[1] -= cen[1]; p[2] -= cen[2]; });
+  const ax = principal(P);
+  const out = P.map(p => [dot(p, ax[0]), dot(p, ax[1]), dot(p, ax[2])]);
+  const res = {A, B, P: out};
+  geoCache.set(key, res);
+  return res;
+}
+function relax(P, i, j, d, k) {
+  const a = P[i], b = P[j], dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+  const L = Math.hypot(dx, dy, dz) || 1e-4, f = (L - d) / L * .5 * k;
+  a[0] += dx * f; a[1] += dy * f; a[2] += dz * f; b[0] -= dx * f; b[1] -= dy * f; b[2] -= dz * f;
+}
+const dot = (p, q) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+function principal(P) {
+  const M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  P.forEach(p => { for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) M[r][c] += p[r] * p[c]; });
+  const mul = v => [dot(M[0], v), dot(M[1], v), dot(M[2], v)];
+  const norm = v => { const l = Math.hypot(...v) || 1; return v.map(x => x / l); };
+  let v1 = norm([1, .3, .1]); for (let i = 0; i < 60; i++) v1 = norm(mul(v1));
+  const l1 = dot(v1, mul(v1));
+  const M1 = M.map((row, r) => row.map((x, c) => x - l1 * v1[r] * v1[c]));
+  const mul1 = v => [dot(M1[0], v), dot(M1[1], v), dot(M1[2], v)];
+  let v2 = norm([.2, 1, .3]); for (let i = 0; i < 60; i++) { v2 = mul1(v2); const pr = dot(v2, v1); v2 = norm(v2.map((x, k) => x - pr * v1[k])); }
+  const v3 = [v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]];
+  return [v1, v2, v3];
+}
+
+/* Molekül-Betrachter auf einem Canvas. Ziehen dreht, Doppelklick setzt zurück. */
+function molViewer(cv, station, o = {}) {
+  const V = {mol: null, geo: null, mode: o.mode || 'kugel', labels: !!o.labels, spin: o.spin !== false, yaw: -.5, pitch: .35, drag: null, angles: o.angles || null, pairs: false, morph: 1, fit: 0, extra: null};
+  V.set = (m) => { V.mol = m; V.geo = m ? build3D(m) : null; V.fit = 0; };
+  cv.style.touchAction = 'none'; cv.style.cursor = 'grab';
+  cv.addEventListener('pointerdown', e => { V.drag = [e.clientX, e.clientY]; cv.setPointerCapture(e.pointerId); cv.style.cursor = 'grabbing'; });
+  cv.addEventListener('pointermove', e => { if (!V.drag) return; V.yaw += (e.clientX - V.drag[0]) * .01; V.pitch = clamp(V.pitch + (e.clientY - V.drag[1]) * .01, -1.5, 1.5); V.drag = [e.clientX, e.clientY]; });
+  const up = () => { V.drag = null; cv.style.cursor = 'grab'; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('dblclick', () => { V.yaw = -.5; V.pitch = .35; });
+  V.project = (w, h) => {
+    const g = V.geo; if (!g) return null;
+    const cy = Math.cos(V.yaw), sy = Math.sin(V.yaw), cp = Math.cos(V.pitch), sp = Math.sin(V.pitch);
+    const pts = (V.points || g.P).map(([x, y, z]) => { const x1 = x * cy + z * sy, z1 = -x * sy + z * cy; const y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp; return [x1, y2, z2]; });
+    let R = 0; g.P.forEach((p, i) => R = Math.max(R, Math.hypot(...p) + (V.mode === 'kalotte' ? R_VDW[g.A[i].el] * .95 : .6)));
+    if (!V.fit) V.fit = R; else V.fit = lerp(V.fit, R, .15);
+    const s = Math.min(w, h) * .46 / Math.max(1.75, V.fit), D = 14;
+    return pts.map(([x, y, z]) => { const f = D / (D - z); return {x: w / 2 + x * s * f, y: h / 2 + y * s * f, z, f, s: s * f}; });
+  };
+  V.draw = (ctx, w, h) => {
+    const g = V.geo; if (!g) return;
+    const S = V.project(w, h), items = [];
+    const kal = V.mode === 'kalotte';
+    g.A.forEach((a, i) => items.push({z: S[i].z, t: 'a', i}));
+    if (!kal) g.B.forEach(([i, j, ord]) => items.push({z: (S[i].z + S[j].z) / 2 - .01, t: 'b', i, j, ord}));
+    items.sort((p, q) => p.z - q.z);
+    const rad = (i) => kal ? R_VDW[g.A[i].el] * .92 * S[i].s : (g.A[i].el === 'H' ? .24 : g.A[i].el === 'C' ? .36 : .44) * S[i].s;
+    for (const it of items) {
+      if (it.t === 'b') {
+        const p0 = S[it.i], q0 = S[it.j], dx = q0.x - p0.x, dy = q0.y - p0.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+        const ri = rad(it.i) * .8, rj = rad(it.j) * .8;
+        if (L <= (ri + rj) * .95) continue;
+        const p = {x: p0.x + dx / L * ri, y: p0.y + dy / L * ri, s: p0.s}, q = {x: q0.x - dx / L * rj, y: q0.y - dy / L * rj, s: q0.s};
+        const sw = Math.max(3, .11 * p.s), gap = it.ord === 1 ? 0 : sw * 1.25;
+        const offs = it.ord === 1 ? [0] : it.ord === 2 ? [-gap / 2 - sw * .1, gap / 2 + sw * .1] : [-gap, 0, gap];
+        for (const k of offs) {
+          const x1 = p.x + nx * k, y1 = p.y + ny * k, x2 = q.x + nx * k, y2 = q.y + ny * k;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = alpha('#000000', .35); ctx.lineWidth = it.ord === 1 ? sw + 2 : sw * .8 + 2;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          const gr = ctx.createLinearGradient(x1, y1, x2, y2);
+          gr.addColorStop(0, mix(ATOM_COL(g.A[it.i].el), '#ffffff', .25)); gr.addColorStop(.5, mix(ATOM_COL(g.A[it.i].el), '#ffffff', .25)); gr.addColorStop(.5, mix(ATOM_COL(g.A[it.j].el), '#ffffff', .25)); gr.addColorStop(1, mix(ATOM_COL(g.A[it.j].el), '#ffffff', .25));
+          ctx.strokeStyle = gr; ctx.lineWidth = it.ord === 1 ? sw : sw * .8;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        }
+        if (V.pairs) {
+          const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2, er = Math.max(3, .07 * p.s);
+          for (let k = 0; k < it.ord; k++) for (const sgn of [-1, 1]) {
+            const off = (k - (it.ord - 1) / 2) * er * 3.2;
+            const ex = mx + nx * off + dx / L * sgn * er * 1.3, ey = my + ny * off + dy / L * sgn * er * 1.3;
+            ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(ex, ey, er, 0, 7); ctx.fill();
+          }
+        }
+      } else {
+        const i = it.i, a = g.A[i], p = S[i], r = rad(i);
+        const col = ATOM_COL(a.el);
+        const gr = ctx.createRadialGradient(p.x - r * .38, p.y - r * .42, r * .08, p.x, p.y, r);
+        gr.addColorStop(0, mix(col, '#ffffff', .55)); gr.addColorStop(.55, col); gr.addColorStop(1, mix(col, '#000000', a.el === 'H' ? .38 : .45));
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fill();
+        if (a.el === 'H' || kal) { ctx.strokeStyle = alpha('#000000', .3); ctx.lineWidth = 1; ctx.stroke(); }
+        if (V.labels && (!kal || it.z > -.5)) {
+          const lc = a.el === 'H' ? '#1d2a22' : '#ffffff';
+          label(ctx, a.el, p.x, p.y + 1, {size: Math.max(10, r * (a.el.length > 1 ? .8 : 1.05)), color: lc, font: SANS});
+        }
+      }
+    }
+    if (V.angles) for (const [i, c, j, txt] of V.angles) drawAngle(ctx, S[i], S[c], S[j], txt);
+    if (V.extra) V.extra(ctx, S, w, h);
+  };
+  visuals.push({station, tick(dt) {
+    if (!cv.clientWidth) return;
+    if (V.spin && !V.drag && !RM.matches) V.yaw += dt * .45;
+    const {ctx, w, h} = setup(cv);
+    V.draw(ctx, w, h);
+  }});
+  return V;
+}
+function drawAngle(ctx, a, c, b, txt) {
+  const a1 = Math.atan2(a.y - c.y, a.x - c.x), a2 = Math.atan2(b.y - c.y, b.x - c.x);
+  let d = a2 - a1; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+  const r = Math.min(Math.hypot(a.x - c.x, a.y - c.y), Math.hypot(b.x - c.x, b.y - c.y)) * .45;
+  ctx.strokeStyle = C.accent; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(c.x, c.y, r, a1, a1 + d, d < 0); ctx.stroke();
+  const am = a1 + d / 2, tx = c.x + Math.cos(am) * (r + 26), ty = c.y + Math.sin(am) * (r + 18);
+  ctx.font = `700 15px ${MONO}`; const tw = ctx.measureText(txt).width;
+  ctx.fillStyle = alpha(C.surface, .9); roundRect(ctx, tx - tw / 2 - 5, ty - 11, tw + 10, 22, 6); ctx.fill();
+  label(ctx, txt, tx, ty, {size: 15, font: MONO, color: C.accent});
+}
+/* Bindungswinkel im Raum (Grad) */
+function angle3D(P, i, c, j) {
+  const u = P[i].map((v, k) => v - P[c][k]), v = P[j].map((x, k) => x - P[c][k]);
+  return Math.acos(dot(u, v) / Math.hypot(...u) / Math.hypot(...v)) * 180 / Math.PI;
+}
+const MOL = s => parseSmiles(s);
+
+/* ================= Widgets der Reihe ================= */
+/* Molekül-Baukasten auf einem Raster. o: {cols, rows, maxC, multi, onChange(mol), start: smiles}
+   C-Atom antippen = auswählen; freies Nachbarfeld antippen = neues C-Atom an das ausgewählte binden. */
+function molBuilder(root, o = {}) {
+  const cols = o.cols || 9, rows = o.rows || 5, G = 64;
+  let maxC = o.maxC || 10, atoms = [], bonds = [], hist = [], sel = -1;
+  root.classList.add('builder');
+  root.innerHTML = `<svg class="bgrid" viewBox="0 0 ${cols * G} ${rows * G}" aria-label="Baukasten: Raster für Kohlenstoffatome"></svg>
+    <div class="controls"><button class="btn" data-b="undo">Rückgängig</button><button class="btn" data-b="del">Ausgewähltes C entfernen</button><button class="btn" data-b="clear">Alles löschen</button>${o.extraButtons || ''}</div>
+    <p class="b-msg" aria-live="polite">${o.hint || 'Tippe auf ein freies Feld neben dem markierten C-Atom. Ein anderes C-Atom antippen, um dort weiterzubauen.'}</p>`;
+  const svg = $('svg', root), msg = $('.b-msg', root);
+  const at = (x, y) => atoms.findIndex(a => a.cx === x && a.cy === y);
+  const nb = i => bonds.filter(b => b[0] === i || b[1] === i);
+  const used = i => nb(i).reduce((s, b) => s + b[2], 0);
+  const adjC = (x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => at(x + dx, y + dy)).filter(i => i >= 0);
+  const save = () => hist.push(JSON.stringify([atoms, bonds, sel]));
+  const mol = () => ({a: atoms.map(a => ({el: 'C', x: a.cx * 2, y: a.cy * 2})), b: bonds.map(b => b.slice())});
+  function parentFor(x, y) {
+    const n = adjC(x, y).filter(i => used(i) < 4);
+    if (sel >= 0 && n.includes(sel)) return sel;
+    if (sel < 0 && n.length === 1) return n[0];
+    return -1;
+  }
+  const canAdd = (x, y) => at(x, y) < 0 && atoms.length < maxC && (!atoms.length || parentFor(x, y) >= 0);
+  function draw() {
+    let s = '';
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      if (at(x, y) >= 0) continue;
+      const can = canAdd(x, y);
+      s += `<rect class="cell${can ? ' can' : ''}" x="${x * G + 6}" y="${y * G + 6}" width="${G - 12}" height="${G - 12}" rx="12" data-x="${x}" data-y="${y}"/>`;
+      if (can) s += `<text class="plus" x="${x * G + G / 2}" y="${y * G + G / 2}">+</text>`;
+    }
+    bonds.forEach(([i, j, ord], k) => {
+      const a = atoms[i], b = atoms[j], x1 = a.cx * G + G / 2, y1 = a.cy * G + G / 2, x2 = b.cx * G + G / 2, y2 = b.cy * G + G / 2;
+      const horiz = y1 === y2, offs = ord === 1 ? [0] : ord === 2 ? [-5, 5] : [-8, 0, 8];
+      s += `<line class="gbhit${o.multi ? '' : ' off'}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" data-bond="${k}"/><g class="gbv">`;
+      for (const d of offs) s += `<line class="gb" x1="${x1 + (horiz ? 0 : d)}" y1="${y1 + (horiz ? d : 0)}" x2="${x2 + (horiz ? 0 : d)}" y2="${y2 + (horiz ? d : 0)}"/>`;
+      s += '</g>';
+    });
+    atoms.forEach((a, i) => { s += `<circle class="gc${i === sel ? ' sel' : ''}" cx="${a.cx * G + G / 2}" cy="${a.cy * G + G / 2}" r="19" data-atom="${i}"/><text class="gcl" x="${a.cx * G + G / 2}" y="${a.cy * G + G / 2 + 1}">C</text>`; });
+    svg.innerHTML = s;
+    $('[data-b="del"]', root).disabled = sel < 0 || (atoms.length > 1 && nb(sel).length > 1);
+  }
+  function changed() { draw(); if (o.onChange) o.onChange(atoms.length ? mol() : null); }
+  function remove(i) {
+    bonds = bonds.filter(b => b[0] !== i && b[1] !== i).map(b => b.map((v, k) => k < 2 && v > i ? v - 1 : v));
+    atoms.splice(i, 1); sel = -1;
+  }
+  svg.addEventListener('click', e => {
+    const cell = e.target.closest('[data-x]'), atom = e.target.closest('[data-atom]'), bond = e.target.closest('[data-bond]');
+    if (cell) {
+      const x = +cell.dataset.x, y = +cell.dataset.y;
+      if (!canAdd(x, y)) {
+        const n = adjC(x, y);
+        msg.textContent = atoms.length >= maxC ? `Höchstens ${maxC} C-Atome.` : !n.length ? 'Setze das neue C-Atom direkt neben ein vorhandenes.' : n.every(i => used(i) >= 4) ? 'Dieses C-Atom hat schon vier Bindungen: Kohlenstoff ist vierbindig.' : 'Markiere zuerst das C-Atom, an das das neue Atom gebunden werden soll.';
+        return;
+      }
+      save();
+      const p = atoms.length ? parentFor(x, y) : -1;
+      atoms.push({cx: x, cy: y});
+      if (p >= 0) bonds.push([p, atoms.length - 1, 1]);
+      sel = atoms.length - 1; msg.textContent = '';
+      return changed();
+    }
+    if (atom) { const i = +atom.dataset.atom; sel = sel === i ? -1 : i; msg.textContent = sel >= 0 ? 'C-Atom markiert. Tippe auf ein freies Nachbarfeld.' : ''; return draw(); }
+    if (bond && o.multi) {
+      const b = bonds[+bond.dataset.bond];
+      let next = b[2] % 3 + 1;
+      const free = k => 4 - used(k) + b[2];
+      while (next > 1 && (free(b[0]) < next || free(b[1]) < next)) next = next % 3 + 1;
+      if (next === b[2]) { msg.textContent = 'Mehr Bindungen sind hier nicht möglich: Kohlenstoff ist vierbindig.'; return; }
+      save(); b[2] = next; msg.textContent = ['', 'Einfachbindung', 'Doppelbindung', 'Dreifachbindung'][next]; return changed();
+    }
+  });
+  root.addEventListener('click', e => {
+    const b = e.target.closest('[data-b]'); if (!b) return;
+    if (b.dataset.b === 'undo' && hist.length) { [atoms, bonds, sel] = JSON.parse(hist.pop()); changed(); }
+    if (b.dataset.b === 'clear') { save(); atoms = []; bonds = []; sel = -1; changed(); }
+    if (b.dataset.b === 'del' && sel >= 0) { if (atoms.length > 1 && nb(sel).length > 1) { msg.textContent = 'Nur C-Atome am Ende einer Kette können entfernt werden.'; return; } save(); remove(sel); changed(); }
+  });
+  const api = {
+    load(smiles) {
+      const m = layout2D(parseSmiles(smiles));
+      const xs = m.a.map(a => a.x / 2), ys = m.a.map(a => a.y / 2);
+      const ox = Math.floor((cols - (Math.max(...xs) - Math.min(...xs) + 1)) / 2) - Math.min(...xs);
+      const oy = Math.floor((rows - (Math.max(...ys) - Math.min(...ys) + 1)) / 2) - Math.min(...ys);
+      atoms = m.a.map(a => ({cx: a.x / 2 + ox, cy: a.y / 2 + oy})); bonds = m.b.map(b => b.slice()); hist = []; sel = -1; changed();
+    },
+    clear() { atoms = []; bonds = []; hist = []; sel = -1; changed(); },
+    setMax(k) { maxC = k; },
+    mol: () => atoms.length ? mol() : null,
+    msg: t => msg.innerHTML = t
+  };
+  if (o.start) api.load(o.start); else draw();
+  return api;
+}
+/* Molekül ohne Koordinaten (für automatische Anordnung) */
+const fresh = m => ({a: m.a.map(a => ({el: a.el})), b: m.b.map(b => b.slice())});
+/* Molekül aus „Rasterbild“: Zeilen mit C/Br/Cl/O/F/I und Punkten; Nachbarn waagerecht/senkrecht sind gebunden,
+   = und # zwischen zwei Atomen in einer Zeile bzw. eine Zeile mit = / # / | dazwischen geben die Bindungsart an. */
+function gridMol(lines) {
+  const a = [], b = [], pos = {};
+  lines.forEach((ln, y) => { if (y % 2) return; ln.split(' ').forEach((t, x) => { if (/^[A-Z][a-z]?$/.test(t)) { pos[x + ',' + y] = a.length; a.push({el: t, x, y}); } }); });
+  lines.forEach((ln, y) => ln.split(' ').forEach((t, x) => {
+    const ord = {'-': 1, '=': 2, '#': 3, '|': 1, 'ǁ': 2}[t];
+    if (!ord) return;
+    if (y % 2 === 0) { const l = pos[(x - 1) + ',' + y], r = pos[(x + 1) + ',' + y]; if (l !== undefined && r !== undefined) b.push([l, r, ord]); }
+    else { const u = pos[x + ',' + (y - 1)], d = pos[x + ',' + (y + 1)]; if (u !== undefined && d !== undefined) b.push([u, d, ord]); }
+  }));
+  return {a, b};
+}
+
+/* Reihenfolge legen: items [{t, v}] – richtig ist aufsteigend nach v */
+function orderer(root, items, o = {}) {
+  function build() {
+    const its = shuffle(items.map((it, k) => ({...it, k})));
+    root.innerHTML = `<div class="ord-lab"><span>${o.low || 'kleinster Wert'}</span><span>${o.high || 'größter Wert'} →</span></div>
+      <div class="ord-line" data-line></div>
+      <p class="note" style="margin:.5rem 0 .3rem">Klicke die Karten in der richtigen Reihenfolge an:</p>
+      <div class="ord-pool" data-pool>${its.map(it => `<button class="sort-card" data-k="${it.k}">${it.t}</button>`).join('')}</div>
+      <div class="controls" style="margin-top:.6rem"><button class="btn primary" data-o="check">Prüfen</button><button class="btn" data-o="reset">Neu mischen</button><span class="sort-fb" aria-live="polite"></span></div>`;
+  }
+  root.addEventListener('click', e => {
+    const c = e.target.closest('.sort-card'), act = e.target.closest('[data-o]');
+    if (act) {
+      if (act.dataset.o === 'reset') return build();
+      const line = $$('[data-line] .sort-card', root), sorted = items.map((it, k) => k).sort((p, q) => items[p].v - items[q].v);
+      let ok = 0;
+      line.forEach((card, i) => { const good = items[+card.dataset.k].v === items[sorted[i]].v; card.classList.toggle('ok', good); card.classList.toggle('err', !good); if (good) ok++; });
+      $('.sort-fb', root).innerHTML = line.length < items.length ? `Lege zuerst alle ${items.length} Karten.` : ok === items.length ? '<b class="good">Perfekt – alles in der richtigen Reihenfolge!</b>' + (o.solved ? ' ' + o.solved : '') : `<b>${ok}</b> von ${items.length} Karten stehen richtig.`;
+      return;
+    }
+    if (c) {
+      c.classList.remove('ok', 'err');
+      if (c.closest('[data-line]')) $('[data-pool]', root).appendChild(c); else $('[data-line]', root).appendChild(c);
+    }
+  });
+  build();
+}
+
+/* Namen vergleichen: genau richtig, fast richtig (Schreibweise) oder falsch */
+function normName(s) { return s.trim().toLowerCase().replace(/\s+/g, '').replace(/[–−‐]/g, '-').replace(/okt/g, 'oct').replace(/eicos/g, 'icos').replace(/jod/g, 'iod'); }
+function oldStyle(name) {
+  // But-2-en → 2-Buten, Buta-1,3-dien → 1,3-Butadien, 4-Methylpent-1-en → 4-Methyl-1-penten
+  const m = name.match(/^(.*?)([A-Za-zäöü]+?)a?-([\d,]+)-((?:di|tri)?)(en|in)$/i);
+  if (!m) return null;
+  const [, pre, stem, loc, mult, suf] = m;
+  return pre + loc + '-' + stem.toLowerCase() + (mult ? 'a' + mult : '') + suf;
+}
+function checkName(input, correct) {
+  const a = normName(input), b = normName(correct), old = oldStyle(correct);
+  if (!a) return {state: 'empty'};
+  if (a === b || (old && a === normName(old))) return {state: 'ok'};
+  const strip = s => s.replace(/[-,]/g, '');
+  if (strip(a) === strip(b) || (old && strip(a) === strip(normName(old)))) return {state: 'almost'};
+  return {state: 'wrong'};
+}
+/* Zufällige Moleküle für Übungen */
+const ALKANE_POOL = ['CCC', 'CCCC', 'CC(C)C', 'CCCCC', 'CC(C)CC', 'CC(C)(C)C', 'CCCCCC', 'CC(C)CCC', 'CCC(C)CC', 'CC(C)C(C)C', 'CC(C)(C)CC', 'CCCCCCC', 'CC(C)CCCC', 'CCC(C)CCC', 'CC(C)C(C)CC', 'CC(C)CC(C)C', 'CCC(CC)CC', 'CC(C)(C)CCC', 'CCC(C)(C)CC', 'CC(C)C(C)(C)C', 'CCCCCCCC', 'CCC(C)C(C)CC', 'CCC(CC)C(C)C', 'CC(C)CC(C)(C)C', 'CCC(C)(CC)CC'];
+
+/* ================================================================ */
+/* ================= Inhalte dieser Stunde ================= */
+/* ================= ORGANISCH SORTIEREN ================= */
+sorter($('#sort-org'), [{id: 'o', name: 'organisch'}, {id: 'a', name: 'anorganisch'}], [
+  {t: 'Methan (Erdgas)', c: 'o'}, {t: 'Traubenzucker', c: 'o'}, {t: 'Kochsalz', c: 'a'}, {t: 'Wasser', c: 'a'},
+  {t: 'Ethanol (Alkohol)', c: 'o'}, {t: 'Kohlenstoffdioxid', c: 'a'}, {t: 'Kerzenwachs', c: 'o'}, {t: 'Kalk (Calciumcarbonat)', c: 'a'},
+  {t: 'Benzin', c: 'o'}, {t: 'Eiweiß', c: 'o'}, {t: 'Eisen', c: 'a'}, {t: 'Kunststoff (PE)', c: 'o'}
+]);
+
+/* ================= NACHWEIS ================= */
+(() => {
+  const cv = $('#cv-nach');
+  const S = {lit: false, pump: false, cond: 0, turb: 0, wat: false, bub: []};
+  function status() {
+    let t;
+    if (!S.lit) t = 'Zünde die Kerze an. Das Paraffin verbrennt mit Sauerstoff aus der Luft.';
+    else if (!S.pump) t = 'Die Kerze brennt. Schalte die Pumpe ein, damit die Verbrennungsgase durch die Apparatur gesaugt werden.';
+    else if (S.cond < .35) t = 'Die Gase strömen durch das gekühlte U-Rohr und durch das Kalkwasser. Beobachte genau …';
+    else if (!S.wat) t = `Im U-Rohr sammelt sich eine farblose Flüssigkeit. Das Kalkwasser wird ${S.turb > .7 ? 'deutlich' : 'langsam'} trüb. Prüfe die Flüssigkeit mit Watesmo-Papier.`;
+    else t = '<b>Watesmo-Papier blau → Wasser.</b> <b>Kalkwasser trüb → Kohlenstoffdioxid.</b> Paraffin enthält also C- und H-Atome.';
+    $('#n-status').innerHTML = t;
+  }
+  $('#n-lit').onclick = () => { S.lit = !S.lit; $('#n-lit').textContent = S.lit ? 'Kerze löschen' : 'Kerze anzünden'; status(); };
+  $('#n-pump').onclick = () => { S.pump = !S.pump; $('#n-pump').textContent = S.pump ? 'Pumpe ausschalten' : 'Pumpe einschalten'; status(); };
+  $('#n-wat').onclick = () => { if (S.cond < .35) { $('#n-status').innerHTML = 'Es hat sich noch nicht genug Flüssigkeit gesammelt. Lass den Versuch länger laufen.'; return; } S.wat = true; status(); };
+  $('#n-reset').onclick = () => { Object.assign(S, {lit: false, pump: false, cond: 0, turb: 0, wat: false, bub: []}); $('#n-lit').textContent = 'Kerze anzünden'; $('#n-pump').textContent = 'Pumpe einschalten'; status(); };
+  status();
+  visuals.push({station: 'nachweis', tick(dt, t) {
+    const {ctx, w, h} = setup(cv), u = w / 100, v = h / 100;
+    const X = x => x * u, Y = y => y * v;
+    if (S.lit && S.pump) { S.cond = Math.min(1, S.cond + dt * .045); S.turb = Math.min(1, S.turb + dt * .05); if (S.cond > .35) status(); }
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const glass = alpha(C.ink2, .9), lw = Math.max(1.5, w * .004);
+    // Tisch
+    ctx.fillStyle = C.surface2; ctx.fillRect(0, Y(90), w, Y(10));
+    // Kerze
+    ctx.fillStyle = mix(C.surface, '#f4ead2', .8); ctx.strokeStyle = glass; ctx.lineWidth = lw;
+    ctx.fillRect(X(9), Y(64), X(6), Y(26)); ctx.strokeRect(X(9), Y(64), X(6), Y(26));
+    ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.moveTo(X(12), Y(64)); ctx.lineTo(X(12), Y(60)); ctx.stroke();
+    if (S.lit) {
+      const fl = 1 + Math.sin(t * 13) * .06 + Math.sin(t * 7.3) * .04;
+      const g = ctx.createRadialGradient(X(12), Y(57), 1, X(12), Y(56), Y(7) * fl);
+      g.addColorStop(0, '#fff6c8'); g.addColorStop(.45, '#ffc43a'); g.addColorStop(1, 'rgba(255,140,30,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(X(12), Y(55.5), X(1.6), Y(6.5) * fl, 0, 0, 7); ctx.fill();
+    }
+    // Trichter und Schlauch
+    ctx.strokeStyle = glass; ctx.lineWidth = lw * 1.4;
+    ctx.beginPath(); ctx.moveTo(X(4), Y(47)); ctx.lineTo(X(11), Y(34)); ctx.lineTo(X(11), Y(18)); ctx.lineTo(X(36), Y(18)); ctx.lineTo(X(36), Y(74));
+    ctx.moveTo(X(20), Y(47)); ctx.lineTo(X(13), Y(34)); ctx.lineTo(X(13), Y(20)); ctx.lineTo(X(34), Y(20)); ctx.lineTo(X(34), Y(74)); ctx.stroke();
+    // Becherglas mit Eiswasser
+    ctx.fillStyle = alpha(C.electron, .12); ctx.fillRect(X(28), Y(52), X(24), Y(37));
+    ctx.fillStyle = alpha('#ffffff', .55); ctx.strokeStyle = alpha(C.ink2, .5); ctx.lineWidth = 1;
+    for (const [ix, iy] of [[30, 54], [47, 56], [41, 53.5]]) { ctx.fillRect(X(ix), Y(iy), X(3), X(3)); ctx.strokeRect(X(ix), Y(iy), X(3), X(3)); }
+    ctx.strokeStyle = glass; ctx.lineWidth = lw * 1.4;
+    ctx.beginPath(); ctx.moveTo(X(28), Y(46)); ctx.lineTo(X(28), Y(89)); ctx.lineTo(X(52), Y(89)); ctx.lineTo(X(52), Y(46)); ctx.stroke();
+    // U-Rohr
+    const Ux1 = 35, Ux2 = 45, Ub = 80;
+    ctx.lineWidth = X(2.2); ctx.strokeStyle = alpha(C.ink2, .5);
+    ctx.beginPath(); ctx.moveTo(X(Ux1), Y(18)); ctx.lineTo(X(Ux1), Y(Ub - 4)); ctx.arc(X((Ux1 + Ux2) / 2), Y(Ub - 4), X((Ux2 - Ux1) / 2), Math.PI, 0, true); ctx.lineTo(X(Ux2), Y(18)); ctx.stroke();
+    ctx.lineWidth = X(1.3); ctx.strokeStyle = C.surface;
+    ctx.beginPath(); ctx.moveTo(X(Ux1), Y(18)); ctx.lineTo(X(Ux1), Y(Ub - 4)); ctx.arc(X((Ux1 + Ux2) / 2), Y(Ub - 4), X((Ux2 - Ux1) / 2), Math.PI, 0, true); ctx.lineTo(X(Ux2), Y(18)); ctx.stroke();
+    if (S.cond > 0) {
+      ctx.lineWidth = X(1.3); ctx.strokeStyle = alpha(S.wat ? '#3b6fe0' : '#9cc3ff', .85);
+      const lvl = S.cond * 9;
+      ctx.beginPath(); ctx.moveTo(X(Ux1), Y(Ub - 4 - lvl)); ctx.lineTo(X(Ux1), Y(Ub - 4)); ctx.arc(X((Ux1 + Ux2) / 2), Y(Ub - 4), X((Ux2 - Ux1) / 2), Math.PI, 0, true); ctx.lineTo(X(Ux2), Y(Ub - 4 - lvl)); ctx.stroke();
+    }
+    // Verbindung zur Waschflasche
+    ctx.strokeStyle = glass; ctx.lineWidth = lw * 1.4;
+    ctx.beginPath(); ctx.moveTo(X(45), Y(18)); ctx.lineTo(X(65), Y(18)); ctx.lineTo(X(65), Y(82)); ctx.stroke();
+    // Waschflasche
+    const tb = S.turb;
+    ctx.fillStyle = alpha('#bcdcff', .28); ctx.fillRect(X(58), Y(50), X(16), Y(38));
+    if (tb > .02) { ctx.fillStyle = alpha('#f4f4ee', tb * .85); ctx.fillRect(X(58), Y(50), X(16), Y(38)); }
+    ctx.strokeStyle = glass; ctx.lineWidth = lw * 1.4;
+    ctx.beginPath(); ctx.moveTo(X(60), Y(34)); ctx.lineTo(X(58), Y(40)); ctx.lineTo(X(58), Y(89)); ctx.lineTo(X(74), Y(89)); ctx.lineTo(X(74), Y(40)); ctx.lineTo(X(72), Y(34)); ctx.lineTo(X(60), Y(34)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(70), Y(34)); ctx.lineTo(X(70), Y(24)); ctx.lineTo(X(92), Y(24)); ctx.stroke();
+    ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.moveTo(X(95), Y(24)); ctx.lineTo(X(91), Y(21)); ctx.lineTo(X(91), Y(27)); ctx.fill();
+    // Blasen
+    if (S.lit && S.pump && Math.random() < dt * 9) S.bub.push({x: 65 + (Math.random() - .5) * 2, y: 82, r: .6 + Math.random() * .7});
+    S.bub = S.bub.filter(b => (b.y -= dt * 22) > 51);
+    ctx.strokeStyle = alpha(C.ink2, .8); ctx.lineWidth = 1;
+    for (const b of S.bub) { ctx.beginPath(); ctx.arc(X(b.x + Math.sin(b.y) * .4), Y(b.y), X(b.r), 0, 7); ctx.stroke(); }
+    // Rauchgase
+    if (S.lit && S.pump) {
+      ctx.fillStyle = alpha(C.ink2, .25);
+      for (let k = 0; k < 6; k++) { const p = ((t * .6 + k / 6) % 1); ctx.beginPath(); ctx.arc(X(12 + Math.sin(p * 9 + k) * .4), Y(48 - p * 28), X(.5), 0, 7); ctx.fill(); }
+    }
+    // Watesmo-Papier
+    if (S.wat) {
+      ctx.fillStyle = '#2f62d8'; ctx.strokeStyle = C.ink; ctx.lineWidth = 1;
+      ctx.save(); ctx.translate(X(48), Y(66)); ctx.rotate(-.25); ctx.fillRect(-X(1.2), -Y(12), X(2.4), Y(16)); ctx.strokeRect(-X(1.2), -Y(12), X(2.4), Y(16)); ctx.restore();
+    }
+    // Beschriftung
+    const fs = Math.max(11, w * .019);
+    label(ctx, 'Kerze (Paraffin)', X(12), Y(95), {size: fs});
+    label(ctx, 'U-Rohr in Eiswasser', X(40), Y(95), {size: fs});
+    label(ctx, 'Kalkwasser', X(66), Y(95), {size: fs});
+    label(ctx, 'zur Pumpe', X(88), Y(19), {size: fs, color: C.ink2});
+    if (S.wat) label(ctx, 'Watesmo: blau', X(48), Y(48), {size: fs, color: '#2f62d8'});
+  }});
+})();
+
+/* ================= LEWIS: METHAN ================= */
+(() => {
+  const cv = $('#cv-lewis');
+  const S = {n: 0, lines: false, anim: [0, 0, 0, 0]};
+  const DIR = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  const START = [[-.8, -.75], [.82, -.7], [.85, .72], [-.82, .7]];
+  function upd() {
+    $('#lw-b').textContent = S.n; $('#lw-e').textContent = 4 + S.n; $('#lw-h').textContent = S.n ? '2' : '–';
+    $('#lw-add').disabled = S.n >= 4;
+    const msg = ['Das C-Atom hat 4 ungepaarte Valenzelektronen. Jedes H-Atom bringt 1 Elektron mit.',
+      'Ein H-Atom und das C-Atom teilen sich ein Elektronenpaar. Das H-Atom hat jetzt 2 Elektronen wie Helium.',
+      'Zwei Bindungen. Das C-Atom hat 6 Elektronen um sich, es fehlen noch 2.',
+      'Drei Bindungen. Noch ein ungepaartes Elektron am C-Atom.',
+      '<b>Methan CH₄:</b> Das C-Atom ist von 8 Elektronen umgeben (Edelgaskonfiguration wie Neon). Es hat vier Bindungen: <b>Kohlenstoff ist vierbindig.</b>'];
+    $('#lw-status').innerHTML = msg[S.n];
+  }
+  $('#lw-add').onclick = () => { if (S.n < 4) { S.n++; upd(); } };
+  $('#lw-reset').onclick = () => { S.n = 0; S.anim = [0, 0, 0, 0]; upd(); };
+  $$('[data-lw]').forEach(b => b.onclick = () => { S.lines = b.dataset.lw === 'lines'; $$('[data-lw]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  cv.addEventListener('click', () => $('#lw-add').click());
+  upd();
+  visuals.push({station: 'vierbindig', tick(dt) {
+    const {ctx, w, h} = setup(cv), cx = w / 2, cy = h / 2, R = Math.min(w, h) * .3, fs = Math.min(w, h) * .14;
+    for (let k = 0; k < 4; k++) S.anim[k] = clamp(S.anim[k] + (k < S.n ? 1 : -1) * dt * 2.2, 0, 1);
+    // C-Atom
+    label(ctx, 'C', cx, cy + fs * .05, {size: fs});
+    const eR = Math.max(4, fs * .085), e1 = fs * .5;
+    for (let k = 0; k < 4; k++) {
+      const [dx, dy] = DIR[k], p = ease(S.anim[k]);
+      const hx = lerp(cx + START[k][0] * w * .42, cx + dx * R, p), hy = lerp(cy + START[k][1] * h * .42, cy + dy * R, p);
+      label(ctx, 'H', hx, hy + fs * .04, {size: fs * .85, color: C.ink});
+      if (p > .97 && S.lines) {
+        ctx.strokeStyle = C.ink; ctx.lineWidth = Math.max(3, fs * .07); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(cx + dx * fs * .55, cy + dy * fs * .6); ctx.lineTo(hx - dx * fs * .45, hy - dy * fs * .5); ctx.stroke();
+        continue;
+      }
+      // Elektron des C-Atoms
+      const ce = [cx + dx * e1 * (1 + p * .55), cy + dy * e1 * (1 + p * .55)];
+      // Elektron des H-Atoms
+      const he = [lerp(hx - dx * fs * .45 + (dx ? 0 : fs * .45), hx - dx * fs * .55, p), lerp(hy - dy * fs * .45 + (dy ? 0 : fs * .45), hy - dy * fs * .55, p)];
+      const perp = [dy, dx];
+      const cP = [ce[0] + perp[0] * eR * 1.3 * p, ce[1] + perp[1] * eR * 1.3 * p], hP = [lerp(he[0], ce[0] - perp[0] * eR * 1.3, p), lerp(he[1], ce[1] - perp[1] * eR * 1.3, p)];
+      ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(cP[0], cP[1], eR, 0, 7); ctx.fill();
+      ctx.fillStyle = C.proton; ctx.beginPath(); ctx.arc(hP[0], hP[1], eR, 0, 7); ctx.fill();
+      if (p > .97) { ctx.strokeStyle = alpha(C.accent, .6); ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.ellipse((cP[0] + hP[0]) / 2, (cP[1] + hP[1]) / 2, eR * (dx ? 2.6 : 4.2), eR * (dx ? 4.2 : 2.6), 0, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
+    }
+    if (S.n === 4) {
+      ctx.strokeStyle = alpha(C.good, .55); ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
+      ctx.beginPath(); ctx.arc(cx, cy, fs * 1.02, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      label(ctx, '8 Elektronen', cx, cy + R + fs * .9, {size: fs * .32, color: C.good});
+    }
+    ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(14, h - 16, 5, 0, 7); ctx.fill();
+    label(ctx, 'Elektron vom C', 24, h - 16, {size: 12, align: 'left', weight: 400, color: C.ink2});
+    ctx.fillStyle = C.proton; ctx.beginPath(); ctx.arc(140, h - 16, 5, 0, 7); ctx.fill();
+    label(ctx, 'Elektron vom H', 150, h - 16, {size: 12, align: 'left', weight: 400, color: C.ink2});
+  }});
+})();
+
+/* ================= TETRAEDER ================= */
+(() => {
+  const V = molViewer($('#cv-tet'), 'tetraeder', {labels: true});
+  V.set(MOL('C'));
+  const g = V.geo, H = [1, 2, 3, 4], L = Math.hypot(...g.P[1]);
+  // flache Lage: Kreuz in der Ebene, Zuordnung mit kleinstem Weg
+  const flat = [[L, 0, 0], [0, -L, 0], [-L, 0, 0], [0, L, 0]];
+  let best = null;
+  const perm = a => a.length <= 1 ? [a] : a.flatMap((x, i) => perm([...a.slice(0, i), ...a.slice(i + 1)]).map(p => [x, ...p]));
+  for (const p of perm([0, 1, 2, 3])) { const d = H.reduce((s, hI, k) => s + Math.hypot(...g.P[hI].map((v, c) => v - flat[p[k]][c])), 0); if (!best || d < best.d) best = {d, p}; }
+  const target = [[0, 0, 0], ...H.map((hI, k) => flat[best.p[k]])];
+  const adjPair = (() => { const a = best.p.indexOf(0), b = best.p.indexOf(1); return [H[a], H[b]]; })();
+  let f = 1, goal = 1;
+  V.points = g.P.map(p => p.slice());
+  V.angles = [[adjPair[0], 0, adjPair[1], '']];
+  V.extra = (ctx, S) => {
+    if ($('#tet-edges').checked && V.mode !== 'kalotte') {
+      ctx.strokeStyle = alpha(C.accent, .55); ctx.lineWidth = 1.5; ctx.setLineDash([6, 5]);
+      for (let i = 1; i <= 4; i++) for (let j = i + 1; j <= 4; j++) { ctx.beginPath(); ctx.moveTo(S[i].x, S[i].y); ctx.lineTo(S[j].x, S[j].y); ctx.stroke(); }
+      ctx.setLineDash([]);
+    }
+  };
+  $$('[data-tf]').forEach(b => b.onclick = () => { goal = +b.dataset.tf; $$('[data-tf]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  $('#tet-pairs').onchange = e => V.pairs = e.target.checked;
+  $('#tet-kal').onchange = e => V.mode = e.target.checked ? 'kalotte' : 'kugel';
+  $('#tet-spin').onchange = e => V.spin = e.target.checked;
+  visuals.unshift({station: 'tetraeder', tick(dt) {
+    f = clamp(f + Math.sign(goal - f) * dt * 1.2, 0, 1);
+    const e = ease(f);
+    V.points = g.P.map((p, i) => p.map((v, c) => lerp(target[i][c], v, e)));
+    const a = angle3D(V.points, adjPair[0], 0, adjPair[1]);
+    V.angles[0][3] = fix(a, 1) + '°';
+    if (V.mode === 'kalotte') V.angles = null; else if (!V.angles) V.angles = [[adjPair[0], 0, adjPair[1], fix(a, 1) + '°']];
+    $('#tet-status').innerHTML = f < .02 ? 'Flach gezeichnet liegen die H-Atome im Winkel von <b>90°</b>. So nah sollten sich die Elektronenpaare nicht kommen.' : f > .98 ? 'Räumlich: Alle vier Bindungen sind gleich weit voneinander entfernt. Jeder H–C–H-Winkel beträgt <b>109,5°</b>.' : 'Die Elektronenpaare weichen sich aus …';
+  }});
+})();
+
+/* ================= VIELFALT ================= */
+(() => {
+  const GAL = [
+    ['C', 'Methan', 'Hauptbestandteil von Erdgas und Biogas'],
+    ['CCC', 'Propan', 'Flüssiggas für Campingkocher und Grill'],
+    ['CCCC', 'Butan', 'Gas in Feuerzeugen'],
+    ['CC(C)C', '2-Methylpropan', 'verzweigt: Treibgas, Kältemittel in Kühlschränken (Isobutan)'],
+    ['CCCCCCCC', 'Octan', 'Bestandteil von Benzin'],
+    ['CCCCCCCCCCCCCCCC', 'Hexadecan', 'Bestandteil von Diesel (Cetan)'],
+    ['C=C', 'Ethen', 'Doppelbindung: Reifegas für Obst, Rohstoff für Kunststoffe'],
+    ['C#C', 'Ethin', 'Dreifachbindung: Schweißgas (Acetylen)']
+  ];
+  const V = molViewer($('#cv-gal'), 'vielfalt', {});
+  const pick = k => {
+    const [s, n, use] = GAL[k], m = MOL(s);
+    V.set(m);
+    $$('#gal .cardbtn').forEach((b, i) => b.setAttribute('aria-pressed', i === k));
+    $('#gal-status').innerHTML = `<b>${n}</b> · <span class="chem">${sumFormula(m)}</span> · ${use}`;
+  };
+  $('#gal').innerHTML = GAL.map(([s, n], k) => `<button class="cardbtn" data-k="${k}"><b>${n}</b><small>${sumFormula(MOL(s))}</small></button>`).join('');
+  $('#gal').onclick = e => { const b = e.target.closest('[data-k]'); if (b) pick(+b.dataset.k); };
+  $$('[data-gm]').forEach(b => b.onclick = () => { V.mode = b.dataset.gm; $$('[data-gm]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  pick(0);
+})();
+
+$('#heft-ch4').innerHTML = formulaSVG(MOL('C'), 'struktur', {unit: 40, label: 'Valenzstrichformel von Methan'});
+
+/* ================= ÜBUNGEN ================= */
+mcQuiz($('#quiz1'), [
+  {q: 'Womit beschäftigt sich die organische Chemie?', a: ['mit Kohlenstoffverbindungen', 'nur mit Stoffen aus Lebewesen', 'mit Metallen und Salzen', 'mit allen Gasen'], ok: 0, why: 'Organische Chemie ist die Chemie der Kohlenstoffverbindungen, egal ob sie aus Lebewesen stammen oder im Labor hergestellt werden.'},
+  {q: 'Wer widerlegte 1828 die Lebenskraft-Theorie?', a: ['Friedrich Wöhler', 'Dmitri Mendelejew', 'Niels Bohr', 'John Dalton'], ok: 0, why: 'Wöhler stellte Harnstoff aus anorganischen Stoffen her.'},
+  {q: 'Kalkwasser wird trüb. Welcher Stoff ist nachgewiesen?', a: ['Kohlenstoffdioxid', 'Wasser', 'Sauerstoff', 'Wasserstoff'], ok: 0, why: 'Die Kalkwasserprobe ist der Nachweis für Kohlenstoffdioxid.'},
+  {q: 'Watesmo-Papier färbt sich blau. Welcher Stoff ist nachgewiesen?', a: ['Wasser', 'Kohlenstoffdioxid', 'Methan', 'Ruß'], ok: 0, why: 'Watesmo-Papier (Wassertestpapier) wird durch Wasser blau.'},
+  {q: 'Warum kann man aus dem Verbrennungsversuch nicht schließen, dass Paraffin Sauerstoff enthält?', a: ['Der Sauerstoff kann aus der Luft stammen.', 'Weil Sauerstoff nicht brennt.', 'Weil Paraffin ein Feststoff ist.', 'Weil Wasser keinen Sauerstoff enthält.'], ok: 0, why: 'Bei der Verbrennung reagiert der Stoff mit Sauerstoff aus der Luft.'},
+  {q: 'Was ist ein Kohlenwasserstoff?', a: ['eine Verbindung nur aus C- und H-Atomen', 'eine Mischung aus Kohle und Wasser', 'jede Verbindung mit Kohlenstoff', 'eine Verbindung aus C, H und O'], ok: 0, why: 'Kohlenwasserstoffe bestehen ausschließlich aus Kohlenstoff- und Wasserstoffatomen.'},
+  {q: 'Wie viele Bindungen bildet ein Kohlenstoffatom?', a: ['4', '2', '1', '8'], ok: 0, why: 'C hat 4 Valenzelektronen und bildet vier Elektronenpaarbindungen.'},
+  {q: 'Wie groß ist der H–C–H-Bindungswinkel im Methanmolekül?', a: ['109,5°', '90°', '120°', '180°'], ok: 0, why: 'Die vier Elektronenpaare stoßen sich ab und zeigen in die Ecken eines Tetraeders.'},
+  {q: 'Warum ist das Methanmolekül nicht flach?', a: ['Die Elektronenpaare stoßen sich ab und gehen auf größtmöglichen Abstand.', 'Weil die H-Atome zu groß sind.', 'Weil das C-Atom geladen ist.', 'Weil Methan ein Gas ist.'], ok: 0, why: 'Nach dem EPA-Modell richten sich die Elektronenpaare so weit wie möglich voneinander entfernt aus.'},
+  {q: 'Welche Elektronenzahl erreicht das C-Atom im Methanmolekül?', a: ['8, wie Neon', '4, wie vorher', '2, wie Helium', '10'], ok: 0, why: 'Vier geteilte Elektronenpaare ergeben 8 Elektronen um das C-Atom.'},
+  {q: 'Welcher Stoff gehört NICHT zur organischen Chemie?', a: ['Kohlenstoffdioxid', 'Methan', 'Zucker', 'Benzin'], ok: 0, why: 'CO₂ enthält zwar Kohlenstoff, zählt aber als Ausnahme zur anorganischen Chemie.'},
+  {q: 'Warum gibt es so viele organische Verbindungen?', a: ['C-Atome können sich zu Ketten, Verzweigungen und Ringen verbinden.', 'Kohlenstoff ist das häufigste Element der Erde.', 'Kohlenstoff ist ein Metall.', 'Kohlenstoff bildet nur Einfachbindungen.'], ok: 0, why: 'Die Fähigkeit, stabile Bindungen untereinander zu bilden, macht die Vielfalt möglich.'}
+], {pick: 8});
+matcher($('#match1'), [
+  ['organische Chemie', 'Chemie der Kohlenstoffverbindungen'],
+  ['Kohlenwasserstoff', 'Verbindung nur aus C- und H-Atomen'],
+  ['vierbindig', 'bildet vier Elektronenpaarbindungen, z. B. das C-Atom'],
+  ['Elektronenpaarbindung', 'zwei Atome teilen sich ein Elektronenpaar'],
+  ['Tetraeder', 'Körper aus vier gleichseitigen Dreiecken, Form des Methanmoleküls'],
+  ['Kalkwasserprobe', 'Nachweis von Kohlenstoffdioxid'],
+  ['Watesmo-Papier', 'Nachweis von Wasser']
+]);
+
+startApp();
+})();
+</script>
+</body>
+</html>
