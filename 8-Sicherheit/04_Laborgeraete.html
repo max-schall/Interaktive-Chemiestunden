@@ -662,7 +662,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
     <div class="txt">
       <p class="eyebrow">Station 2 · Brenner-Führerschein</p>
       <h2>Der Gasbrenner</h2>
-      <p class="lead">Im Brennerrohr reißt das einströmende Gas Luft mit. Über die <b>Luftzufuhr</b> stellt man verschiedene Flammen ein.</p>
+      <p class="lead">Im Brennerrohr reißt das einströmende Gas Luft mit. Über die <b>Luftzufuhr</b> stellt man verschiedene Flammen ein. Angezündet wird immer mit <b>geschlossener</b> Luftzufuhr – und das Streichholz brennt schon, bevor das Gas kommt.</p>
       <ul class="facts">
         <li><b>Leuchtende Flamme</b> (Luftzufuhr zu): gelb, rußt, ca. 1000 °C. Gut sichtbar – Sparflamme in Pausen.</li>
         <li><b>Nicht leuchtende Flamme</b> (Luft halb): blau, ca. 1200 °C. Zum Erhitzen.</li>
@@ -674,7 +674,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
       <canvas id="cv-br" class="wide" aria-label="Gasbrenner mit einstellbarer Flamme"></canvas>
       <div class="slider"><label for="br-gas">Gasregler <output id="br-go"></output></label><input type="range" id="br-gas" min="0" max="100" value="0"></div>
       <div class="slider"><label for="br-luft">Luftregler <output id="br-lo"></output></label><input type="range" id="br-luft" min="0" max="100" value="0"></div>
-      <div class="controls"><button class="btn primary" id="br-fire">Anzünden</button></div>
+      <div class="controls"><button class="btn" id="br-hahn">Gashahn öffnen</button><button class="btn primary" id="br-fire">Streichholz an die Öffnung</button><button class="btn" id="br-reset">Von vorn</button></div>
       <p class="status" id="br-status"></p>
     </div>
   </div>
@@ -2242,48 +2242,115 @@ function labSVG(key, size = 80) {
 
 /* ================= BRENNER ================= */
 (() => {
-  let lit = false;
+  // hahn: Gashahn am Tisch; cloud: unverbranntes Gas um die Öffnung; match: Restbrenndauer Streichholz (s)
+  let hahn = false, lit = false, strike = '', cloud = 0, match = 0, boom = 0, boomSize = 0, msg = '', msgT = 0, shown = '';
   const gas = () => +$('#br-gas').value / 100, luft = () => +$('#br-luft').value / 100;
-  const upd = () => {
+  const flow = () => hahn ? gas() : 0;
+  const say = m => { msg = m; msgT = 7; };
+  const ignite = () => {
+    match = 0; lit = true;
+    if (cloud > .45) { boom = 1; boomSize = Math.min(cloud, 1.2); cloud = 0; say('<b class="bad">Verpuffung!</b> Das Gas ist zu lange unverbrannt ausgeströmt, hat sich mit Luft gemischt und ist auf einen Schlag verbrannt – eine Stichflamme. Darum: erst das brennende Streichholz an die Öffnung, dann den Gasregler öffnen.'); }
+    if (luft() > .5) strike = 'anzünden';
+  };
+  const sync = () => {
     $('#br-go').textContent = gas() ? Math.round(gas() * 100) + ' %' : 'zu';
     $('#br-lo').textContent = luft() < .15 ? 'zu' : luft() < .7 ? 'halb' : 'ganz auf';
-    if (!gas()) lit = false;
+    $('#br-hahn').textContent = hahn ? 'Gashahn schließen' : 'Gashahn öffnen';
+    $('#br-fire').disabled = lit || match > 0;
     const L = luft();
     let txt;
-    if (!gas()) txt = 'Gasregler geschlossen. Erst Streichholz an die Öffnung, dann Gas aufdrehen.';
-    else if (!lit) txt = '<b class="bad">Achtung:</b> Gas strömt unverbrannt aus! Sofort anzünden oder Gasregler schließen.';
-    else if (L < .15) txt = '<b>Leuchtende Flamme:</b> wenig Luft, unvollständige Verbrennung. Glühende Rußteilchen leuchten gelb. An kalten Gegenständen schlägt sich Ruß nieder.';
-    else if (L < .7) txt = '<b>Nicht leuchtende Flamme:</b> mehr Luft, das Gas verbrennt vollständig, die Flamme ist blau und heißer.';
-    else txt = '<b>Rauschende Flamme:</b> viel Luft, deutlich hörbares Rauschen. Die heißeste Stelle liegt knapp über der Spitze des inneren blauen Kegels.';
-    $('#br-status').innerHTML = txt;
-    $('#br-T').textContent = gas() && lit ? (L < .15 ? '≈ 1000 °C' : L < .7 ? '≈ 1200 °C' : '≈ 1500 °C') : '';
-    $('#br-fire').disabled = lit;
+    if (msgT > 0) txt = msg;
+    else if (lit && strike) txt = `<b class="bad">Flamme durchgeschlagen!</b> ${strike === 'anzünden' ? 'Beim Anzünden war der Luftregler offen.' : 'Zu viel Luft bei zu wenig Gas.'} Die Flamme brennt jetzt unten an der Gasdüse im Rohr: Das Rohr wird glühend heiß, es entsteht giftiges Kohlenstoffmonooxid. Gasregler schließen, abkühlen lassen, mit geschlossenem Luftregler neu anzünden.`;
+    else if (lit && L < .15) txt = '<b>Leuchtende Flamme:</b> wenig Luft, unvollständige Verbrennung. Glühende Rußteilchen leuchten gelb. An kalten Gegenständen schlägt sich Ruß nieder.';
+    else if (lit && L < .7) txt = '<b>Nicht leuchtende Flamme:</b> mehr Luft, das Gas verbrennt vollständig, die Flamme ist blau und heißer.';
+    else if (lit) txt = '<b>Rauschende Flamme:</b> viel Luft, deutlich hörbares Rauschen. Die heißeste Stelle liegt knapp über der Spitze des inneren blauen Kegels.';
+    else if (flow() && cloud > .3) txt = '<b class="bad">Gefahr:</b> Schon viel Gas ausgetreten – jetzt nicht mehr anzünden! Gasregler schließen und warten, bis sich das Gas verteilt hat.';
+    else if (flow()) txt = '<b class="bad">Achtung:</b> Gas strömt unverbrannt aus! Sofort anzünden oder Gasregler schließen.';
+    else if (!hahn && gas()) txt = 'Es strömt kein Gas, weil der Gashahn am Tisch zu ist. Aber Vorsicht: Beim Öffnen des Gashahns strömt sofort Gas aus. Regler vorher schließen!';
+    else if (!hahn) txt = 'Gas- und Luftregler sind geschlossen. Zuerst den Gashahn am Tisch öffnen.';
+    else if (match > 0) txt = 'Das Streichholz brennt an der Öffnung – jetzt den Gasregler langsam öffnen.';
+    else if (cloud > .05) txt = 'Das ausgetretene Gas verteilt sich noch. Kurz warten, dann neu anzünden.';
+    else txt = 'Gashahn offen. Jetzt das brennende Streichholz an die Öffnung halten, dann den Gasregler öffnen.';
+    if (txt !== shown) $('#br-status').innerHTML = shown = txt;
+    $('#br-T').textContent = lit && !strike ? (L < .15 ? '≈ 1000 °C' : L < .7 ? '≈ 1200 °C' : '≈ 1500 °C') : '';
   };
-  $('#br-gas').oninput = upd; $('#br-luft').oninput = upd;
-  $('#br-fire').onclick = () => { if (!gas()) { $('#br-gas').value = 40; } lit = true; upd(); };
-  upd();
-  canvasLoop($('#cv-br'), 'brenner', (ctx, w, h, t) => {
-    const x = w * .45, base = h * .97, s = h * .5;
-    // Fuß, Rohr
+  const step = dt => {
+    if (lit && !flow()) { lit = false; strike = ''; if (!hahn && gas()) say('Flamme aus. Besser andersherum: zuerst Luft- und Gasregler am Brenner schließen, zum Schluss den Gashahn am Tisch.'); else if (hahn) say('Flamme aus. Zum Schluss noch den Gashahn am Tisch schließen.'); }
+    if (match > 0) { match -= dt; if (flow() && !lit) ignite(); else if (match <= 0 && !lit) say('Das Streichholz ist abgebrannt. Erst Gashahn öffnen, dann ein neues Streichholz an die Öffnung halten und dabei den Gasregler aufdrehen.'); }
+    if (lit && !strike && luft() > .75 && gas() < .25) strike = 'luft';
+    cloud = lit ? Math.max(0, cloud - dt * .6) : flow() ? Math.min(1.5, cloud + flow() * dt * .3) : Math.max(0, cloud - dt * .08);
+    msgT -= dt;
+    boom = Math.max(0, boom - dt / .9);
+    sync();
+  };
+  $('#br-gas').oninput = sync; $('#br-luft').oninput = sync;
+  $('#br-hahn').onclick = () => { hahn = !hahn; msgT = 0; step(0); };
+  $('#br-fire').onclick = () => { match = 6; msgT = 0; step(0); };
+  $('#br-reset').onclick = () => { hahn = lit = false; strike = ''; cloud = match = boom = msgT = 0; $('#br-gas').value = 0; $('#br-luft').value = 0; sync(); };
+  sync();
+
+  // Flamme auf dem Brennerrohr: Fuß so breit wie das Rohr (Radius r), Höhe H
+  const shape = (ctx, x, y, r0, rm, hh, tip) => { ctx.beginPath(); ctx.moveTo(x - r0, y); ctx.bezierCurveTo(x - rm, y - hh * .3, x - rm * .6, y - hh * .7, x + tip, y - hh); ctx.bezierCurveTo(x + rm * .6, y - hh * .7, x + rm, y - hh * .3, x + r0, y); ctx.closePath(); };
+  const tubeFlame = (ctx, x, y, r, H, t, L) => {
+    if (L < .15) {
+      const hh = H * (1 + Math.sin(t * 7) * .07 + Math.sin(t * 13) * .04), tip = Math.sin(t * 4) * r * .5;
+      const g = ctx.createLinearGradient(x, y, x, y - hh); g.addColorStop(0, '#ff9a1f'); g.addColorStop(.5, '#ffd23a'); g.addColorStop(1, alpha('#fff3b0', .5));
+      ctx.fillStyle = g; shape(ctx, x, y, r, r * 1.6, hh, tip); ctx.fill();
+      ctx.fillStyle = alpha('#3a6dff', .55); shape(ctx, x, y, r * .9, r * .9, hh * .12, 0); ctx.fill();
+      return null;
+    }
+    const roar = L >= .7, hh = H * (1 + Math.sin(t * (roar ? 41 : 17)) * (roar ? .03 : .05)), tip = Math.sin(t * 9) * r * (roar ? .08 : .2);
+    ctx.fillStyle = alpha(roar ? '#5a6cff' : '#4f7dff', .42); shape(ctx, x, y, r, r * (roar ? 1.15 : 1.3), hh, tip); ctx.fill();
+    const ch = hh * (roar ? .32 : .42);
+    ctx.fillStyle = alpha(roar ? '#1d3dff' : '#2b4dff', roar ? .9 : .6); ctx.beginPath(); ctx.moveTo(x - r * .8, y); ctx.quadraticCurveTo(x - r * .5, y - ch * .5, x, y - ch); ctx.quadraticCurveTo(x + r * .5, y - ch * .5, x + r * .8, y); ctx.closePath(); ctx.fill();
+    return roar ? y - ch - hh * .06 : null;
+  };
+
+  canvasLoop($('#cv-br'), 'brenner', (ctx, w, h, t, dt) => {
+    step(dt);
+    const x = w * .4, base = h * .97, s = h * .5, r = s * .08, top = base - s * 1.05, L = luft();
+    // Fuß, Rohr (glüht bei durchgeschlagener Flamme)
     ctx.fillStyle = C.ink2; roundRect(ctx, x - s * .45, base - s * .1, s * .9, s * .1, 4); ctx.fill();
-    ctx.fillStyle = mix(C.ink2, C.surface, .25); roundRect(ctx, x - s * .08, base - s * 1.05, s * .16, s * .95, 3); ctx.fill();
+    ctx.fillStyle = lit && strike ? mix(C.ink2, '#ff5a1f', .45 + Math.sin(t * 6) * .1) : mix(C.ink2, C.surface, .25); roundRect(ctx, x - r, top, r * 2, s * .95, 3); ctx.fill();
     // Luftregler-Ring
     ctx.fillStyle = C.ink2; roundRect(ctx, x - s * .13, base - s * .42, s * .26, s * .1, 3); ctx.fill();
-    const L = luft();
     for (let k = 0; k < 2; k++) { ctx.fillStyle = C.surface; ctx.fillRect(x - s * .11 + k * s * .14, base - s * .4, s * .08 * L, s * .06); }
-    // Schlauch
-    ctx.strokeStyle = '#d0703a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x + s * .3, base - s * .05); ctx.quadraticCurveTo(x + s * .9, base, w * .95, base - s * .3); ctx.stroke();
     label(ctx, 'Luftregler', x - s * .55, base - s * .37, {size: 12, color: C.ink2, align: 'right'});
-    label(ctx, 'Gasschlauch', w * .9, base - s * .45, {size: 12, color: C.ink2});
+    // Schlauch und Gashahn am Tisch
+    const vx = w * .9, vy = base - s * .3;
+    ctx.strokeStyle = '#d0703a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x + s * .3, base - s * .05); ctx.quadraticCurveTo(x + s * .9, base, vx - 12, vy); ctx.stroke();
+    ctx.fillStyle = C.ink2; roundRect(ctx, vx - 12, vy - 9, 30, 18, 4); ctx.fill(); ctx.fillRect(vx + 14, vy - 5, w - vx, 10);
+    ctx.strokeStyle = hahn ? C.good : C.bad; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath();
+    if (hahn) { ctx.moveTo(vx - 14, vy - 16); ctx.lineTo(vx + 20, vy - 16); } else { ctx.moveTo(vx + 3, vy - 34); ctx.lineTo(vx + 3, vy - 6); }
+    ctx.stroke();
+    label(ctx, 'Gashahn ' + (hahn ? 'auf' : 'zu'), vx + 3, vy - 48, {size: 12, color: hahn ? C.good : C.bad});
     // Luftpfeile
-    if (gas() && L > .1) for (let k = 0; k < 3; k++) { const p = ((t * 1.5 + k / 3) % 1); arrow(ctx, x - s * .6 + p * s * .3, base - s * .37, x - s * .45 + p * s * .3, base - s * .37, alpha(C.electron, .6 * (1 - p)), 2, 7); }
+    if (flow() && L > .1) for (let k = 0; k < 3; k++) { const p = ((t * 1.5 + k / 3) % 1); arrow(ctx, x - s * .6 + p * s * .3, base - s * .37, x - s * .45 + p * s * .3, base - s * .37, alpha(C.electron, .6 * (1 - p)), 2, 7); }
     // Flamme
-    if (gas() && lit) {
-      const top = base - s * 1.05, H = s * (.7 + gas() * .9);
-      if (L < .15) flame(ctx, x, top, H * 1.15, t, {kind: 'gelb'});
-      else if (L < .7) flame(ctx, x, top, H * .85, t);
-      else { flame(ctx, x, top, H * .7, t, {kind: 'rauschend'}); ctx.fillStyle = alpha('#1d3dff', .9); ctx.beginPath(); ctx.moveTo(x - s * .07, top); ctx.lineTo(x, top - H * .22); ctx.lineTo(x + s * .07, top); ctx.closePath(); ctx.fill(); dotAt(ctx, x, top - H * .27, 'hot', 4); label(ctx, 'heißeste Stelle', x + s * .2, top - H * .27, {size: 12, color: C.ink2, align: 'left'}); }
-    } else if (gas()) { for (let k = 0; k < 6; k++) { const p = ((t * .8 + k / 6) % 1); ctx.fillStyle = alpha(C.ink2, .18 * (1 - p)); ctx.beginPath(); ctx.arc(x + Math.sin(t * 2 + k) * 8, base - s * 1.1 - p * s * .8, 6 + p * 14, 0, 7); ctx.fill(); } label(ctx, 'Gas!', x + s * .3, base - s * 1.4, {size: 14, color: C.bad}); }
+    if (lit && strike) {
+      for (const d of [-1, 1]) flame(ctx, x + d * s * .07, base - s * .42, s * (.16 + Math.sin(t * 11 + d) * .03), t + d, {kind: 'gelb'});
+      label(ctx, 'Flamme brennt an der Düse!', x + s * .3, top - s * .1, {size: 13, color: C.bad, align: 'left'});
+    } else if (lit) {
+      const H = (top - h * .05) * (.35 + gas() * .65) * (L < .15 ? 1 : L < .7 ? .8 : .62);
+      const hot = tubeFlame(ctx, x, top, r, H, t, L);
+      if (hot) { dotAt(ctx, x, hot, 'hot', 4); label(ctx, 'heißeste Stelle', x + s * .25, hot, {size: 12, color: C.ink2, align: 'left'}); }
+    }
+    // unverbranntes Gas
+    if (cloud > .02) { const a = Math.min(cloud, 1); for (let k = 0; k < 8; k++) { const p = ((t * .6 + k / 8) % 1); ctx.fillStyle = alpha(C.ink2, .22 * a * (1 - p)); ctx.beginPath(); ctx.arc(x + Math.sin(t * 2 + k) * (8 + 30 * a), top - p * s * (.5 + .6 * a), 6 + p * (12 + 30 * a), 0, 7); ctx.fill(); } if (!lit) label(ctx, 'Gas!', x + s * .35, top - s * .35, {size: 14, color: C.bad}); }
+    // Streichholz
+    if (match > 0 && !lit) {
+      const mx = x - r * 1.3, my = top - s * .03;
+      ctx.strokeStyle = '#c8a26a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - s * .6, top + s * .2); ctx.lineTo(mx, my); ctx.stroke();
+      ctx.fillStyle = '#5a2a1a'; ctx.beginPath(); ctx.arc(mx, my, 4, 0, 7); ctx.fill();
+      flame(ctx, mx, my + 2, s * .14 * clamp(match, .3, 1), t, {kind: 'gelb'});
+    }
+    // Verpuffung
+    if (boom > 0) {
+      const p = 1 - boom, R = s * (.35 + boomSize * .7) * (.4 + .6 * ease(Math.min(1, p * 2.5))), cy = top - s * .3;
+      const g = ctx.createRadialGradient(x, cy, 0, x, cy, R); g.addColorStop(0, alpha('#fffbe0', boom)); g.addColorStop(.35, alpha('#ffd23a', .9 * boom)); g.addColorStop(.75, alpha('#ff7a1f', .6 * boom)); g.addColorStop(1, alpha('#ff5a1f', 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, cy, R, 0, 7); ctx.fill();
+      if (boom > .3) label(ctx, 'WUSCH!', x - R * .9, cy - R * .6, {size: 18, color: C.bad, align: 'right'});
+    }
   });
 })();
 
