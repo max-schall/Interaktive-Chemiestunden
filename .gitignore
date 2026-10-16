@@ -1,6 +1,8 @@
 *
 !*/
 !*.html
+!*.pdf
+*_Lösung.pdf
 !.gitignore
 !README.md
 _*/
