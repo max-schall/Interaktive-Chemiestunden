@@ -2237,6 +2237,172 @@ function labSVG(key, size = 80) {
   return `<svg class="lab" viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="${g ? g.n : key}" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${g ? g.d : ''}</svg>`;
 }
 
+/* ---------- Strukturformeln und Mechanismen auf Canvas (Klasse 12) ---------- */
+/* mol = {a: [{el, x, y, q, lp, e, c, hide}], b: [[i, j, ordnung, art]]} mit x/y in Bindungslängen.
+   el darf auch eine Gruppe sein („CH₃“, „OH“). lp/e: Richtungen freier Elektronenpaare bzw. Einzelelektronen
+   ('o', 'u', 'l', 'r', 'ol', 'or', 'ul', 'ur' oder Winkel in Grad). q: '+', '−', 'δ+', 'δ−'.
+   art: 'hl' (Akzent), 'new' (entsteht gerade, gestrichelt), 'break' (bricht gerade), 'dash' (gestrichelt).
+   o: {x, y, s (px pro Bindung), size, skel (C ohne Beschriftung), alpha} – gibt P(i) mit Pixelkoordinaten zurück */
+const ELC = el => ({O: 'atom-o', N: 'atom-n', Br: 'bromine', 'Br₂': 'bromine', Cl: 'atom-cl', S: 'atom-s', I: 'atom-i', F: 'atom-f'})[el];
+const DIR2D = {o: -90, u: 90, l: 180, r: 0, ol: -135, or: -45, ul: 135, ur: 45};
+function struct2D(ctx, mol, o = {}) {
+  const s = o.s || 44, fs = o.size || clamp(s * .4, 11, 22);
+  const P = i => [o.x + mol.a[i].x * s, o.y + mol.a[i].y * s];
+  ctx.save(); ctx.globalAlpha = o.alpha ?? 1;
+  ctx.font = `700 ${fs}px ${SANS}`;
+  const box = a => (a.hide || (a.el === 'C' && o.skel)) ? [0, 0] : [ctx.measureText(a.el).width / 2 + 2, fs * .55];
+  const cut = (a, ux, uy) => { const [hw, hh] = box(a); if (!hw) return 0; return Math.min(Math.abs(ux) > 1e-6 ? hw / Math.abs(ux) : 1e9, Math.abs(uy) > 1e-6 ? hh / Math.abs(uy) : 1e9); };
+  for (const [i, j, ord = 1, art] of mol.b) {
+    let [x1, y1] = P(i), [x2, y2] = P(j);
+    const L = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L, uy = (y2 - y1) / L, g1 = cut(mol.a[i], ux, uy), g2 = cut(mol.a[j], ux, uy);
+    x1 += ux * g1; y1 += uy * g1; x2 -= ux * g2; y2 -= uy * g2;
+    ctx.strokeStyle = col(art === 'hl' || art === 'new' ? 'accent' : art === 'break' ? 'bad' : o.bond || 'ink');
+    ctx.lineWidth = o.lw || Math.max(1.6, s * .05); ctx.lineCap = 'round';
+    ctx.setLineDash(art === 'dash' || art === 'new' || art === 'break' ? [5, 4] : []);
+    const nx = -uy, ny = ux, d = Math.max(4.5, s * .12);
+    for (const k of ord === 3 ? [-d, 0, d] : ord === 2 ? [-d / 2, d / 2] : [0]) { ctx.beginPath(); ctx.moveTo(x1 + nx * k, y1 + ny * k); ctx.lineTo(x2 + nx * k, y2 + ny * k); ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
+  const ang = d => (typeof d === 'number' ? d : DIR2D[d]) * Math.PI / 180;
+  mol.a.forEach((a, i) => {
+    if (a.hide) return;
+    const [x, y] = P(i), [hw, hh] = box(a);
+    if (!(a.el === 'C' && o.skel)) label(ctx, a.el, x, y, {size: fs, color: col(a.c || ELC(a.el) || 'ink'), font: SANS});
+    const rr = d => { const t = ang(d), c = Math.cos(t), sn = Math.sin(t); return [t, Math.min(Math.abs(c) > .01 ? (hw + fs * .28) / Math.abs(c) : 1e9, Math.abs(sn) > .01 ? (hh + fs * .22) / Math.abs(sn) : 1e9)]; };
+    ctx.strokeStyle = col(a.c || ELC(a.el) || 'ink'); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = Math.max(1.8, fs * .12);
+    for (const d of a.lp || []) { const [t, R] = rr(d), px = x + Math.cos(t) * R, py = y + Math.sin(t) * R, l = fs * .38; ctx.beginPath(); ctx.moveTo(px - Math.sin(t) * l, py + Math.cos(t) * l); ctx.lineTo(px + Math.sin(t) * l, py - Math.cos(t) * l); ctx.stroke(); }
+    for (const d of a.e || []) { const [t, R] = rr(d); ctx.beginPath(); ctx.arc(x + Math.cos(t) * R, y + Math.sin(t) * R, Math.max(2.2, fs * .14), 0, 7); ctx.fill(); }
+    if (a.q) {
+      const lpR = (a.lp || []).some(d => d === 'r' || d === 'or') ? fs * .45 : 0, qx = x + hw + fs * .38 + lpR, qy = y - hh - fs * .12;
+      if (a.q.startsWith('δ')) label(ctx, a.q, qx, qy, {size: fs * .72, color: col(a.q.endsWith('+') ? 'bad' : 'electron'), font: SANS});
+      else { ctx.strokeStyle = col(a.q === '+' ? 'bad' : 'electron'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(qx, qy, fs * .36, 0, 7); ctx.stroke(); label(ctx, a.q, qx, qy + .5, {size: fs * .6, color: ctx.strokeStyle, font: SANS}); }
+    }
+  });
+  ctx.restore();
+  return P;
+}
+/* Gebogener Elektronenpfeil von (x1, y1) nach (x2, y2); bend: Ausbuchtung in px (Vorzeichen = Seite);
+   o: {half (Halbpfeil, ein Elektron), t (0–1, Anteil gezeichnet), c, lw} */
+function eArrow(ctx, x1, y1, x2, y2, bend = 30, o = {}) {
+  const L = Math.hypot(x2 - x1, y2 - y1) || 1, cx = (x1 + x2) / 2 - (y2 - y1) / L * bend, cy = (y1 + y2) / 2 + (x2 - x1) / L * bend, T = clamp(o.t ?? 1, 0, 1);
+  if (T <= 0) return;
+  const q = t => [(1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cx + t * t * x2, (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cy + t * t * y2];
+  const c = col(o.c || 'accent'); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = o.lw || 2.2; ctx.lineCap = 'round';
+  ctx.beginPath(); for (let k = 0; k <= 24; k++) { const [x, y] = q(T * k / 24); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+  const [ex, ey] = q(T), dx = 2 * (1 - T) * (cx - x1) + 2 * T * (x2 - cx), dy = 2 * (1 - T) * (cy - y1) + 2 * T * (y2 - cy), a = Math.atan2(dy, dx), h = o.head || 10;
+  ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - h * Math.cos(a - .42), ey - h * Math.sin(a - .42));
+  if (o.half) ctx.lineTo(ex - h * .7 * Math.cos(a), ey - h * .7 * Math.sin(a)); else ctx.lineTo(ex - h * Math.cos(a + .42), ey - h * Math.sin(a + .42));
+  ctx.closePath(); ctx.fill();
+}
+/* Benzolring mit Mittelpunkt cx, cy und Kantenlänge r; mode 'k1' | 'k2' (Kekulé-Grenzformeln) | 'ring' (Kreis) | 'h' (nur Sechseck);
+   o: {mix (0–1 Überblendung k1 → k2), sub: {Ecke 0–5: Text}, color, lw, rot, ringAlpha} – gibt die Ecken zurück (Ecke 0 oben) */
+function benzene(ctx, cx, cy, r, mode = 'ring', o = {}) {
+  const rot = o.rot ?? -Math.PI / 2, V = [...Array(6)].map((_, k) => [cx + r * Math.cos(rot + k * Math.PI / 3), cy + r * Math.sin(rot + k * Math.PI / 3)]);
+  const c = col(o.color || 'ink'), lw = o.lw || Math.max(1.8, r * .06);
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath(); V.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.stroke();
+  const inner = (ks, a) => { ctx.globalAlpha = a; for (const k of ks) { const [ax, ay] = V[k], [bx, by] = V[(k + 1) % 6], f = .78, sh = .14; const p = (x, y) => [cx + (x - cx) * f, cy + (y - cy) * f]; const [px, py] = p(ax, ay), [qx, qy] = p(bx, by); ctx.beginPath(); ctx.moveTo(px + (qx - px) * sh, py + (qy - py) * sh); ctx.lineTo(qx - (qx - px) * sh, qy - (qy - py) * sh); ctx.stroke(); } ctx.globalAlpha = 1; };
+  if (mode === 'k1' || mode === 'k2') { const m = o.mix ?? (mode === 'k2' ? 1 : 0); if (m < 1) inner([0, 2, 4], 1 - m); if (m > 0) inner([1, 3, 5], m); }
+  if (mode === 'ring') { ctx.globalAlpha = o.ringAlpha ?? 1; ctx.beginPath(); ctx.arc(cx, cy, r * .6, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+  for (const [k, txt] of Object.entries(o.sub || {})) {
+    const [x, y] = V[+k], ux = (x - cx) / r, uy = (y - cy) / r, fs = o.size || clamp(r * .42, 11, 20);
+    ctx.font = `700 ${fs}px ${SANS}`; const hw = ctx.measureText(txt).width / 2 + 3, hh = fs * .55, d = r * .62;
+    const gx = x + ux * d, gy = y + uy * d, g = Math.min(Math.abs(ux) > .01 ? hw / Math.abs(ux) : 1e9, Math.abs(uy) > .01 ? hh / Math.abs(uy) : 1e9);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(gx - ux * g, gy - uy * g); ctx.stroke();
+    label(ctx, txt, gx, gy, {size: fs, color: col(ELC(txt.replace(/[^A-Za-z]/g, '')) || o.color || 'ink'), font: SANS});
+  }
+  ctx.restore();
+  return V;
+}
+/* Energieprofil: levels = Energiewerte der Minima und Maxima im Wechsel, gezeichnet über x = 0 … levels.length – 1 */
+function eProfile(ctx, X, Y, levels, c, lw = 2.5, dash) {
+  const pts = [];
+  for (let k = 0; k < levels.length - 1; k++) for (let s = 0; s <= 20; s++) { const u = s / 20; pts.push([X(k + u), Y(levels[k] + (levels[k + 1] - levels[k]) * (1 - Math.cos(Math.PI * u)) / 2)]); }
+  polyline(ctx, pts, c, lw, dash);
+}
+/* Mechanismus-Spieler: frames [{a: Atome, b: Bindungen, arr: [[von, nach, bend, half]], txt, note}] mit gleicher Atomliste (hide erlaubt).
+   Punkte: Atomindex, [i, j] (Bindungsmitte), [i, 'o'|'u'|…] (neben Atom i). Atome gleiten zwischen den Schritten.
+   o: {ox, oy (Ursprung als Anteil von w, h), scale (Anteil von min(w, h) pro Bindung), status, extra(ctx, w, h, k, u, P)} */
+function mechPlayer(cv, station, stepRoot, frames, o = {}) {
+  let k = 0, prev = 0, tt = 9;
+  const st = stepper(stepRoot, frames.length, i => { prev = k; k = i; tt = 0; if (o.status) o.status.innerHTML = frames[i].txt || ''; });
+  canvasLoop(cv, station, (ctx, w, h, t, dt) => {
+    tt += dt;
+    const F = frames[k], G = frames[prev], u = ease(clamp(tt / .8, 0, 1)), s = Math.min(w, h) * (o.scale || .13);
+    const a = F.a.map((x, i) => { const g = G.a[i] || x; return {...x, x: lerp(g.x, x.x, u), y: lerp(g.y, x.y, u)}; });
+    const P = struct2D(ctx, {a, b: F.b}, {x: w * (o.ox ?? .5), y: h * (o.oy ?? .5), s});
+    const pt = p => { if (typeof p === 'number') return P(p); if (typeof p[1] === 'number') { const [x1, y1] = P(p[0]), [x2, y2] = P(p[1]); return [(x1 + x2) / 2, (y1 + y2) / 2]; } const [x, y] = P(p[0]), d = (typeof p[1] === 'string' ? DIR2D[p[1]] : 0) * Math.PI / 180; return [x + Math.cos(d) * s * .42, y + Math.sin(d) * s * .42]; };
+    if (u >= 1) (F.arr || []).forEach(([p, q, bend, half], j) => { const [x1, y1] = pt(p), [x2, y2] = pt(q); eArrow(ctx, x1, y1, x2, y2, (bend ?? .5) * s, {half, t: clamp((tt - .8 - j * .35) / .6, 0, 1)}); });
+    if (F.note) label(ctx, F.note, w / 2, h - 16, {size: 13, color: C.ink2, weight: 600});
+    if (o.extra) o.extra(ctx, w, h, k, u, P);
+  });
+  return st;
+}
+/* Galvanische Zelle aus zwei Halbzellen mit Salzbrücke, Draht und Messgerät.
+   o: {L, R: {el (Elektrodenmetall), name, sol (Lösung), solc (Farbe), gas (H₂-Elektrode), q (Beschriftung Pol)},
+       U (Anzeige), meter ('V' | 'A' | 'lamp' | 'src'), flow (Elektronenfluss an/aus), dir (1: Elektronen L → R), t, bridge (true/false)} */
+function galvCell(ctx, w, h, o) {
+  const t = o.t || 0, by = h * .42, bh = h * .5, bw = w * .3, xs = [w * .07, w * .63], top = h * .14;
+  const E = [o.L, o.R], ex = [xs[0] + bw * .5, xs[1] + bw * .5];
+  E.forEach((s, i) => {
+    const x = xs[i];
+    ctx.fillStyle = alpha(col(s.solc || '#d9e2ea'), .5); ctx.fillRect(x + 2, by + bh * .14, bw - 4, bh * .84);
+    beaker(ctx, x, by, bw, bh, {marks: false});
+    label(ctx, s.sol || '', x + bw / 2, by + bh + 14, {size: 11, color: C.ink2});
+    const ew = Math.max(10, bw * .1);
+    if (s.gas) {
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.strokeRect(ex[i] - ew * 1.3, by - h * .04, ew * 2.6, bh * .78);
+      ctx.fillStyle = '#c9cfd6'; ctx.fillRect(ex[i] - ew / 2, by + bh * .4, ew, bh * .28);
+      bubbles(ctx, ex[i] - ew, by + bh * .1, ew * 2, bh * .5, t, 8, '#9ab', 5);
+      label(ctx, 'H₂ ⟶', ex[i] - ew * 1.3 - 4, by + bh * .2, {size: 11, align: 'right', color: C.ink2});
+      ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(ex[i], by + bh * .4); ctx.lineTo(ex[i], top); ctx.stroke();
+    } else {
+      ctx.fillStyle = s.ec || elCol(s.el); ctx.fillRect(ex[i] - ew / 2, by - h * .06, ew, bh * .8);
+      ctx.strokeStyle = alpha(C.ink, .4); ctx.lineWidth = 1; ctx.strokeRect(ex[i] - ew / 2, by - h * .06, ew, bh * .8);
+    }
+    label(ctx, s.name || s.el, ex[i] + (i ? 1 : -1) * (ew + 4), by - h * .02, {size: 13, align: i ? 'left' : 'right'});
+    if (s.q) label(ctx, s.q, ex[i] + (i ? 1 : -1) * (ew + 4), by + h * .04, {size: 11, align: i ? 'left' : 'right', color: s.q.includes('−') ? C.electron : C.bad});
+  });
+  // Salzbrücke
+  if (o.bridge !== false) {
+    const x1 = xs[0] + bw * .82, x2 = xs[1] + bw * .18, yb = by + bh * .55, yt = by - h * .05;
+    ctx.strokeStyle = alpha(C.ink2, .7); ctx.lineWidth = 12; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(x1, yb); ctx.lineTo(x1, yt); ctx.lineTo(x2, yt); ctx.lineTo(x2, yb); ctx.stroke();
+    ctx.strokeStyle = alpha('#f3efe2', .95); ctx.lineWidth = 8; ctx.stroke();
+    label(ctx, 'Salzbrücke (KNO₃)', (x1 + x2) / 2, yt - 12, {size: 10, color: C.ink2, weight: 400});
+    if (o.flow) { const d = o.dir ?? 1; for (let k = 0; k < 3; k++) { const p = (t * .25 + k / 3) % 1, x = lerp(x1, x2, d > 0 ? 1 - p : p); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, yt, 4, 0, 7); ctx.fill(); const x3 = lerp(x1, x2, d > 0 ? p : 1 - p); ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(x3, yt + 1, 3, 0, 7); ctx.fill(); } }
+  }
+  // Draht und Messgerät
+  const mx = w / 2;
+  ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ex[0], by - h * .06); ctx.lineTo(ex[0], top); ctx.lineTo(ex[1], top); ctx.lineTo(ex[1], by - h * .06); ctx.stroke();
+  ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(mx, top, 22, 0, 7); ctx.fill(); ctx.stroke();
+  if (o.meter === 'lamp') { const on = o.flow ? .6 + .4 * Math.sin(t * 20) * .1 : 0; ctx.fillStyle = alpha('#ffd24a', on); ctx.beginPath(); ctx.arc(mx, top, 20, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(mx - 12, top - 12); ctx.lineTo(mx + 12, top + 12); ctx.moveTo(mx + 12, top - 12); ctx.lineTo(mx - 12, top + 12); ctx.stroke(); }
+  else if (o.meter === 'src') { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mx - 5, top - 12); ctx.lineTo(mx - 5, top + 12); ctx.moveTo(mx + 5, top - 7); ctx.lineTo(mx + 5, top + 7); ctx.stroke(); label(ctx, '−', mx - 14, top - 14, {size: 12}); label(ctx, '+', mx + 14, top - 14, {size: 12}); }
+  else label(ctx, o.meter || 'V', mx, top + 1, {size: 15});
+  if (o.U !== undefined) { ctx.fillStyle = '#0f2a1c'; roundRect(ctx, mx - 44, top + 26, 88, 26, 5); ctx.fill(); label(ctx, o.U, mx, top + 39, {size: 15, font: MONO, color: '#7CFFB2'}); }
+  if (o.flow) {
+    const d = o.dir ?? 1, path = [[ex[0], by - h * .06], [ex[0], top], [ex[1], top], [ex[1], by - h * .06]], seg = [0, 1, 2].map(k => Math.hypot(path[k + 1][0] - path[k][0], path[k + 1][1] - path[k][1])), tot = seg[0] + seg[1] + seg[2];
+    for (let k = 0; k < 10; k++) { let s = ((t * .3 + k / 10) % 1) * tot; if (d < 0) s = tot - s; let j = 0; while (j < 2 && s > seg[j]) { s -= seg[j]; j++; } const f = s / seg[j], x = lerp(path[j][0], path[j + 1][0], f), y = lerp(path[j][1], path[j + 1][1], f); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
+    label(ctx, d > 0 ? 'e⁻ ⟶' : '⟵ e⁻', (ex[0] + mx) / 2 + (d > 0 ? 0 : (ex[1] - ex[0]) / 2), top - 14, {size: 13, color: C.electron});
+  }
+  return {ex, by, bh, xs, bw, top};
+}
+/* Standardpotenziale (V), gerundet wie in der Abitur-Anlage */
+const E0 = {Li: [-3.04, 'Li⁺/Li'], K: [-2.93, 'K⁺/K'], Ca: [-2.87, 'Ca²⁺/Ca'], Na: [-2.71, 'Na⁺/Na'], Mg: [-2.37, 'Mg²⁺/Mg'], Al: [-1.66, 'Al³⁺/Al'], Zn: [-.76, 'Zn²⁺/Zn'], Fe: [-.41, 'Fe²⁺/Fe'], Ni: [-.23, 'Ni²⁺/Ni'], Sn: [-.14, 'Sn²⁺/Sn'], Pb: [-.13, 'Pb²⁺/Pb'], H: [0, '2 H₃O⁺/H₂'], Cu: [.35, 'Cu²⁺/Cu'], I: [.54, 'I₂/2 I⁻'], Fe3: [.77, 'Fe³⁺/Fe²⁺'], Ag: [.80, 'Ag⁺/Ag'], Br: [1.07, 'Br₂/2 Br⁻'], O: [1.23, 'O₂/H₂O'], Cl: [1.36, 'Cl₂/2 Cl⁻'], Au: [1.50, 'Au³⁺/Au'], Mn: [1.51, 'MnO₄⁻/Mn²⁺'], F: [2.87, 'F₂/2 F⁻']};
+/* Wellenlänge (380–750 nm) als Farbe; Komplementärfarbe über das Restlicht */
+function wlColor(nm, a = 1) {
+  let r = 0, g = 0, b = 0;
+  if (nm < 440) { r = -(nm - 440) / 60; b = 1; } else if (nm < 490) { g = (nm - 440) / 50; b = 1; } else if (nm < 510) { g = 1; b = -(nm - 510) / 20; } else if (nm < 580) { r = (nm - 510) / 70; g = 1; } else if (nm < 645) { r = 1; g = -(nm - 645) / 65; } else r = 1;
+  const f = nm < 420 ? .3 + .7 * (nm - 380) / 40 : nm > 700 ? .3 + .7 * (750 - nm) / 50 : 1;
+  return `rgba(${[r, g, b].map(v => Math.round(255 * Math.pow(clamp(v * f, 0, 1), .8))).join(',')},${a})`;
+}
+/* Wahrgenommene Farbe, wenn eine Gauß-Bande um nm (Breite wd) absorbiert wird (Absorption 0–1); nm darf eine Liste von Banden [[nm, wd, a], …] sein */
+function seenColor(nm, wd = 40, absMax = .95) {
+  const S = T => { let R = 0, G = 0, B = 0; for (let l = 400; l <= 700; l += 5) { const t = T(l), c = wlColor(l).match(/[\d.]+/g).map(Number); R += c[0] * t; G += c[1] * t; B += c[2] * t; } return [R, G, B]; };
+  const W = seenColor.W || (seenColor.W = S(() => 1)), X = S(l => Array.isArray(nm) ? nm.reduce((t, [c, d, m]) => t * (1 - m * Math.exp(-((l - c) ** 2) / (2 * d * d))), 1) : 1 - absMax * Math.exp(-((l - nm) ** 2) / (2 * wd * wd)));
+  const v = X.map((x, i) => x / W[i]), mn = Math.min(...v), mx = Math.max(...v);
+  return `rgb(${v.map(x => Math.round(255 * clamp(mx - (mx - x) * 1.8, 0, 1))).join(',')})`;
+}
+
 /* ================================================================ */
 /* ================= Inhalte dieser Stunde ================= */
 
@@ -2274,21 +2440,44 @@ const RES = {glc: {god: 1, ben: 1, tol: 1, iod: 0}, fru: {god: 0, ben: 1, tol: 1
 
 /* ================= KOMPLEXE ================= */
 (() => {
-  const K = {cu: ['Tetraaqua-Kupfer(II)', 'Cu²⁺', 'H₂O', 4, '#3a7ad0', 'Cu²⁺ mit vier Wasser-Liganden (hellblau). Das O-Atom jedes Wassermoleküls stellt ein freies Elektronenpaar.'], nh3: ['Tetraammin-Kupfer(II)', 'Cu²⁺', 'NH₃', 4, '#2a3ab0', 'Mit Ammoniak bildet Kupfer einen tiefblauen Komplex: NH₃ ist ein stärkerer Ligand als Wasser.'], ag: ['Diamminsilber(I)', 'Ag⁺', 'NH₃', 2, '#c8ccd2', 'Das Tollens-Reagenz: Ag⁺ mit zwei Ammoniak-Liganden – linear gebaut, farblos.']};
-  let k = 'cu';
-  seg($('#ko-seg'), [['cu', '[Cu(H₂O)₄]²⁺'], ['nh3', '[Cu(NH₃)₄]²⁺'], ['ag', '[Ag(NH₃)₂]⁺']], v => { k = v; $('#ko-out').innerHTML = `<b>${K[v][0]}:</b> ${K[v][5]}`; });
-  canvasLoop($('#cv-ko'), 'komplex', (ctx, w, h, t) => {
-    const [n, z, lig, num, colr] = K[k], cx = w * .5, cy = h * .5, R = Math.min(w, h) * .32;
-    ctx.fillStyle = alpha(colr, .15); ctx.beginPath(); ctx.arc(cx, cy, R * 1.25, 0, 7); ctx.fill();
-    const ang = num === 2 ? [0, Math.PI] : [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
-    ang.forEach(a => { const x = cx + Math.cos(a + t * .2) * R, y = cy + Math.sin(a + t * .2) * R, xi = cx + Math.cos(a + t * .2) * R * .35, yi = cy + Math.sin(a + t * .2) * R * .35;
-      ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(xi, yi); ctx.lineTo(x - Math.cos(a + t * .2) * 22, y - Math.sin(a + t * .2) * 22); ctx.stroke();
-      arrow(ctx, x - Math.cos(a + t * .2) * 24, y - Math.sin(a + t * .2) * 24, xi + Math.cos(a + t * .2) * 6, yi + Math.sin(a + t * .2) * 6, C.accent, 1.5, 8);
-      atomBall(ctx, x, y, 18, lig === 'H₂O' ? 'O' : 'N'); label(ctx, lig, x, y + 30, {size: 12});
-      ctx.fillStyle = C.ink; for (const o of [-4, 4]) { ctx.beginPath(); ctx.arc(x - Math.cos(a + t * .2) * 22 + Math.sin(a + t * .2) * o, y - Math.sin(a + t * .2) * 22 - Math.cos(a + t * .2) * o, 2.5, 0, 7); ctx.fill(); } });
-    sphere(ctx, cx, cy, 26, k === 'ag' ? '#9aa3ad' : '#c46a2a', z, '#fff');
-    label(ctx, '→ freies Elektronenpaar des Liganden bindet an das Zentralion', w / 2, h * .96, {size: 11, color: C.ink2, weight: 400});
-  });
+  const K = {cu: ['Tetraaqua-Kupfer(II)', 'Cu²⁺', 'H₂O', 4, '#8ec3ea', 'Cu²⁺ mit vier Wasser-Liganden (hellblau). Das O-Atom jedes Wassermoleküls stellt ein freies Elektronenpaar.', 'quadratisch-planar'], nh3: ['Tetraammin-Kupfer(II)', 'Cu²⁺', 'NH₃', 4, '#2b3fb8', 'Mit Ammoniak bildet Kupfer einen tiefblauen Komplex: NH₃ ist ein stärkerer Ligand als Wasser.', 'quadratisch-planar'], ag: ['Diamminsilber(I)', 'Ag⁺', 'NH₃', 2, '#eef1f4', 'Das Tollens-Reagenz: Ag⁺ mit zwei Ammoniak-Liganden – linear gebaut, farblos.', 'linear']};
+  let k = 'cu', tt = 0;
+  seg($('#ko-seg'), [['cu', '[Cu(H₂O)₄]²⁺'], ['nh3', '[Cu(NH₃)₄]²⁺'], ['ag', '[Ag(NH₃)₂]⁺']], v => { k = v; tt = 0; $('#ko-out').innerHTML = `<b>${K[v][0]}:</b> ${K[v][5]}`; });
+  onShow.push(id => { if (id === 'komplex') tt = 0; });
+  canvasLoop($('#cv-ko'), 'komplex', (ctx, w, h, t, dt) => {
+    tt += dt;
+    const [n, z, lig, num, colr, , geo] = K[k], cx = w * .34, cy = h * .5, R = Math.min(w * .17, h * .27), rM = R * .3, rA = R * .17, fs = Math.max(11, w * .019);
+    // Zentralion mit Hof
+    const gl = ctx.createRadialGradient(cx, cy, rM * .5, cx, cy, R * 1.5); gl.addColorStop(0, alpha(colr === '#eef1f4' ? '#9aa3ad' : colr, .35)); gl.addColorStop(1, alpha(colr === '#eef1f4' ? '#9aa3ad' : colr, 0)); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(cx, cy, R * 1.5, 0, 7); ctx.fill();
+    const ang = num === 2 ? [Math.PI, 0] : [Math.PI, -Math.PI / 2, 0, Math.PI / 2];
+    ang.forEach((a, i) => {
+      const arr = ease(clamp((tt - i * .35) / 1.2, 0, 1)), d = lerp(R * 1.7, R, arr) + Math.sin(t * 3 + i) * 1.5, ux = Math.cos(a), uy = Math.sin(a), x = cx + ux * d, y = cy + uy * d;
+      ctx.globalAlpha = clamp(arr * 3, 0, 1);
+      // Wasserstoff-Atome zeigen vom Zentralion weg
+      const hs = lig === 'H₂O' ? [52, -52] : [0, 72, -72];
+      // koordinative Bindung: freies Elektronenpaar → Zentralion
+      const bond = clamp((tt - i * .35 - 1.2) / .5, 0, 1);
+      if (bond > 0) { const x1 = x - ux * rA * 1.3, y1 = y - uy * rA * 1.3, x2 = cx + ux * rM * 1.05, y2 = cy + uy * rM * 1.05; arrow(ctx, x1, y1, lerp(x1, x2, bond), lerp(y1, y2, bond), C.accent, 3, 10); }
+      for (const hd of hs) { const b = a + hd * Math.PI / 180; ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(b) * rA * 1.6, y + Math.sin(b) * rA * 1.6); ctx.stroke(); sphere(ctx, x + Math.cos(b) * rA * 1.6, y + Math.sin(b) * rA * 1.6, rA * .6, C.atomh, '', '', alpha('#000', .3)); }
+      sphere(ctx, x, y, rA, lig === 'H₂O' ? C.atomo : C.atomn); label(ctx, lig === 'H₂O' ? 'O' : 'N', x, y + 1, {size: rA * .95, color: '#fff'});
+      // Elektronenpaar als Keule mit zwei Punkten
+      if (bond < 1) { const ex = x - ux * rA * 1.35, ey = y - uy * rA * 1.35; ctx.fillStyle = alpha(C.electron, .18); ctx.beginPath(); ctx.ellipse(ex, ey, rA * .55, rA * .35, a + Math.PI / 2, 0, 7); ctx.fill(); ctx.fillStyle = C.electron; for (const o of [-1, 1]) { ctx.beginPath(); ctx.arc(ex - uy * o * rA * .22, ey + ux * o * rA * .22, 2.6, 0, 7); ctx.fill(); } }
+      ctx.globalAlpha = 1;
+    });
+    sphere(ctx, cx, cy, rM, k === 'ag' ? '#a7b0ba' : '#c46a2a', '', '');
+    label(ctx, z, cx, cy + 1, {size: rM * .62, color: '#fff'});
+    label(ctx, geo, cx, cy + R * 1.6, {size: fs * .85, color: C.ink2, weight: 600});
+    // Legende
+    const lx = w * .02, ly = h * .05; arrow(ctx, lx, ly, lx + 26, ly, C.accent, 3, 9); label(ctx, 'koordinative Bindung', lx + 32, ly, {size: fs * .8, align: 'left', color: C.ink2});
+    ctx.fillStyle = C.electron; for (const o of [-4, 4]) { ctx.beginPath(); ctx.arc(lx + w * .3 + o, ly, 2.6, 0, 7); ctx.fill(); } label(ctx, 'freies Elektronenpaar', lx + w * .3 + 12, ly, {size: fs * .8, align: 'left', color: C.ink2});
+    // Reagenzglas mit Farbe der Lösung
+    const tx = w * .8, tw = Math.min(w * .09, h * .14), tTop = h * .1, tH = h * .66;
+    tube(ctx, tx, tTop, tw, tH, {fill: colr, level: .62, alpha: k === 'ag' ? .5 : .85});
+    label(ctx, n, tx, tTop + tH + fs * 1.4, {size: fs * .85, weight: 700});
+    label(ctx, k === 'cu' ? 'hellblau' : k === 'nh3' ? 'tiefblau' : 'farblos', tx, tTop + tH + fs * 2.6, {size: fs * .8, color: C.ink2, weight: 600});
+    label(ctx, 'Zentralion: Akzeptor', w * .02, h * .9, {size: fs * .8, color: C.ink2, align: 'left'});
+    label(ctx, 'Ligand: Donator', w * .02, h * .9 + fs * 1.3, {size: fs * .8, color: C.ink2, align: 'left'});
+      });
 })();
 
 /* ================= DETEKTIV ================= */

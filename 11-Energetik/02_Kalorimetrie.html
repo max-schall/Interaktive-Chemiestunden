@@ -643,7 +643,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
     <ol class="preview" aria-label="Stationen dieser Stunde">
       <li><button data-go="aufbau"><span class="num">1</span><span class="y">Erarbeitung</span><span class="n"><b>Das Kalorimeter</b><span>Aufbau und Messprinzip</span></span></button></li>
       <li><button data-go="loesung"><span class="num">2</span><span class="y">Experiment</span><span class="n"><b>Salze lösen im Kalorimeter</b><span>Warm oder kalt?</span></span></button></li>
-      <li><button data-go="dose"><span class="num">3</span><span class="y">Anwendung</span><span class="n"><b>Die selbsterhitzende Dose</b><span>Wie viel Calciumoxid?</span></span></button></li>
+      <li><button data-go="dose"><span class="num">3</span><span class="y">Anwendung</span><span class="n"><b>Die selbsterhitzende Konserve</b><span>Wie viel Calciumoxid?</span></span></button></li>
     </ol>
   </div>
 </section>
@@ -694,26 +694,27 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
   </div>
 </section>
 
-<section class="station" id="dose" data-label="Heizdose" data-yr="Anwendung" data-title="Die selbsterhitzende Dose" data-sub="Wie viel Calciumoxid?" hidden>
+<section class="station" id="dose" data-label="Heizdose" data-yr="Anwendung" data-title="Die selbsterhitzende Konserve" data-sub="Wie viel Calciumoxid?" hidden>
   <div class="model">
     <div class="txt">
       <p class="eyebrow">Station 3 · Anwendung</p>
-      <h2>Die selbsterhitzende Dose</h2>
-      <p class="lead">In manchen Kaffeedosen steckt ein Einsatz mit Calciumoxid. Drückt man auf den Boden, gelangt Wasser hinein:</p>
+      <h2>Die selbsterhitzende Konserve</h2>
+      <p class="lead">Für Outdoor- und Notfallverpflegung gibt es Suppendosen, die sich ohne Herd erhitzen: Um den Innenbecher liegt ein Ring aus Branntkalk (Calciumoxid). Drückt man auf den Boden, sticht ein Dorn einen Wasserbeutel auf:</p>
       <p class="eq-line">CaO + H₂O <span class="arrow">⟶</span> Ca(OH)₂<br>Δ<sub>R</sub>H = –65 kJ/mol</p>
       <ol class="facts">
-        <li>Benötigte Wärme: Q = c(W) · m(Kaffee) · Δϑ</li>
+        <li>Benötigte Wärme: Q = c · m(Suppe) · Δϑ, c ≈ c(W)</li>
         <li>Stoffmenge Calciumoxid: n = Q : 65 kJ/mol</li>
         <li>Masse: m = n · M(CaO), M(CaO) = 56,1 g/mol</li>
       </ol>
-      <p class="note">In der Realität geht ein Teil der Wärme an die Dose und die Luft verloren – man braucht mehr Calciumoxid.</p>
+      <p class="note">Ein Teil der Wärme erwärmt die Dose selbst und geht an die Luft verloren – man braucht mehr Calciumoxid, als die Rechnung ergibt.</p>
     </div>
     <div class="vis">
-      <div class="vis-head"><h3>Dosen-Rechner</h3></div>
-      <canvas id="cv-do" class="low" aria-label="Dose mit Heizeinsatz"></canvas>
-      <div class="slider"><label for="do-m">Kaffee <output id="do-mo"></output></label><input type="range" id="do-m" min="100" max="400" step="10" value="200"></div>
+      <div class="vis-head"><h3>Dose im Schnitt</h3></div>
+      <canvas id="cv-do" class="wide" aria-label="Schnitt durch eine selbsterhitzende Dose mit Calciumoxid-Ring, Wasserbeutel und Thermometer"></canvas>
+      <div class="slider"><label for="do-m">Suppe <output id="do-mo"></output></label><input type="range" id="do-m" min="100" max="400" step="10" value="300"></div>
       <div class="slider"><label for="do-t">Erwärmung <output id="do-to"></output></label><input type="range" id="do-t" min="10" max="60" value="40"></div>
       <div class="slider"><label for="do-e">Wirkungsgrad <output id="do-eo"></output></label><input type="range" id="do-e" min="30" max="100" step="5" value="100"></div>
+      <div class="controls"><button class="btn primary" id="do-go">Boden drücken</button><button class="btn" id="do-reset">Neue Dose</button></div>
       <p class="status" id="do-out"></p>
     </div>
   </div>
@@ -2220,6 +2221,172 @@ function labSVG(key, size = 80) {
   return `<svg class="lab" viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="${g ? g.n : key}" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${g ? g.d : ''}</svg>`;
 }
 
+/* ---------- Strukturformeln und Mechanismen auf Canvas (Klasse 12) ---------- */
+/* mol = {a: [{el, x, y, q, lp, e, c, hide}], b: [[i, j, ordnung, art]]} mit x/y in Bindungslängen.
+   el darf auch eine Gruppe sein („CH₃“, „OH“). lp/e: Richtungen freier Elektronenpaare bzw. Einzelelektronen
+   ('o', 'u', 'l', 'r', 'ol', 'or', 'ul', 'ur' oder Winkel in Grad). q: '+', '−', 'δ+', 'δ−'.
+   art: 'hl' (Akzent), 'new' (entsteht gerade, gestrichelt), 'break' (bricht gerade), 'dash' (gestrichelt).
+   o: {x, y, s (px pro Bindung), size, skel (C ohne Beschriftung), alpha} – gibt P(i) mit Pixelkoordinaten zurück */
+const ELC = el => ({O: 'atom-o', N: 'atom-n', Br: 'bromine', 'Br₂': 'bromine', Cl: 'atom-cl', S: 'atom-s', I: 'atom-i', F: 'atom-f'})[el];
+const DIR2D = {o: -90, u: 90, l: 180, r: 0, ol: -135, or: -45, ul: 135, ur: 45};
+function struct2D(ctx, mol, o = {}) {
+  const s = o.s || 44, fs = o.size || clamp(s * .4, 11, 22);
+  const P = i => [o.x + mol.a[i].x * s, o.y + mol.a[i].y * s];
+  ctx.save(); ctx.globalAlpha = o.alpha ?? 1;
+  ctx.font = `700 ${fs}px ${SANS}`;
+  const box = a => (a.hide || (a.el === 'C' && o.skel)) ? [0, 0] : [ctx.measureText(a.el).width / 2 + 2, fs * .55];
+  const cut = (a, ux, uy) => { const [hw, hh] = box(a); if (!hw) return 0; return Math.min(Math.abs(ux) > 1e-6 ? hw / Math.abs(ux) : 1e9, Math.abs(uy) > 1e-6 ? hh / Math.abs(uy) : 1e9); };
+  for (const [i, j, ord = 1, art] of mol.b) {
+    let [x1, y1] = P(i), [x2, y2] = P(j);
+    const L = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L, uy = (y2 - y1) / L, g1 = cut(mol.a[i], ux, uy), g2 = cut(mol.a[j], ux, uy);
+    x1 += ux * g1; y1 += uy * g1; x2 -= ux * g2; y2 -= uy * g2;
+    ctx.strokeStyle = col(art === 'hl' || art === 'new' ? 'accent' : art === 'break' ? 'bad' : o.bond || 'ink');
+    ctx.lineWidth = o.lw || Math.max(1.6, s * .05); ctx.lineCap = 'round';
+    ctx.setLineDash(art === 'dash' || art === 'new' || art === 'break' ? [5, 4] : []);
+    const nx = -uy, ny = ux, d = Math.max(4.5, s * .12);
+    for (const k of ord === 3 ? [-d, 0, d] : ord === 2 ? [-d / 2, d / 2] : [0]) { ctx.beginPath(); ctx.moveTo(x1 + nx * k, y1 + ny * k); ctx.lineTo(x2 + nx * k, y2 + ny * k); ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
+  const ang = d => (typeof d === 'number' ? d : DIR2D[d]) * Math.PI / 180;
+  mol.a.forEach((a, i) => {
+    if (a.hide) return;
+    const [x, y] = P(i), [hw, hh] = box(a);
+    if (!(a.el === 'C' && o.skel)) label(ctx, a.el, x, y, {size: fs, color: col(a.c || ELC(a.el) || 'ink'), font: SANS});
+    const rr = d => { const t = ang(d), c = Math.cos(t), sn = Math.sin(t); return [t, Math.min(Math.abs(c) > .01 ? (hw + fs * .28) / Math.abs(c) : 1e9, Math.abs(sn) > .01 ? (hh + fs * .22) / Math.abs(sn) : 1e9)]; };
+    ctx.strokeStyle = col(a.c || ELC(a.el) || 'ink'); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = Math.max(1.8, fs * .12);
+    for (const d of a.lp || []) { const [t, R] = rr(d), px = x + Math.cos(t) * R, py = y + Math.sin(t) * R, l = fs * .38; ctx.beginPath(); ctx.moveTo(px - Math.sin(t) * l, py + Math.cos(t) * l); ctx.lineTo(px + Math.sin(t) * l, py - Math.cos(t) * l); ctx.stroke(); }
+    for (const d of a.e || []) { const [t, R] = rr(d); ctx.beginPath(); ctx.arc(x + Math.cos(t) * R, y + Math.sin(t) * R, Math.max(2.2, fs * .14), 0, 7); ctx.fill(); }
+    if (a.q) {
+      const lpR = (a.lp || []).some(d => d === 'r' || d === 'or') ? fs * .45 : 0, qx = x + hw + fs * .38 + lpR, qy = y - hh - fs * .12;
+      if (a.q.startsWith('δ')) label(ctx, a.q, qx, qy, {size: fs * .72, color: col(a.q.endsWith('+') ? 'bad' : 'electron'), font: SANS});
+      else { ctx.strokeStyle = col(a.q === '+' ? 'bad' : 'electron'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(qx, qy, fs * .36, 0, 7); ctx.stroke(); label(ctx, a.q, qx, qy + .5, {size: fs * .6, color: ctx.strokeStyle, font: SANS}); }
+    }
+  });
+  ctx.restore();
+  return P;
+}
+/* Gebogener Elektronenpfeil von (x1, y1) nach (x2, y2); bend: Ausbuchtung in px (Vorzeichen = Seite);
+   o: {half (Halbpfeil, ein Elektron), t (0–1, Anteil gezeichnet), c, lw} */
+function eArrow(ctx, x1, y1, x2, y2, bend = 30, o = {}) {
+  const L = Math.hypot(x2 - x1, y2 - y1) || 1, cx = (x1 + x2) / 2 - (y2 - y1) / L * bend, cy = (y1 + y2) / 2 + (x2 - x1) / L * bend, T = clamp(o.t ?? 1, 0, 1);
+  if (T <= 0) return;
+  const q = t => [(1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cx + t * t * x2, (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cy + t * t * y2];
+  const c = col(o.c || 'accent'); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = o.lw || 2.2; ctx.lineCap = 'round';
+  ctx.beginPath(); for (let k = 0; k <= 24; k++) { const [x, y] = q(T * k / 24); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+  const [ex, ey] = q(T), dx = 2 * (1 - T) * (cx - x1) + 2 * T * (x2 - cx), dy = 2 * (1 - T) * (cy - y1) + 2 * T * (y2 - cy), a = Math.atan2(dy, dx), h = o.head || 10;
+  ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - h * Math.cos(a - .42), ey - h * Math.sin(a - .42));
+  if (o.half) ctx.lineTo(ex - h * .7 * Math.cos(a), ey - h * .7 * Math.sin(a)); else ctx.lineTo(ex - h * Math.cos(a + .42), ey - h * Math.sin(a + .42));
+  ctx.closePath(); ctx.fill();
+}
+/* Benzolring mit Mittelpunkt cx, cy und Kantenlänge r; mode 'k1' | 'k2' (Kekulé-Grenzformeln) | 'ring' (Kreis) | 'h' (nur Sechseck);
+   o: {mix (0–1 Überblendung k1 → k2), sub: {Ecke 0–5: Text}, color, lw, rot, ringAlpha} – gibt die Ecken zurück (Ecke 0 oben) */
+function benzene(ctx, cx, cy, r, mode = 'ring', o = {}) {
+  const rot = o.rot ?? -Math.PI / 2, V = [...Array(6)].map((_, k) => [cx + r * Math.cos(rot + k * Math.PI / 3), cy + r * Math.sin(rot + k * Math.PI / 3)]);
+  const c = col(o.color || 'ink'), lw = o.lw || Math.max(1.8, r * .06);
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath(); V.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.stroke();
+  const inner = (ks, a) => { ctx.globalAlpha = a; for (const k of ks) { const [ax, ay] = V[k], [bx, by] = V[(k + 1) % 6], f = .78, sh = .14; const p = (x, y) => [cx + (x - cx) * f, cy + (y - cy) * f]; const [px, py] = p(ax, ay), [qx, qy] = p(bx, by); ctx.beginPath(); ctx.moveTo(px + (qx - px) * sh, py + (qy - py) * sh); ctx.lineTo(qx - (qx - px) * sh, qy - (qy - py) * sh); ctx.stroke(); } ctx.globalAlpha = 1; };
+  if (mode === 'k1' || mode === 'k2') { const m = o.mix ?? (mode === 'k2' ? 1 : 0); if (m < 1) inner([0, 2, 4], 1 - m); if (m > 0) inner([1, 3, 5], m); }
+  if (mode === 'ring') { ctx.globalAlpha = o.ringAlpha ?? 1; ctx.beginPath(); ctx.arc(cx, cy, r * .6, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+  for (const [k, txt] of Object.entries(o.sub || {})) {
+    const [x, y] = V[+k], ux = (x - cx) / r, uy = (y - cy) / r, fs = o.size || clamp(r * .42, 11, 20);
+    ctx.font = `700 ${fs}px ${SANS}`; const hw = ctx.measureText(txt).width / 2 + 3, hh = fs * .55, d = r * .62;
+    const gx = x + ux * d, gy = y + uy * d, g = Math.min(Math.abs(ux) > .01 ? hw / Math.abs(ux) : 1e9, Math.abs(uy) > .01 ? hh / Math.abs(uy) : 1e9);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(gx - ux * g, gy - uy * g); ctx.stroke();
+    label(ctx, txt, gx, gy, {size: fs, color: col(ELC(txt.replace(/[^A-Za-z]/g, '')) || o.color || 'ink'), font: SANS});
+  }
+  ctx.restore();
+  return V;
+}
+/* Energieprofil: levels = Energiewerte der Minima und Maxima im Wechsel, gezeichnet über x = 0 … levels.length – 1 */
+function eProfile(ctx, X, Y, levels, c, lw = 2.5, dash) {
+  const pts = [];
+  for (let k = 0; k < levels.length - 1; k++) for (let s = 0; s <= 20; s++) { const u = s / 20; pts.push([X(k + u), Y(levels[k] + (levels[k + 1] - levels[k]) * (1 - Math.cos(Math.PI * u)) / 2)]); }
+  polyline(ctx, pts, c, lw, dash);
+}
+/* Mechanismus-Spieler: frames [{a: Atome, b: Bindungen, arr: [[von, nach, bend, half]], txt, note}] mit gleicher Atomliste (hide erlaubt).
+   Punkte: Atomindex, [i, j] (Bindungsmitte), [i, 'o'|'u'|…] (neben Atom i). Atome gleiten zwischen den Schritten.
+   o: {ox, oy (Ursprung als Anteil von w, h), scale (Anteil von min(w, h) pro Bindung), status, extra(ctx, w, h, k, u, P)} */
+function mechPlayer(cv, station, stepRoot, frames, o = {}) {
+  let k = 0, prev = 0, tt = 9;
+  const st = stepper(stepRoot, frames.length, i => { prev = k; k = i; tt = 0; if (o.status) o.status.innerHTML = frames[i].txt || ''; });
+  canvasLoop(cv, station, (ctx, w, h, t, dt) => {
+    tt += dt;
+    const F = frames[k], G = frames[prev], u = ease(clamp(tt / .8, 0, 1)), s = Math.min(w, h) * (o.scale || .13);
+    const a = F.a.map((x, i) => { const g = G.a[i] || x; return {...x, x: lerp(g.x, x.x, u), y: lerp(g.y, x.y, u)}; });
+    const P = struct2D(ctx, {a, b: F.b}, {x: w * (o.ox ?? .5), y: h * (o.oy ?? .5), s});
+    const pt = p => { if (typeof p === 'number') return P(p); if (typeof p[1] === 'number') { const [x1, y1] = P(p[0]), [x2, y2] = P(p[1]); return [(x1 + x2) / 2, (y1 + y2) / 2]; } const [x, y] = P(p[0]), d = (typeof p[1] === 'string' ? DIR2D[p[1]] : 0) * Math.PI / 180; return [x + Math.cos(d) * s * .42, y + Math.sin(d) * s * .42]; };
+    if (u >= 1) (F.arr || []).forEach(([p, q, bend, half], j) => { const [x1, y1] = pt(p), [x2, y2] = pt(q); eArrow(ctx, x1, y1, x2, y2, (bend ?? .5) * s, {half, t: clamp((tt - .8 - j * .35) / .6, 0, 1)}); });
+    if (F.note) label(ctx, F.note, w / 2, h - 16, {size: 13, color: C.ink2, weight: 600});
+    if (o.extra) o.extra(ctx, w, h, k, u, P);
+  });
+  return st;
+}
+/* Galvanische Zelle aus zwei Halbzellen mit Salzbrücke, Draht und Messgerät.
+   o: {L, R: {el (Elektrodenmetall), name, sol (Lösung), solc (Farbe), gas (H₂-Elektrode), q (Beschriftung Pol)},
+       U (Anzeige), meter ('V' | 'A' | 'lamp' | 'src'), flow (Elektronenfluss an/aus), dir (1: Elektronen L → R), t, bridge (true/false)} */
+function galvCell(ctx, w, h, o) {
+  const t = o.t || 0, by = h * .42, bh = h * .5, bw = w * .3, xs = [w * .07, w * .63], top = h * .14;
+  const E = [o.L, o.R], ex = [xs[0] + bw * .5, xs[1] + bw * .5];
+  E.forEach((s, i) => {
+    const x = xs[i];
+    ctx.fillStyle = alpha(col(s.solc || '#d9e2ea'), .5); ctx.fillRect(x + 2, by + bh * .14, bw - 4, bh * .84);
+    beaker(ctx, x, by, bw, bh, {marks: false});
+    label(ctx, s.sol || '', x + bw / 2, by + bh + 14, {size: 11, color: C.ink2});
+    const ew = Math.max(10, bw * .1);
+    if (s.gas) {
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.strokeRect(ex[i] - ew * 1.3, by - h * .04, ew * 2.6, bh * .78);
+      ctx.fillStyle = '#c9cfd6'; ctx.fillRect(ex[i] - ew / 2, by + bh * .4, ew, bh * .28);
+      bubbles(ctx, ex[i] - ew, by + bh * .1, ew * 2, bh * .5, t, 8, '#9ab', 5);
+      label(ctx, 'H₂ ⟶', ex[i] - ew * 1.3 - 4, by + bh * .2, {size: 11, align: 'right', color: C.ink2});
+      ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(ex[i], by + bh * .4); ctx.lineTo(ex[i], top); ctx.stroke();
+    } else {
+      ctx.fillStyle = s.ec || elCol(s.el); ctx.fillRect(ex[i] - ew / 2, by - h * .06, ew, bh * .8);
+      ctx.strokeStyle = alpha(C.ink, .4); ctx.lineWidth = 1; ctx.strokeRect(ex[i] - ew / 2, by - h * .06, ew, bh * .8);
+    }
+    label(ctx, s.name || s.el, ex[i] + (i ? 1 : -1) * (ew + 4), by - h * .02, {size: 13, align: i ? 'left' : 'right'});
+    if (s.q) label(ctx, s.q, ex[i] + (i ? 1 : -1) * (ew + 4), by + h * .04, {size: 11, align: i ? 'left' : 'right', color: s.q.includes('−') ? C.electron : C.bad});
+  });
+  // Salzbrücke
+  if (o.bridge !== false) {
+    const x1 = xs[0] + bw * .82, x2 = xs[1] + bw * .18, yb = by + bh * .55, yt = by - h * .05;
+    ctx.strokeStyle = alpha(C.ink2, .7); ctx.lineWidth = 12; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(x1, yb); ctx.lineTo(x1, yt); ctx.lineTo(x2, yt); ctx.lineTo(x2, yb); ctx.stroke();
+    ctx.strokeStyle = alpha('#f3efe2', .95); ctx.lineWidth = 8; ctx.stroke();
+    label(ctx, 'Salzbrücke (KNO₃)', (x1 + x2) / 2, yt - 12, {size: 10, color: C.ink2, weight: 400});
+    if (o.flow) { const d = o.dir ?? 1; for (let k = 0; k < 3; k++) { const p = (t * .25 + k / 3) % 1, x = lerp(x1, x2, d > 0 ? 1 - p : p); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, yt, 4, 0, 7); ctx.fill(); const x3 = lerp(x1, x2, d > 0 ? p : 1 - p); ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(x3, yt + 1, 3, 0, 7); ctx.fill(); } }
+  }
+  // Draht und Messgerät
+  const mx = w / 2;
+  ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ex[0], by - h * .06); ctx.lineTo(ex[0], top); ctx.lineTo(ex[1], top); ctx.lineTo(ex[1], by - h * .06); ctx.stroke();
+  ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(mx, top, 22, 0, 7); ctx.fill(); ctx.stroke();
+  if (o.meter === 'lamp') { const on = o.flow ? .6 + .4 * Math.sin(t * 20) * .1 : 0; ctx.fillStyle = alpha('#ffd24a', on); ctx.beginPath(); ctx.arc(mx, top, 20, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(mx - 12, top - 12); ctx.lineTo(mx + 12, top + 12); ctx.moveTo(mx + 12, top - 12); ctx.lineTo(mx - 12, top + 12); ctx.stroke(); }
+  else if (o.meter === 'src') { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mx - 5, top - 12); ctx.lineTo(mx - 5, top + 12); ctx.moveTo(mx + 5, top - 7); ctx.lineTo(mx + 5, top + 7); ctx.stroke(); label(ctx, '−', mx - 14, top - 14, {size: 12}); label(ctx, '+', mx + 14, top - 14, {size: 12}); }
+  else label(ctx, o.meter || 'V', mx, top + 1, {size: 15});
+  if (o.U !== undefined) { ctx.fillStyle = '#0f2a1c'; roundRect(ctx, mx - 44, top + 26, 88, 26, 5); ctx.fill(); label(ctx, o.U, mx, top + 39, {size: 15, font: MONO, color: '#7CFFB2'}); }
+  if (o.flow) {
+    const d = o.dir ?? 1, path = [[ex[0], by - h * .06], [ex[0], top], [ex[1], top], [ex[1], by - h * .06]], seg = [0, 1, 2].map(k => Math.hypot(path[k + 1][0] - path[k][0], path[k + 1][1] - path[k][1])), tot = seg[0] + seg[1] + seg[2];
+    for (let k = 0; k < 10; k++) { let s = ((t * .3 + k / 10) % 1) * tot; if (d < 0) s = tot - s; let j = 0; while (j < 2 && s > seg[j]) { s -= seg[j]; j++; } const f = s / seg[j], x = lerp(path[j][0], path[j + 1][0], f), y = lerp(path[j][1], path[j + 1][1], f); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
+    label(ctx, d > 0 ? 'e⁻ ⟶' : '⟵ e⁻', (ex[0] + mx) / 2 + (d > 0 ? 0 : (ex[1] - ex[0]) / 2), top - 14, {size: 13, color: C.electron});
+  }
+  return {ex, by, bh, xs, bw, top};
+}
+/* Standardpotenziale (V), gerundet wie in der Abitur-Anlage */
+const E0 = {Li: [-3.04, 'Li⁺/Li'], K: [-2.93, 'K⁺/K'], Ca: [-2.87, 'Ca²⁺/Ca'], Na: [-2.71, 'Na⁺/Na'], Mg: [-2.37, 'Mg²⁺/Mg'], Al: [-1.66, 'Al³⁺/Al'], Zn: [-.76, 'Zn²⁺/Zn'], Fe: [-.41, 'Fe²⁺/Fe'], Ni: [-.23, 'Ni²⁺/Ni'], Sn: [-.14, 'Sn²⁺/Sn'], Pb: [-.13, 'Pb²⁺/Pb'], H: [0, '2 H₃O⁺/H₂'], Cu: [.35, 'Cu²⁺/Cu'], I: [.54, 'I₂/2 I⁻'], Fe3: [.77, 'Fe³⁺/Fe²⁺'], Ag: [.80, 'Ag⁺/Ag'], Br: [1.07, 'Br₂/2 Br⁻'], O: [1.23, 'O₂/H₂O'], Cl: [1.36, 'Cl₂/2 Cl⁻'], Au: [1.50, 'Au³⁺/Au'], Mn: [1.51, 'MnO₄⁻/Mn²⁺'], F: [2.87, 'F₂/2 F⁻']};
+/* Wellenlänge (380–750 nm) als Farbe; Komplementärfarbe über das Restlicht */
+function wlColor(nm, a = 1) {
+  let r = 0, g = 0, b = 0;
+  if (nm < 440) { r = -(nm - 440) / 60; b = 1; } else if (nm < 490) { g = (nm - 440) / 50; b = 1; } else if (nm < 510) { g = 1; b = -(nm - 510) / 20; } else if (nm < 580) { r = (nm - 510) / 70; g = 1; } else if (nm < 645) { r = 1; g = -(nm - 645) / 65; } else r = 1;
+  const f = nm < 420 ? .3 + .7 * (nm - 380) / 40 : nm > 700 ? .3 + .7 * (750 - nm) / 50 : 1;
+  return `rgba(${[r, g, b].map(v => Math.round(255 * Math.pow(clamp(v * f, 0, 1), .8))).join(',')},${a})`;
+}
+/* Wahrgenommene Farbe, wenn eine Gauß-Bande um nm (Breite wd) absorbiert wird (Absorption 0–1); nm darf eine Liste von Banden [[nm, wd, a], …] sein */
+function seenColor(nm, wd = 40, absMax = .95) {
+  const S = T => { let R = 0, G = 0, B = 0; for (let l = 400; l <= 700; l += 5) { const t = T(l), c = wlColor(l).match(/[\d.]+/g).map(Number); R += c[0] * t; G += c[1] * t; B += c[2] * t; } return [R, G, B]; };
+  const W = seenColor.W || (seenColor.W = S(() => 1)), X = S(l => Array.isArray(nm) ? nm.reduce((t, [c, d, m]) => t * (1 - m * Math.exp(-((l - c) ** 2) / (2 * d * d))), 1) : 1 - absMax * Math.exp(-((l - nm) ** 2) / (2 * wd * wd)));
+  const v = X.map((x, i) => x / W[i]), mn = Math.min(...v), mx = Math.max(...v);
+  return `rgb(${v.map(x => Math.round(255 * clamp(mx - (mx - x) * 1.8, 0, 1))).join(',')})`;
+}
+
 /* ================================================================ */
 /* ================= Inhalte dieser Stunde ================= */
 
@@ -2299,23 +2466,85 @@ function labSVG(key, size = 80) {
 
 /* ================= DOSE ================= */
 (() => {
+  let tt = -1;
+  const val = () => { const m = +$('#do-m').value, dt = +$('#do-t').value, e = +$('#do-e').value / 100, Q = 4.19 * m * dt / 1000; return {m, dt, e, Q, QR: Q / e, n: Q / e / 65, mc: Q / e / 65 * 56.1}; };
   const upd = () => {
-    const m = +$('#do-m').value, dt = +$('#do-t').value, e = +$('#do-e').value / 100;
+    const {m, dt, e, Q, QR, n, mc} = val();
     $('#do-mo').textContent = m + ' g'; $('#do-to').textContent = dt + ' K'; $('#do-eo').textContent = Math.round(e * 100) + ' %';
-    const Q = 4.19 * m * dt / 1000, n = Q / 65 / e, mc = n * 56.1;
-    $('#do-out').innerHTML = `Q = 4,19 · ${m} · ${dt} J = <b>${numDE(Q, 1)} kJ</b>${e < 1 ? ` · bei ${Math.round(e * 100)} % Wirkungsgrad braucht man ${numDE(Q / e, 1)} kJ` : ''} → n(CaO) = ${numDE(n, 2)} mol → <b>m(CaO) = ${numDE(mc, 1)} g</b>`;
+    $('#do-out').innerHTML = `Q = 4,19 · ${m} · ${dt} J = <b>${numDE(Q, 1)} kJ</b>${e < 1 ? ` · bei ${Math.round(e * 100)} % Wirkungsgrad muss die Reaktion ${numDE(QR, 1)} kJ liefern` : ''} → n(CaO) = ${numDE(n, 2)} mol → <b>m(CaO) = ${numDE(mc, 1)} g</b>`;
   };
   ['do-m', 'do-t', 'do-e'].forEach(id => $('#' + id).oninput = upd); upd();
-  canvasLoop($('#cv-do'), 'dose', (ctx, w, h, t) => {
-    const m = +$('#do-m').value, dt = +$('#do-t').value, e = +$('#do-e').value / 100, mc = 4.19 * m * dt / 1000 / 65 / e * 56.1;
-    const cx = w * .3, dw = w * .22, dh = h * .78, top = h * .12;
-    ctx.fillStyle = mix(C.ink2, C.surface, .55); roundRect(ctx, cx - dw / 2, top, dw, dh, 10); ctx.fill();
-    ctx.fillStyle = mix('#7a4a24', C.hot, .2 + .6 * (dt / 60)); roundRect(ctx, cx - dw / 2 + 6, top + 8, dw - 12, dh - 16, 6); ctx.fill();
-    const ih = clamp(mc / 120, .15, .8) * dh; ctx.fillStyle = '#e8e2d6'; roundRect(ctx, cx - dw * .22, top + dh - ih - 8, dw * .44, ih, 6); ctx.fill();
-    label(ctx, 'CaO', cx, top + dh - ih / 2 - 8, {size: 12, color: '#3a3a3a'});
-    for (let k = 0; k < 4; k++) { const yy = top + dh - ih - 14 - ((t * .5 + k * .25) % 1) * (dh - ih) * .7; ctx.strokeStyle = alpha(C.hot, .6); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 10 + k * 7, yy + 6); ctx.quadraticCurveTo(cx - 4 + k * 7, yy, cx - 10 + k * 7, yy - 6); ctx.stroke(); }
-    label(ctx, numDE(mc, 0) + ' g CaO', w * .72, h * .4, {size: 26, font: DISPLAY, color: C.accent});
-    label(ctx, 'für ' + m + ' g Kaffee, +' + dt + ' K', w * .72, h * .6, {size: 13, color: C.ink2});
+  $('#do-go').onclick = () => { if (tt < 0) tt = 0; };
+  $('#do-reset').onclick = () => { tt = -1; };
+  const GR = (() => { const r = rng(7); return [...Array(260)].map(() => [r(), r(), .7 + r() * .6]); })();
+  canvasLoop($('#cv-do'), 'dose', (ctx, w, h, t, dt) => {
+    const {m, dt: dT, e, Q, QR, mc} = val();
+    if (tt >= 0) tt += dt;
+    const push = clamp(tt / .7, 0, 1), wet = clamp((tt - .7) / 1.6, 0, 1), heat = tt < 1.2 ? 0 : 1 - Math.exp(-(tt - 1.2) / 2.2);
+    const T = 20 + dT * heat, hot = clamp((T - 20) / 60, 0, 1);
+    // Geometrie
+    const W = Math.min(w * .34, h * .66), cx = Math.max(w * .25, W / 2 + 64), top = h * .1, bot = h * .9, H = bot - top;
+    const ix = W * .32, iTop = top + H * .06, iBot = bot - H * .24, pTop = bot - H * .19, pBot = bot - H * .04;
+    // Außenwand
+    ctx.fillStyle = mix(C.surface2, C.ink2, .12); roundRect(ctx, cx - W / 2, top, W, H, 8); ctx.fill();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.stroke();
+    for (const y of [top + H * .03, bot - H * .015]) { ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - W / 2 - 3, y); ctx.lineTo(cx + W / 2 + 3, y); ctx.stroke(); }
+    // Kammer mit Calciumoxid (Ring um den Innenbecher)
+    const chT = iTop + H * .18, chB = pTop - 4, fill = clamp(mc / 140, .4, 1), cTop = chB - (chB - chT) * fill;
+    const inCh = (x, y) => y > cTop && y < chB && (Math.abs(x - cx) > ix + 3 || y > iBot + 3);
+    ctx.save(); ctx.beginPath(); ctx.rect(cx - W / 2 + 4, cTop, W - 8, chB - cTop); ctx.clip();
+    ctx.fillStyle = mix('#efe9dc', C.hot, hot * .35); ctx.fillRect(cx - W / 2, cTop, W, chB - cTop);
+    if (wet > 0) { const wy = chB - (chB - cTop) * wet; ctx.fillStyle = alpha(C.water, .28 * (1 - heat * .6)); ctx.fillRect(cx - W / 2, wy, W, chB - wy); }
+    for (const [gx, gy, gs] of GR) { const x = cx - W / 2 + 6 + gx * (W - 12), y = cTop + gy * (chB - cTop); if (!inCh(x, y)) continue; const reacted = wet > 0 && y > chB - (chB - cTop) * wet; ctx.fillStyle = reacted ? mix('#d9d4c8', '#ffffff', heat * .5) : '#c9c0ab'; ctx.beginPath(); ctx.arc(x, y, (reacted ? 3 + heat : 2.6) * gs, 0, 7); ctx.fill(); }
+    if (heat > 0) { const g = ctx.createLinearGradient(0, chB, 0, cTop); g.addColorStop(0, alpha(C.hot, .35 * heat)); g.addColorStop(1, alpha(C.hot, .05)); ctx.fillStyle = g; ctx.fillRect(cx - W / 2, cTop, W, chB - cTop); }
+    ctx.restore();
+    // Innenbecher mit Suppe
+    ctx.fillStyle = C.surface; roundRect(ctx, cx - ix - 4, iTop - 2, ix * 2 + 8, iBot - iTop + 6, 6); ctx.fill();
+    const soup = mix('#c9a15a', '#c0471d', hot), sTop = iTop + H * .1;
+    ctx.fillStyle = soup; roundRect(ctx, cx - ix, sTop, ix * 2, iBot - sTop, 5); ctx.fill();
+    ctx.strokeStyle = alpha('#fff', .35); ctx.lineWidth = 2; ctx.beginPath(); for (let x = -ix + 4; x <= ix - 4; x += 3) { const y = sTop + 3 + Math.sin(x * .12 + t * 2) * 1.5 * (.3 + hot); x === -ix + 4 ? ctx.moveTo(cx + x, y) : ctx.lineTo(cx + x, y); } ctx.stroke();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; roundRect(ctx, cx - ix - 4, iTop - 2, ix * 2 + 8, iBot - iTop + 6, 6); ctx.stroke();
+    label(ctx, 'Suppe', cx, (sTop + iBot) / 2, {size: 13, color: '#fff'});
+    // Deckel mit Lasche, Dampf
+    ctx.fillStyle = C.ink2; roundRect(ctx, cx - W * .18, top - 7, W * .36, 7, 3); ctx.fill();
+    if (T > 45) for (let k = 0; k < 4; k++) { const p = (t * .35 + k / 4) % 1, x = cx - W * .2 + k * W * .13 + Math.sin(t * 2 + k) * 5; ctx.strokeStyle = alpha(C.ink2, .45 * (1 - p) * clamp((T - 45) / 20, 0, 1)); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x, top - 12 - p * H * .12); ctx.quadraticCurveTo(x + 8, top - 20 - p * H * .12, x, top - 28 - p * H * .12); ctx.stroke(); }
+    // Wärmepfeile von der Kammer in die Suppe
+    if (heat > 0 && heat < .97) for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { const y = lerp(cTop, iBot, (k + .5) / 3), p = (t * .8 + k * .33) % 1; ctx.globalAlpha = .95 * Math.sin(Math.PI * p); arrow(ctx, cx + s * (ix + W * .15 - p * W * .08), y, cx + s * (ix - W * .04 - p * W * .08), y, C.hot, 3.5, 11); ctx.globalAlpha = 1; }
+    // Wasserbeutel mit Folie, Druckknopf mit Dorn
+    const wl = 1 - wet * .92;
+    ctx.fillStyle = alpha(C.water, .55); roundRect(ctx, cx - W * .4, pBot - (pBot - pTop) * wl, W * .8, (pBot - pTop) * wl, 6); ctx.fill();
+    ctx.strokeStyle = C.water; ctx.lineWidth = 2; roundRect(ctx, cx - W * .4, pTop, W * .8, pBot - pTop, 6); ctx.stroke();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.setLineDash(push >= 1 ? [6, 5] : []); ctx.beginPath(); ctx.moveTo(cx - W / 2 + 3, pTop - 2); ctx.lineTo(cx + W / 2 - 3, pTop - 2); ctx.stroke(); ctx.setLineDash([]);
+    const sp = bot + 10 - push * (bot - pTop + 16);
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(cx - 6, bot + 10); ctx.lineTo(cx - 6, sp + 12); ctx.lineTo(cx, sp); ctx.lineTo(cx + 6, sp + 12); ctx.lineTo(cx + 6, bot + 10); ctx.closePath(); ctx.fill();
+    roundRect(ctx, cx - W * .16, bot + 6 - push * 6, W * .32, 8, 3); ctx.fill();
+    if (tt < 0) { const b = Math.sin(t * 4) * 3; arrow(ctx, cx + W * .32, bot + 26 + b, cx + W * .32, bot + 6 + b, C.accent, 2.5, 9); label(ctx, 'drücken', cx + W * .32 + 8, bot + 22, {size: 12, align: 'left', color: C.accent}); }
+    if (wet > 0 && wet < 1) for (let k = 0; k < 5; k++) { const p = (t * 1.5 + k / 5) % 1; ctx.fillStyle = alpha(C.water, .9); ctx.beginPath(); ctx.arc(cx + (k - 2) * W * .17, pTop - p * (pTop - cTop) * wet, 2.5, 0, 7); ctx.fill(); }
+    // Beschriftung links
+    const lx = cx - W / 2 - 10, tag = (txt, y, c) => { ctx.strokeStyle = alpha(C.ink2, .6); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx + 2, y); ctx.lineTo(cx - W / 2 + 14, y); ctx.stroke(); label(ctx, txt, lx, y, {size: 11.5, align: 'right', color: c || C.ink2}); };
+    tag(wet > .5 ? 'Ca(OH)₂' : 'CaO', (cTop + chB) / 2); tag('Wasser', (pTop + pBot) / 2, C.water); tag('Folie', pTop - 2);
+    // Thermometer
+    const tx = cx + W / 2 + w * .06, tTop = top + H * .05, tBot = bot - H * .12, Y = v => lerp(tBot, tTop, v / 100);
+    ctx.fillStyle = C.surface; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.8; roundRect(ctx, tx - 6, tTop - 8, 12, tBot - tTop + 12, 6); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(tx, tBot + 10, 11, 0, 7); ctx.fillStyle = C.hot; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.hot; ctx.fillRect(tx - 3, Y(T), 6, tBot + 4 - Y(T));
+    for (let v = 0; v <= 100; v += 20) { ctx.strokeStyle = C.ink2; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(tx + 7, Y(v)); ctx.lineTo(tx + 12, Y(v)); ctx.stroke(); label(ctx, v, tx + 15, Y(v), {size: 10, align: 'left', color: C.ink2, font: MONO, weight: 400}); }
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = C.accent; ctx.beginPath(); ctx.moveTo(tx - 12, Y(20 + dT)); ctx.lineTo(tx + 12, Y(20 + dT)); ctx.stroke(); ctx.setLineDash([]);
+    label(ctx, fix(T, 1) + ' °C', tx, tTop - 20, {size: 14, font: MONO, color: C.hot});
+    // Energiebilanz rechts
+    const bx = w * .62, bw = w * .34, by = h * .14, bh = 26;
+    label(ctx, 'Energiebilanz', bx, by - 4, {size: 13, align: 'left', color: C.ink2});
+    ctx.fillStyle = C.hot; roundRect(ctx, bx, by + 8, bw, bh, 5); ctx.fill();
+    label(ctx, `Reaktion: ${numDE(QR, 1)} kJ`, bx + 8, by + 8 + bh / 2, {size: 12.5, align: 'left', color: '#fff'});
+    const yb = by + bh + 34;
+    ctx.fillStyle = mix(C.hot, '#c9a15a', .25); roundRect(ctx, bx, yb, bw * e, bh, 5); ctx.fill();
+    if (e < 1) { ctx.fillStyle = alpha(C.ink2, .25); roundRect(ctx, bx + bw * e + 3, yb, bw * (1 - e) - 3, bh, 5); ctx.fill(); }
+    ctx.strokeStyle = alpha(C.ink2, .5); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(bx + bw * e / 2, by + 8 + bh + 2); ctx.lineTo(bx + bw * e / 2, yb - 2); if (e < 1) { ctx.moveTo(bx + bw * (1 + e) / 2, by + 8 + bh + 2); ctx.lineTo(bx + bw * (1 + e) / 2, yb - 2); } ctx.stroke();
+    label(ctx, 'Suppe ' + numDE(Q, 1) + ' kJ', bx + 2, yb + bh + 13, {size: 11.5, align: 'left', color: C.ink});
+    if (e < 1) label(ctx, 'Dose, Luft ' + numDE(QR - Q, 1) + ' kJ', bx + bw, yb + bh + 13, {size: 11.5, align: 'right', color: C.ink2});
+    label(ctx, numDE(mc, 0) + ' g', bx, h * .62, {size: Math.min(44, w * .07), font: DISPLAY, color: C.accent, align: 'left'});
+    label(ctx, 'Calciumoxid nötig', bx, h * .62 + Math.min(30, w * .045), {size: 13, align: 'left', color: C.ink2});
+    wrapText(ctx, mc > 160 ? 'So viel Calciumoxid passt nicht mehr in die Dose!' : tt < 0 ? 'Boden drücken startet die Reaktion.' : heat > .97 ? `Fertig: Die Suppe ist um ${dT} K wärmer.` : wet < 1 ? 'Wasser dringt in den Kalk …' : 'Der Kalk wird heiß, Wärme fließt in die Suppe …', bx, h * .78, bw, 18, {size: 13, color: mc > 160 ? C.bad : C.ink2, weight: 600});
   });
 })();
 

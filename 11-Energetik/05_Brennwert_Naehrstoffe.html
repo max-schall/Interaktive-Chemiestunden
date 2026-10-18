@@ -2242,27 +2242,227 @@ function labSVG(key, size = 80) {
   return `<svg class="lab" viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="${g ? g.n : key}" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${g ? g.d : ''}</svg>`;
 }
 
+/* ---------- Strukturformeln und Mechanismen auf Canvas (Klasse 12) ---------- */
+/* mol = {a: [{el, x, y, q, lp, e, c, hide}], b: [[i, j, ordnung, art]]} mit x/y in Bindungslängen.
+   el darf auch eine Gruppe sein („CH₃“, „OH“). lp/e: Richtungen freier Elektronenpaare bzw. Einzelelektronen
+   ('o', 'u', 'l', 'r', 'ol', 'or', 'ul', 'ur' oder Winkel in Grad). q: '+', '−', 'δ+', 'δ−'.
+   art: 'hl' (Akzent), 'new' (entsteht gerade, gestrichelt), 'break' (bricht gerade), 'dash' (gestrichelt).
+   o: {x, y, s (px pro Bindung), size, skel (C ohne Beschriftung), alpha} – gibt P(i) mit Pixelkoordinaten zurück */
+const ELC = el => ({O: 'atom-o', N: 'atom-n', Br: 'bromine', 'Br₂': 'bromine', Cl: 'atom-cl', S: 'atom-s', I: 'atom-i', F: 'atom-f'})[el];
+const DIR2D = {o: -90, u: 90, l: 180, r: 0, ol: -135, or: -45, ul: 135, ur: 45};
+function struct2D(ctx, mol, o = {}) {
+  const s = o.s || 44, fs = o.size || clamp(s * .4, 11, 22);
+  const P = i => [o.x + mol.a[i].x * s, o.y + mol.a[i].y * s];
+  ctx.save(); ctx.globalAlpha = o.alpha ?? 1;
+  ctx.font = `700 ${fs}px ${SANS}`;
+  const box = a => (a.hide || (a.el === 'C' && o.skel)) ? [0, 0] : [ctx.measureText(a.el).width / 2 + 2, fs * .55];
+  const cut = (a, ux, uy) => { const [hw, hh] = box(a); if (!hw) return 0; return Math.min(Math.abs(ux) > 1e-6 ? hw / Math.abs(ux) : 1e9, Math.abs(uy) > 1e-6 ? hh / Math.abs(uy) : 1e9); };
+  for (const [i, j, ord = 1, art] of mol.b) {
+    let [x1, y1] = P(i), [x2, y2] = P(j);
+    const L = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L, uy = (y2 - y1) / L, g1 = cut(mol.a[i], ux, uy), g2 = cut(mol.a[j], ux, uy);
+    x1 += ux * g1; y1 += uy * g1; x2 -= ux * g2; y2 -= uy * g2;
+    ctx.strokeStyle = col(art === 'hl' || art === 'new' ? 'accent' : art === 'break' ? 'bad' : o.bond || 'ink');
+    ctx.lineWidth = o.lw || Math.max(1.6, s * .05); ctx.lineCap = 'round';
+    ctx.setLineDash(art === 'dash' || art === 'new' || art === 'break' ? [5, 4] : []);
+    const nx = -uy, ny = ux, d = Math.max(4.5, s * .12);
+    for (const k of ord === 3 ? [-d, 0, d] : ord === 2 ? [-d / 2, d / 2] : [0]) { ctx.beginPath(); ctx.moveTo(x1 + nx * k, y1 + ny * k); ctx.lineTo(x2 + nx * k, y2 + ny * k); ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
+  const ang = d => (typeof d === 'number' ? d : DIR2D[d]) * Math.PI / 180;
+  mol.a.forEach((a, i) => {
+    if (a.hide) return;
+    const [x, y] = P(i), [hw, hh] = box(a);
+    if (!(a.el === 'C' && o.skel)) label(ctx, a.el, x, y, {size: fs, color: col(a.c || ELC(a.el) || 'ink'), font: SANS});
+    const rr = d => { const t = ang(d), c = Math.cos(t), sn = Math.sin(t); return [t, Math.min(Math.abs(c) > .01 ? (hw + fs * .28) / Math.abs(c) : 1e9, Math.abs(sn) > .01 ? (hh + fs * .22) / Math.abs(sn) : 1e9)]; };
+    ctx.strokeStyle = col(a.c || ELC(a.el) || 'ink'); ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = Math.max(1.8, fs * .12);
+    for (const d of a.lp || []) { const [t, R] = rr(d), px = x + Math.cos(t) * R, py = y + Math.sin(t) * R, l = fs * .38; ctx.beginPath(); ctx.moveTo(px - Math.sin(t) * l, py + Math.cos(t) * l); ctx.lineTo(px + Math.sin(t) * l, py - Math.cos(t) * l); ctx.stroke(); }
+    for (const d of a.e || []) { const [t, R] = rr(d); ctx.beginPath(); ctx.arc(x + Math.cos(t) * R, y + Math.sin(t) * R, Math.max(2.2, fs * .14), 0, 7); ctx.fill(); }
+    if (a.q) {
+      const lpR = (a.lp || []).some(d => d === 'r' || d === 'or') ? fs * .45 : 0, qx = x + hw + fs * .38 + lpR, qy = y - hh - fs * .12;
+      if (a.q.startsWith('δ')) label(ctx, a.q, qx, qy, {size: fs * .72, color: col(a.q.endsWith('+') ? 'bad' : 'electron'), font: SANS});
+      else { ctx.strokeStyle = col(a.q === '+' ? 'bad' : 'electron'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(qx, qy, fs * .36, 0, 7); ctx.stroke(); label(ctx, a.q, qx, qy + .5, {size: fs * .6, color: ctx.strokeStyle, font: SANS}); }
+    }
+  });
+  ctx.restore();
+  return P;
+}
+/* Gebogener Elektronenpfeil von (x1, y1) nach (x2, y2); bend: Ausbuchtung in px (Vorzeichen = Seite);
+   o: {half (Halbpfeil, ein Elektron), t (0–1, Anteil gezeichnet), c, lw} */
+function eArrow(ctx, x1, y1, x2, y2, bend = 30, o = {}) {
+  const L = Math.hypot(x2 - x1, y2 - y1) || 1, cx = (x1 + x2) / 2 - (y2 - y1) / L * bend, cy = (y1 + y2) / 2 + (x2 - x1) / L * bend, T = clamp(o.t ?? 1, 0, 1);
+  if (T <= 0) return;
+  const q = t => [(1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cx + t * t * x2, (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cy + t * t * y2];
+  const c = col(o.c || 'accent'); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = o.lw || 2.2; ctx.lineCap = 'round';
+  ctx.beginPath(); for (let k = 0; k <= 24; k++) { const [x, y] = q(T * k / 24); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+  const [ex, ey] = q(T), dx = 2 * (1 - T) * (cx - x1) + 2 * T * (x2 - cx), dy = 2 * (1 - T) * (cy - y1) + 2 * T * (y2 - cy), a = Math.atan2(dy, dx), h = o.head || 10;
+  ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - h * Math.cos(a - .42), ey - h * Math.sin(a - .42));
+  if (o.half) ctx.lineTo(ex - h * .7 * Math.cos(a), ey - h * .7 * Math.sin(a)); else ctx.lineTo(ex - h * Math.cos(a + .42), ey - h * Math.sin(a + .42));
+  ctx.closePath(); ctx.fill();
+}
+/* Benzolring mit Mittelpunkt cx, cy und Kantenlänge r; mode 'k1' | 'k2' (Kekulé-Grenzformeln) | 'ring' (Kreis) | 'h' (nur Sechseck);
+   o: {mix (0–1 Überblendung k1 → k2), sub: {Ecke 0–5: Text}, color, lw, rot, ringAlpha} – gibt die Ecken zurück (Ecke 0 oben) */
+function benzene(ctx, cx, cy, r, mode = 'ring', o = {}) {
+  const rot = o.rot ?? -Math.PI / 2, V = [...Array(6)].map((_, k) => [cx + r * Math.cos(rot + k * Math.PI / 3), cy + r * Math.sin(rot + k * Math.PI / 3)]);
+  const c = col(o.color || 'ink'), lw = o.lw || Math.max(1.8, r * .06);
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath(); V.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.stroke();
+  const inner = (ks, a) => { ctx.globalAlpha = a; for (const k of ks) { const [ax, ay] = V[k], [bx, by] = V[(k + 1) % 6], f = .78, sh = .14; const p = (x, y) => [cx + (x - cx) * f, cy + (y - cy) * f]; const [px, py] = p(ax, ay), [qx, qy] = p(bx, by); ctx.beginPath(); ctx.moveTo(px + (qx - px) * sh, py + (qy - py) * sh); ctx.lineTo(qx - (qx - px) * sh, qy - (qy - py) * sh); ctx.stroke(); } ctx.globalAlpha = 1; };
+  if (mode === 'k1' || mode === 'k2') { const m = o.mix ?? (mode === 'k2' ? 1 : 0); if (m < 1) inner([0, 2, 4], 1 - m); if (m > 0) inner([1, 3, 5], m); }
+  if (mode === 'ring') { ctx.globalAlpha = o.ringAlpha ?? 1; ctx.beginPath(); ctx.arc(cx, cy, r * .6, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+  for (const [k, txt] of Object.entries(o.sub || {})) {
+    const [x, y] = V[+k], ux = (x - cx) / r, uy = (y - cy) / r, fs = o.size || clamp(r * .42, 11, 20);
+    ctx.font = `700 ${fs}px ${SANS}`; const hw = ctx.measureText(txt).width / 2 + 3, hh = fs * .55, d = r * .62;
+    const gx = x + ux * d, gy = y + uy * d, g = Math.min(Math.abs(ux) > .01 ? hw / Math.abs(ux) : 1e9, Math.abs(uy) > .01 ? hh / Math.abs(uy) : 1e9);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(gx - ux * g, gy - uy * g); ctx.stroke();
+    label(ctx, txt, gx, gy, {size: fs, color: col(ELC(txt.replace(/[^A-Za-z]/g, '')) || o.color || 'ink'), font: SANS});
+  }
+  ctx.restore();
+  return V;
+}
+/* Energieprofil: levels = Energiewerte der Minima und Maxima im Wechsel, gezeichnet über x = 0 … levels.length – 1 */
+function eProfile(ctx, X, Y, levels, c, lw = 2.5, dash) {
+  const pts = [];
+  for (let k = 0; k < levels.length - 1; k++) for (let s = 0; s <= 20; s++) { const u = s / 20; pts.push([X(k + u), Y(levels[k] + (levels[k + 1] - levels[k]) * (1 - Math.cos(Math.PI * u)) / 2)]); }
+  polyline(ctx, pts, c, lw, dash);
+}
+/* Mechanismus-Spieler: frames [{a: Atome, b: Bindungen, arr: [[von, nach, bend, half]], txt, note}] mit gleicher Atomliste (hide erlaubt).
+   Punkte: Atomindex, [i, j] (Bindungsmitte), [i, 'o'|'u'|…] (neben Atom i). Atome gleiten zwischen den Schritten.
+   o: {ox, oy (Ursprung als Anteil von w, h), scale (Anteil von min(w, h) pro Bindung), status, extra(ctx, w, h, k, u, P)} */
+function mechPlayer(cv, station, stepRoot, frames, o = {}) {
+  let k = 0, prev = 0, tt = 9;
+  const st = stepper(stepRoot, frames.length, i => { prev = k; k = i; tt = 0; if (o.status) o.status.innerHTML = frames[i].txt || ''; });
+  canvasLoop(cv, station, (ctx, w, h, t, dt) => {
+    tt += dt;
+    const F = frames[k], G = frames[prev], u = ease(clamp(tt / .8, 0, 1)), s = Math.min(w, h) * (o.scale || .13);
+    const a = F.a.map((x, i) => { const g = G.a[i] || x; return {...x, x: lerp(g.x, x.x, u), y: lerp(g.y, x.y, u)}; });
+    const P = struct2D(ctx, {a, b: F.b}, {x: w * (o.ox ?? .5), y: h * (o.oy ?? .5), s});
+    const pt = p => { if (typeof p === 'number') return P(p); if (typeof p[1] === 'number') { const [x1, y1] = P(p[0]), [x2, y2] = P(p[1]); return [(x1 + x2) / 2, (y1 + y2) / 2]; } const [x, y] = P(p[0]), d = (typeof p[1] === 'string' ? DIR2D[p[1]] : 0) * Math.PI / 180; return [x + Math.cos(d) * s * .42, y + Math.sin(d) * s * .42]; };
+    if (u >= 1) (F.arr || []).forEach(([p, q, bend, half], j) => { const [x1, y1] = pt(p), [x2, y2] = pt(q); eArrow(ctx, x1, y1, x2, y2, (bend ?? .5) * s, {half, t: clamp((tt - .8 - j * .35) / .6, 0, 1)}); });
+    if (F.note) label(ctx, F.note, w / 2, h - 16, {size: 13, color: C.ink2, weight: 600});
+    if (o.extra) o.extra(ctx, w, h, k, u, P);
+  });
+  return st;
+}
+/* Galvanische Zelle aus zwei Halbzellen mit Salzbrücke, Draht und Messgerät.
+   o: {L, R: {el (Elektrodenmetall), name, sol (Lösung), solc (Farbe), gas (H₂-Elektrode), q (Beschriftung Pol)},
+       U (Anzeige), meter ('V' | 'A' | 'lamp' | 'src'), flow (Elektronenfluss an/aus), dir (1: Elektronen L → R), t, bridge (true/false)} */
+function galvCell(ctx, w, h, o) {
+  const t = o.t || 0, by = h * .42, bh = h * .5, bw = w * .3, xs = [w * .07, w * .63], top = h * .14;
+  const E = [o.L, o.R], ex = [xs[0] + bw * .5, xs[1] + bw * .5];
+  E.forEach((s, i) => {
+    const x = xs[i];
+    ctx.fillStyle = alpha(col(s.solc || '#d9e2ea'), .5); ctx.fillRect(x + 2, by + bh * .14, bw - 4, bh * .84);
+    beaker(ctx, x, by, bw, bh, {marks: false});
+    label(ctx, s.sol || '', x + bw / 2, by + bh + 14, {size: 11, color: C.ink2});
+    const ew = Math.max(10, bw * .1);
+    if (s.gas) {
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.strokeRect(ex[i] - ew * 1.3, by - h * .04, ew * 2.6, bh * .78);
+      ctx.fillStyle = '#c9cfd6'; ctx.fillRect(ex[i] - ew / 2, by + bh * .4, ew, bh * .28);
+      bubbles(ctx, ex[i] - ew, by + bh * .1, ew * 2, bh * .5, t, 8, '#9ab', 5);
+      label(ctx, 'H₂ ⟶', ex[i] - ew * 1.3 - 4, by + bh * .2, {size: 11, align: 'right', color: C.ink2});
+      ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(ex[i], by + bh * .4); ctx.lineTo(ex[i], top); ctx.stroke();
+    } else {
+      ctx.fillStyle = s.ec || elCol(s.el); ctx.fillRect(ex[i] - ew / 2, by - h * .06, ew, bh * .8);
+      ctx.strokeStyle = alpha(C.ink, .4); ctx.lineWidth = 1; ctx.strokeRect(ex[i] - ew / 2, by - h * .06, ew, bh * .8);
+    }
+    label(ctx, s.name || s.el, ex[i] + (i ? 1 : -1) * (ew + 4), by - h * .02, {size: 13, align: i ? 'left' : 'right'});
+    if (s.q) label(ctx, s.q, ex[i] + (i ? 1 : -1) * (ew + 4), by + h * .04, {size: 11, align: i ? 'left' : 'right', color: s.q.includes('−') ? C.electron : C.bad});
+  });
+  // Salzbrücke
+  if (o.bridge !== false) {
+    const x1 = xs[0] + bw * .82, x2 = xs[1] + bw * .18, yb = by + bh * .55, yt = by - h * .05;
+    ctx.strokeStyle = alpha(C.ink2, .7); ctx.lineWidth = 12; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(x1, yb); ctx.lineTo(x1, yt); ctx.lineTo(x2, yt); ctx.lineTo(x2, yb); ctx.stroke();
+    ctx.strokeStyle = alpha('#f3efe2', .95); ctx.lineWidth = 8; ctx.stroke();
+    label(ctx, 'Salzbrücke (KNO₃)', (x1 + x2) / 2, yt - 12, {size: 10, color: C.ink2, weight: 400});
+    if (o.flow) { const d = o.dir ?? 1; for (let k = 0; k < 3; k++) { const p = (t * .25 + k / 3) % 1, x = lerp(x1, x2, d > 0 ? 1 - p : p); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, yt, 4, 0, 7); ctx.fill(); const x3 = lerp(x1, x2, d > 0 ? p : 1 - p); ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(x3, yt + 1, 3, 0, 7); ctx.fill(); } }
+  }
+  // Draht und Messgerät
+  const mx = w / 2;
+  ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ex[0], by - h * .06); ctx.lineTo(ex[0], top); ctx.lineTo(ex[1], top); ctx.lineTo(ex[1], by - h * .06); ctx.stroke();
+  ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(mx, top, 22, 0, 7); ctx.fill(); ctx.stroke();
+  if (o.meter === 'lamp') { const on = o.flow ? .6 + .4 * Math.sin(t * 20) * .1 : 0; ctx.fillStyle = alpha('#ffd24a', on); ctx.beginPath(); ctx.arc(mx, top, 20, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(mx - 12, top - 12); ctx.lineTo(mx + 12, top + 12); ctx.moveTo(mx + 12, top - 12); ctx.lineTo(mx - 12, top + 12); ctx.stroke(); }
+  else if (o.meter === 'src') { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mx - 5, top - 12); ctx.lineTo(mx - 5, top + 12); ctx.moveTo(mx + 5, top - 7); ctx.lineTo(mx + 5, top + 7); ctx.stroke(); label(ctx, '−', mx - 14, top - 14, {size: 12}); label(ctx, '+', mx + 14, top - 14, {size: 12}); }
+  else label(ctx, o.meter || 'V', mx, top + 1, {size: 15});
+  if (o.U !== undefined) { ctx.fillStyle = '#0f2a1c'; roundRect(ctx, mx - 44, top + 26, 88, 26, 5); ctx.fill(); label(ctx, o.U, mx, top + 39, {size: 15, font: MONO, color: '#7CFFB2'}); }
+  if (o.flow) {
+    const d = o.dir ?? 1, path = [[ex[0], by - h * .06], [ex[0], top], [ex[1], top], [ex[1], by - h * .06]], seg = [0, 1, 2].map(k => Math.hypot(path[k + 1][0] - path[k][0], path[k + 1][1] - path[k][1])), tot = seg[0] + seg[1] + seg[2];
+    for (let k = 0; k < 10; k++) { let s = ((t * .3 + k / 10) % 1) * tot; if (d < 0) s = tot - s; let j = 0; while (j < 2 && s > seg[j]) { s -= seg[j]; j++; } const f = s / seg[j], x = lerp(path[j][0], path[j + 1][0], f), y = lerp(path[j][1], path[j + 1][1], f); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
+    label(ctx, d > 0 ? 'e⁻ ⟶' : '⟵ e⁻', (ex[0] + mx) / 2 + (d > 0 ? 0 : (ex[1] - ex[0]) / 2), top - 14, {size: 13, color: C.electron});
+  }
+  return {ex, by, bh, xs, bw, top};
+}
+/* Standardpotenziale (V), gerundet wie in der Abitur-Anlage */
+const E0 = {Li: [-3.04, 'Li⁺/Li'], K: [-2.93, 'K⁺/K'], Ca: [-2.87, 'Ca²⁺/Ca'], Na: [-2.71, 'Na⁺/Na'], Mg: [-2.37, 'Mg²⁺/Mg'], Al: [-1.66, 'Al³⁺/Al'], Zn: [-.76, 'Zn²⁺/Zn'], Fe: [-.41, 'Fe²⁺/Fe'], Ni: [-.23, 'Ni²⁺/Ni'], Sn: [-.14, 'Sn²⁺/Sn'], Pb: [-.13, 'Pb²⁺/Pb'], H: [0, '2 H₃O⁺/H₂'], Cu: [.35, 'Cu²⁺/Cu'], I: [.54, 'I₂/2 I⁻'], Fe3: [.77, 'Fe³⁺/Fe²⁺'], Ag: [.80, 'Ag⁺/Ag'], Br: [1.07, 'Br₂/2 Br⁻'], O: [1.23, 'O₂/H₂O'], Cl: [1.36, 'Cl₂/2 Cl⁻'], Au: [1.50, 'Au³⁺/Au'], Mn: [1.51, 'MnO₄⁻/Mn²⁺'], F: [2.87, 'F₂/2 F⁻']};
+/* Wellenlänge (380–750 nm) als Farbe; Komplementärfarbe über das Restlicht */
+function wlColor(nm, a = 1) {
+  let r = 0, g = 0, b = 0;
+  if (nm < 440) { r = -(nm - 440) / 60; b = 1; } else if (nm < 490) { g = (nm - 440) / 50; b = 1; } else if (nm < 510) { g = 1; b = -(nm - 510) / 20; } else if (nm < 580) { r = (nm - 510) / 70; g = 1; } else if (nm < 645) { r = 1; g = -(nm - 645) / 65; } else r = 1;
+  const f = nm < 420 ? .3 + .7 * (nm - 380) / 40 : nm > 700 ? .3 + .7 * (750 - nm) / 50 : 1;
+  return `rgba(${[r, g, b].map(v => Math.round(255 * Math.pow(clamp(v * f, 0, 1), .8))).join(',')},${a})`;
+}
+/* Wahrgenommene Farbe, wenn eine Gauß-Bande um nm (Breite wd) absorbiert wird (Absorption 0–1); nm darf eine Liste von Banden [[nm, wd, a], …] sein */
+function seenColor(nm, wd = 40, absMax = .95) {
+  const S = T => { let R = 0, G = 0, B = 0; for (let l = 400; l <= 700; l += 5) { const t = T(l), c = wlColor(l).match(/[\d.]+/g).map(Number); R += c[0] * t; G += c[1] * t; B += c[2] * t; } return [R, G, B]; };
+  const W = seenColor.W || (seenColor.W = S(() => 1)), X = S(l => Array.isArray(nm) ? nm.reduce((t, [c, d, m]) => t * (1 - m * Math.exp(-((l - c) ** 2) / (2 * d * d))), 1) : 1 - absMax * Math.exp(-((l - nm) ** 2) / (2 * wd * wd)));
+  const v = X.map((x, i) => x / W[i]), mn = Math.min(...v), mx = Math.max(...v);
+  return `rgb(${v.map(x => Math.round(255 * clamp(mx - (mx - x) * 1.8, 0, 1))).join(',')})`;
+}
+
 /* ================================================================ */
 /* ================= Inhalte dieser Stunde ================= */
 
 /* ================= BRENNWERT / HEIZWERT ================= */
 (() => {
   let m = 'hs';
-  seg($('#bw-seg'), [['hs', 'Brennwert'], ['hi', 'Heizwert']], v => { m = v; $('#bw-status').innerHTML = v === 'hs' ? 'CH₄ + 2 O₂ ⟶ CO₂ + 2 H₂O(l): <b>890 kJ/mol</b> = 55,6 kJ/g. Der Dampf kondensiert und gibt seine Wärme ab.' : 'CH₄ + 2 O₂ ⟶ CO₂ + 2 H₂O(g): <b>802 kJ/mol</b> = 50,1 kJ/g. 2 · 44 kJ/mol Verdampfungswärme gehen mit dem Abgas verloren.'; });
+  seg($('#bw-seg'), [['hs', 'Brennwert'], ['hi', 'Heizwert']], v => { m = v; $('#bw-status').innerHTML = v === 'hs' ? 'CH₄ + 2 O₂ ⟶ CO₂ + 2 H₂O(l): <b>890 kJ/mol</b> = 55,6 kJ/g. Ein kaltes Rohr im Abgas lässt den Wasserdampf kondensieren – die Kondensationswärme wird mitgenutzt.' : 'CH₄ + 2 O₂ ⟶ CO₂ + 2 H₂O(g): <b>802 kJ/mol</b> = 50,1 kJ/g. Der Wasserdampf verlässt den Schornstein – 2 · 44 kJ/mol Verdampfungswärme gehen verloren.'; });
+  const MOL = [...Array(18)].map((_, i) => { const r = rng(i * 7 + 3); r(); r(); return {h2o: i % 3 !== 0, x: r() * 2 - 1, sp: .16 + r() * .08, ph: r(), wob: r() * 6}; });
+  const h2o = (ctx, x, y, s, a = 1) => { ctx.globalAlpha = a; sphere(ctx, x - s * .75, y + s * .5, s * .55, C.atomh, '', '', alpha('#000', .3)); sphere(ctx, x + s * .75, y + s * .5, s * .55, C.atomh, '', '', alpha('#000', .3)); sphere(ctx, x, y, s, C.atomo); ctx.globalAlpha = 1; };
+  const co2 = (ctx, x, y, s, a = 1) => { ctx.globalAlpha = a; sphere(ctx, x - s * 1.5, y, s * .9, C.atomo); sphere(ctx, x + s * 1.5, y, s * .9, C.atomo); sphere(ctx, x, y, s * .85, C.atomc); ctx.globalAlpha = 1; };
   canvasLoop($('#cv-bw'), 'begriffe', (ctx, w, h, t) => {
-    burner(ctx, w * .25, h * .9, 70, t, {});
-    // Kühlplatte / Abgas
-    if (m === 'hs') {
-      ctx.fillStyle = C.cold; roundRect(ctx, w * .1, h * .2, w * .3, 10, 4); ctx.fill(); label(ctx, 'kalte Fläche', w * .25, h * .15, {size: 12, color: C.cold});
-      for (let k = 0; k < 6; k++) { const r = rng(k + 1); const x = w * .13 + r() * w * .24, y = h * .24 + ((t * .4 + r()) % 1) * h * .25; ctx.fillStyle = alpha(C.water, .8); ctx.beginPath(); ctx.ellipse(x, y, 3, 4.5, 0, 0, 7); ctx.fill(); }
-    } else for (let k = 0; k < 8; k++) { const r = rng(k + 4); const p = (t * .3 + r()) % 1; ctx.fillStyle = alpha(C.ink2, .35 * (1 - p)); ctx.beginPath(); ctx.arc(w * .2 + r() * w * .1 + p * 20, h * .55 - p * h * .45, 6 + p * 10, 0, 7); ctx.fill(); }
-    // Balken
-    const bx = w * .55, bw = w * .12, base = h * .9, sc = h * .75 / 890;
-    ctx.fillStyle = C.accent; ctx.fillRect(bx, base - 802 * sc, bw, 802 * sc);
-    ctx.fillStyle = m === 'hs' ? C.water : alpha(C.ink2, .2); ctx.fillRect(bx, base - 890 * sc, bw, 88 * sc);
-    label(ctx, '802 kJ', bx + bw / 2, base - 400 * sc, {size: 13, color: '#fff'});
-    label(ctx, m === 'hs' ? '+ 88 kJ Kondensation' : '88 kJ im Dampf verloren', bx + bw + 10, base - 846 * sc, {size: 12, align: 'left', color: m === 'hs' ? C.water : C.ink2});
-    label(ctx, m === 'hs' ? 'Brennwert 890 kJ/mol' : 'Heizwert 802 kJ/mol', bx + bw / 2, h * .05, {size: 14, font: DISPLAY});
+    const hs = m === 'hs';
+    // Schornstein über der Flamme
+    const cx = w * .23, cw = w * .2, cTop = h * .04, cBot = h * .58, coilY = h * .3, fs = Math.max(11, w * .018);
+    ctx.fillStyle = alpha(C.ink2, .06); ctx.fillRect(cx - cw / 2, cTop, cw, cBot - cTop);
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - cw / 2, cTop); ctx.lineTo(cx - cw / 2, cBot); ctx.moveTo(cx + cw / 2, cTop); ctx.lineTo(cx + cw / 2, cBot); ctx.stroke();
+    burner(ctx, cx, h * .97, h * .2, t, {size: .9});
+    // kaltes Wärmetauscher-Rohr (nur Brennwert)
+    if (hs) {
+      ctx.strokeStyle = C.cold; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath();
+      for (let k = 0; k < 4; k++) { const y = coilY - h * .06 + k * h * .04, a = k % 2 ? cx + cw * .42 : cx - cw * .42, b = k % 2 ? cx - cw * .42 : cx + cw * .42; k ? ctx.lineTo(a, y) : ctx.moveTo(cx - cw * .7, y); ctx.lineTo(b, y); }
+      ctx.lineTo(cx + cw * .7, coilY + h * .06); ctx.stroke();
+      label(ctx, 'kaltes Wasser', cx - cw * .7, coilY - h * .06 - fs, {size: fs * .85, align: 'left', color: C.cold});
+      label(ctx, 'warm →', cx + cw * .7 + 4, coilY + h * .06, {size: fs * .85, align: 'left', color: C.hot});
+      // Kondensat-Ablauf
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx + cw / 2, coilY + h * .1); ctx.lineTo(cx + cw * .95, coilY + h * .2); ctx.lineTo(cx + cw * .95, h * .7); ctx.stroke();
+      beaker(ctx, cx + cw * .75, h * .74, cw * .45, h * .18, {level: .35 + .1 * Math.sin(t * .3), marks: false});
+      label(ctx, 'Kondensat', cx + cw * .97, h * .97, {size: fs * .85, color: C.water});
+    }
+    // Abgas-Teilchen
+    for (const q of MOL) {
+      const p = (t * q.sp + q.ph) % 1, x0 = cx + q.x * cw * .36 + Math.sin(t * 2 + q.wob) * 3;
+      if (hs && q.h2o && p > .45) {
+        const u = (p - .45) / .55; let x, y;
+        if (u < .35) { x = lerp(x0, cx + cw * .5, u / .35); y = coilY + h * .06 + Math.sin(u * 9) * 2; }
+        else if (u < .55) { const v = (u - .35) / .2; x = lerp(cx + cw * .5, cx + cw * .95, v); y = lerp(coilY + h * .1, coilY + h * .2, v); }
+        else { x = cx + cw * .95; y = lerp(coilY + h * .2, h * .82, (u - .55) / .45); }
+        ctx.fillStyle = C.water; ctx.beginPath(); ctx.ellipse(x, y, 3.5, 5, 0, 0, 7); ctx.fill();
+        continue;
+      }
+      const y = lerp(cBot - h * .02, cTop - h * .1, p), a = clamp((1 - p) * 4, 0, 1) * clamp(p * 8, 0, 1), s = Math.max(5, w * .0095);
+      q.h2o ? h2o(ctx, x0, y, s, a) : co2(ctx, x0, y, s * .8, a);
+    }
+    if (!hs) label(ctx, 'H₂O(g) entweicht', cx, h * .015 + fs, {size: fs * .9, color: C.ink2, base: 'top'});
+    // Enthalpiediagramm
+    const X0 = w * .5, X1 = w * .97, Y = v => lerp(h * .16, h * .86, -v / 890), lv = (v, txt, c, a = 1) => { ctx.globalAlpha = a; ctx.strokeStyle = col(c); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X0, Y(v)); ctx.lineTo(X0 + (X1 - X0) * .48, Y(v)); ctx.stroke(); label(ctx, txt, X0 + (X1 - X0) * .5, Y(v), {size: fs, align: 'left', color: col(c)}); ctx.globalAlpha = 1; };
+    label(ctx, 'H', X0 - 12, h * .06, {size: fs * 1.1, font: DISPLAY}); arrow(ctx, X0 - 12, h * .94, X0 - 12, h * .1, C.ink2, 1.5, 8);
+    lv(0, 'CH₄ + 2 O₂', 'ink'); lv(-802, 'CO₂ + 2 H₂O(g)', 'ink', hs ? .55 : 1); lv(-890, 'CO₂ + 2 H₂O(l)', 'water', hs ? 1 : .3);
+    const ax = X0 + (X1 - X0) * .14; arrow(ctx, ax, Y(0) + 4, ax, Y(-802) - 2, C.hot, 4, 13);
+    label(ctx, '–802 kJ', ax + 8, Y(-400), {size: fs, align: 'left', color: C.hot});
+    label(ctx, 'Heizwert', ax + 8, Y(-400) + fs * 1.3, {size: fs * .85, align: 'left', color: C.ink2, weight: 600});
+    const bx = X0 + (X1 - X0) * .3; ctx.globalAlpha = hs ? 1 : .3; arrow(ctx, bx, Y(-802) + 3, bx, Y(-890) - 2, C.water, 4, 10); ctx.globalAlpha = 1;
+    label(ctx, hs ? '–88 kJ Kondensation' : '88 kJ bleiben im Dampf', bx + 8, Y(-846), {size: fs * .85, align: 'left', color: hs ? C.water : C.ink2});
+    if (hs) { const ex = X0 + (X1 - X0) * .03; ctx.strokeStyle = C.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ex + 6, Y(0)); ctx.lineTo(ex, Y(0)); ctx.lineTo(ex, Y(-890)); ctx.lineTo(ex + 6, Y(-890)); ctx.stroke(); label(ctx, 'Brennwert 890 kJ', ex - 4, Y(-890) + fs * 1.3, {size: fs * .9, align: 'left', color: C.accent}); }
+    label(ctx, hs ? 'Brennwert: 890 kJ/mol' : 'Heizwert: 802 kJ/mol', (X0 + X1) / 2, h * .05, {size: fs * 1.15, font: DISPLAY});
   });
 })();
 
