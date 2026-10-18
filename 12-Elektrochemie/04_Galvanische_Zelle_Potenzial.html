@@ -686,7 +686,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
     </div>
     <div class="vis">
       <div class="vis-head"><h3>Grenzfläche vergrößert</h3><div id="ds-seg"></div></div>
-      <canvas id="cv-ds" class="wide" aria-label="Metalloberfläche mit Doppelschicht"></canvas>
+      <canvas id="cv-ds" class="tall" aria-label="Metalloberfläche mit Elektronenüberschuss, hydratisierter Ionenschicht und Potenzialverlauf"></canvas>
       <p class="status" id="ds-status"></p>
     </div>
   </div>
@@ -2419,26 +2419,44 @@ function seenColor(nm, wd = 40, absMax = .95) {
 /* ================= DOPPELSCHICHT ================= */
 (() => {
   const M = {Zn: [9, 'Zink: Viele Atome gehen als Zn²⁺ in Lösung, viele Elektronen bleiben im Metall. Die Doppelschicht ist stark, das Potenzial <b>negativ</b>.'], Cu: [3, 'Kupfer: Kaum Atome gehen in Lösung, eher scheiden sich Cu²⁺-Ionen ab. Wenig Elektronenüberschuss – das Potenzial ist <b>positiver</b>.']};
-  let k = 'Zn';
-  seg($('#ds-seg'), [['Zn', 'Zink'], ['Cu', 'Kupfer']], v => { k = v; $('#ds-status').innerHTML = M[v][1]; });
-  const R = rng(5); R(); const ions = [...Array(10)].map(() => [R(), R(), R() * 6]);
-  canvasLoop($('#cv-ds'), 'doppelschicht', (ctx, w, h, t) => {
-    const n = M[k][0], mx = w * .34;
-    ctx.fillStyle = elCol(k); ctx.fillRect(0, 0, mx, h);
-    ctx.fillStyle = alpha(k === 'Zn' ? '#dfe6ec' : '#4f97d8', .35); ctx.fillRect(mx, 0, w - mx, h);
-    // Metallgitter
-    for (let i = 0; i < 4; i++) for (let j = 0; j < 7; j++) atomBall(ctx, mx * (.15 + i * .23), h * (.08 + j * .14), Math.min(w, h) * .035, k);
-    // Elektronenüberschuss im Metall nahe der Oberfläche
-    for (let j = 0; j < n; j++) { const y = h * (.06 + j * .88 / Math.max(n - 1, 1)); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(mx - 10 + Math.sin(t * 3 + j) * 2, y, 5, 0, 7); ctx.fill(); label(ctx, '−', mx - 10, y, {size: 9, color: '#fff'}); }
-    // Ionenschicht vor der Oberfläche
-    for (let j = 0; j < Math.ceil(n / 2); j++) { const y = h * (.1 + j * .8 / Math.max(Math.ceil(n / 2) - 1, 1)); ionBall(ctx, mx + 22 + Math.sin(t * 2 + j) * 3, y, Math.min(w, h) * .032, k, '2+'); }
-    // ein Ion pendelt zwischen Metall und Lösung (Gleichgewicht)
-    const p = (Math.sin(t * 1.4) + 1) / 2; ionBall(ctx, mx + 10 + p * w * .25, h * .5 + Math.sin(t * 2.3) * 20, Math.min(w, h) * .03, k, '2+');
-    // weitere Ionen in Lösung
-    ions.forEach(([a, b, ph], i) => { if (i % 2) ionBall(ctx, mx + w * .22 + a * (w - mx - w * .26), h * (.1 + b * .8) + Math.sin(t + ph) * 4, Math.min(w, h) * .028, k, '2+'); else { const x = mx + w * .22 + a * (w - mx - w * .26), y = h * (.1 + b * .8) + Math.cos(t + ph) * 4; ctx.fillStyle = alpha(C.gold, .8); ctx.beginPath(); ctx.arc(x, y, Math.min(w, h) * .028, 0, 7); ctx.fill(); label(ctx, 'SO₄²⁻', x, y, {size: 8, color: '#000'}); } });
-    label(ctx, `${k} ⇌ ${k}²⁺ + 2 e⁻`, w * .67, h * .06, {size: 14, color: C.accent});
-    // Potenzialanzeige
-    const bar = n / 10; ctx.fillStyle = alpha(C.electron, .8); ctx.fillRect(w * .92, h * .9 - h * .7 * bar, 16, h * .7 * bar); ctx.strokeStyle = C.ink2; ctx.strokeRect(w * .92, h * .2, 16, h * .7); label(ctx, 'e⁻-Überschuss', w * .93, h * .14, {size: 10, color: C.ink2});
+  let k = 'Zn', tt = 0, nE = 0;
+  seg($('#ds-seg'), [['Zn', 'Zink'], ['Cu', 'Kupfer']], v => { k = v; tt = 0; $('#ds-status').innerHTML = M[v][1]; });
+  const sol = [[.1, .15, 1], [.45, .1, 2], [.8, .3, 3], [.25, .5, 4], [.6, .55, 5], [.9, .75, 0], [.05, .85, 2], [.4, .9, 1], [.7, .95, 4]];
+  const water = (ctx, x, y, s, a) => { sphere(ctx, x, y, s, C.atomo); sphere(ctx, x + Math.cos(a - .9) * s * 1.1, y + Math.sin(a - .9) * s * 1.1, s * .6, C.atomh, '', '', alpha('#000', .25)); sphere(ctx, x + Math.cos(a + .9) * s * 1.1, y + Math.sin(a + .9) * s * 1.1, s * .6, C.atomh, '', '', alpha('#000', .25)); };
+  const hydr = (ctx, x, y, r, el, t, ph) => { for (let q = 0; q < 6; q++) { const a = q * 1.047 + t * .4 + ph; water(ctx, x + Math.cos(a) * r * 1.9, y + Math.sin(a) * r * 1.9, r * .32, a + Math.PI); } ionBall(ctx, x, y, r, el, '2+'); };
+  canvasLoop($('#cv-ds'), 'doppelschicht', (ctx, w, h, t, dt) => {
+    tt += dt;
+    const n = M[k][0], fs = Math.max(11, w * .018), mx = w * .3, top = h * .03, bot = h * .7, U = Math.min(w, h), ar = U * .034, rows = 6;
+    nE += (n - nE) * Math.min(1, dt * 1.2);
+    // Lösung
+    ctx.fillStyle = alpha(k === 'Zn' ? '#cfd9e2' : '#4f97d8', .28); roundRect(ctx, mx, top, w * .97 - mx, bot - top, 10); ctx.fill();
+    // Metallgitter mit Elektronengas
+    ctx.fillStyle = mix(elCol(k), C.surface, .55); roundRect(ctx, w * .03, top, mx - w * .03, bot - top, 10); ctx.fill();
+    const ry = j => top + (bot - top) * (j + .5) / rows;
+    for (let i = 0; i < 4; i++) for (let j = 0; j < rows; j++) atomBall(ctx, mx - ar * 1.2 - i * ar * 2.3, ry(j), ar, k);
+    for (let q = 0; q < 14; q++) { const x = w * .05 + ((q * 37.3 + t * 18 * (q % 2 ? 1 : -1)) % (mx - w * .1) + (mx - w * .1)) % (mx - w * .1), y = top + 8 + ((q * 53.7 + t * 11) % (bot - top - 16)); ctx.fillStyle = alpha(C.electron, .35); ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill(); }
+    // Elektronenüberschuss an der Oberfläche
+    const ne = Math.round(nE); for (let j = 0; j < ne; j++) { const y = top + (bot - top) * (j + .5) / Math.max(ne, 1); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(mx - 8 + Math.sin(t * 3 + j) * 1.5, y, 5, 0, 7); ctx.fill(); label(ctx, '−', mx - 8, y, {size: 9, color: '#fff'}); }
+    // Ionenschicht (hydratisiert) vor der Oberfläche
+    const ni = Math.ceil(ne / 2); for (let j = 0; j < ni; j++) { const y = top + (bot - top) * (j + .5) / Math.max(ni, 1); hydr(ctx, mx + ar * 2.6 + Math.sin(t * 2 + j) * 2, y, ar * .85, k, t, j); }
+    // Gleichgewicht: ein Atom verlässt das Gitter bzw. ein Ion scheidet sich ab
+    const per = 2.6, p = (tt % per) / per, out = k === 'Zn' ? Math.floor(tt / per) % 3 !== 2 : Math.floor(tt / per) % 3 === 2, jj = Math.floor(tt / per) % rows, sy = ry(jj);
+    const e = ease(clamp(p * 1.3, 0, 1)), from = out ? 0 : 1, u = out ? e : 1 - e, ix = lerp(mx - ar * 1.2, mx + w * .3, u), iy = sy + Math.sin(u * Math.PI) * ar * 1.5;
+    if (u < .25) atomBall(ctx, ix, iy, ar, k); else ionBall(ctx, ix, iy, ar * .9, k, '2+');
+    if (u > .1 && u < .6) for (const sg of [-1, 1]) { const ex = lerp(mx - ar * 1.2, mx - 8, clamp((u - .1) / .3, 0, 1)), ey = sy + sg * ar * .9; ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(out ? ex : mx - 8, ey, 4.5, 0, 7); ctx.fill(); }
+    label(ctx, out ? `${k} ⟶ ${k}²⁺ + 2 e⁻  (Oxidation)` : `${k}²⁺ + 2 e⁻ ⟶ ${k}  (Reduktion)`, (mx + w * .97) / 2 + w * .05, top + fs * 1.2, {size: fs * .9, color: out ? C.bad : C.electron});
+    // weitere Ionen und Sulfat in der Lösung
+    sol.forEach(([a, b, ph], i) => { const x = mx + w * .3 + a * (w * .6 - mx * .7), y = top + (bot - top) * (.2 + b * .7) + Math.sin(t + ph) * 4; if (x > w * .95) return; if (i % 2) ionBall(ctx, x, y, ar * .8, k, '2+'); else { ctx.fillStyle = alpha(C.gold, .85); ctx.beginPath(); ctx.arc(x, y, ar * .85, 0, 7); ctx.fill(); label(ctx, 'SO₄²⁻', x, y, {size: Math.max(8, ar * .45), color: '#1a1a1a'}); } });
+    label(ctx, k, (w * .03 + mx) / 2, bot - fs, {size: fs * 1.1, color: C.ink}); label(ctx, `${k}SO₄-Lösung`, w * .85, bot - fs, {size: fs * .85, color: C.ink2});
+    // Potenzialverlauf
+    const gy = h * .76, gh = h * .2, X0 = w * .03, X1 = w * .97, d = k === 'Zn' ? .9 : .3, Y = v => gy + gh * (.5 - v * .45);
+    ctx.strokeStyle = alpha(C.ink2, .3); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X0, gy + gh); ctx.lineTo(X1, gy + gh); ctx.stroke();
+    label(ctx, 'elektrisches Potenzial', X0, gy, {size: fs * .75, align: 'left', color: C.ink2});
+    const ps = [[X0, Y(-d * .5)], [mx, Y(-d * .5)], [mx + ar * 2.6, Y(d * .5)], [X1, Y(d * .5)]];
+    polyline(ctx, ps, C.accent, 3);
+    ctx.strokeStyle = C.ink2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(mx, gy); ctx.lineTo(mx, gy + gh); ctx.stroke(); ctx.setLineDash([]);
+    arrow(ctx, mx + w * .1, Y(d * .5), mx + w * .1, Y(-d * .5), 'electron', 2, 8); label(ctx, `Potenzialdifferenz: ${k === 'Zn' ? 'groß' : 'klein'}`, mx + w * .12, (Y(d * .5) + Y(-d * .5)) / 2, {size: fs * .8, align: 'left', color: C.electron});
+    label(ctx, 'Metall', (X0 + mx) / 2, Y(-d * .5) + (d > .5 ? -fs * .8 : fs * .9), {size: fs * .75, color: C.ink2}); label(ctx, 'Lösung', w * .8, Y(d * .5) - fs * .8, {size: fs * .75, color: C.ink2});
   });
 })();
 

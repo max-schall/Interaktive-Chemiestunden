@@ -665,7 +665,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
     </div>
     <div class="vis">
       <div class="vis-head"><h3>Kreislauf</h3></div>
-      <canvas id="cv-kr" class="wide" aria-label="Forschungskreislauf"></canvas>
+      <canvas id="cv-kr" class="tall" aria-label="Forschungskreislauf mit acht Schritten; ein Klick auf einen Schritt hält an"></canvas>
     </div>
   </div>
   <div class="section-head" style="margin-top:1rem"><h3>Bringe die Schritte in die richtige Reihenfolge</h3></div>
@@ -690,7 +690,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
 
 <section class="station" id="nobel" data-label="Nobelpreise" data-yr="Überblick" data-title="Nobelpreise für Chemie" data-sub="Zeitleiste" hidden>
   <div class="section-head"><p class="eyebrow">Station 3 · Zeitleiste</p><h2>Nobelpreise für Chemie</h2><p class="lead">Viele Themen der Kursstufe wurden mit einem Nobelpreis ausgezeichnet. Klicke auf einen Punkt.</p></div>
-  <canvas id="cv-no" class="chart" aria-label="Zeitleiste der Nobelpreise" style="width:100%;aspect-ratio:16/6;cursor:pointer"></canvas>
+  <canvas id="cv-no" class="chart" aria-label="Zeitleiste der Nobelpreise" style="width:100%;aspect-ratio:16/7;cursor:pointer"></canvas>
   <p class="status" id="no-status"></p>
 </section>
 
@@ -2386,15 +2386,95 @@ function seenColor(nm, wd = 40, absMax = .95) {
 /* ================================================================ */
 /* ================= Inhalte dieser Stunde ================= */
 
+/* Linien-Symbole für den Forschungsprozess (Mittelpunkt x, y; Größe s) */
+function fpIcon(ctx, name, x, y, s, c) {
+  ctx.save(); ctx.translate(x, y); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = Math.max(1.6, s * .09); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const L = (...p) => { ctx.beginPath(); for (let i = 0; i < p.length; i += 2) i ? ctx.lineTo(p[i] * s, p[i + 1] * s) : ctx.moveTo(p[i] * s, p[i + 1] * s); ctx.stroke(); };
+  const O = (cx, cy, r, f) => { ctx.beginPath(); ctx.arc(cx * s, cy * s, r * s, 0, 7); f ? ctx.fill() : ctx.stroke(); };
+  if (name === 'auge') { ctx.beginPath(); ctx.moveTo(-.45 * s, 0); ctx.quadraticCurveTo(0, -.4 * s, .45 * s, 0); ctx.quadraticCurveTo(0, .4 * s, -.45 * s, 0); ctx.stroke(); O(0, 0, .13, 1); }
+  else if (name === 'frage') { ctx.beginPath(); ctx.arc(0, -.15 * s, .2 * s, Math.PI * 1.1, Math.PI * 2.3); ctx.stroke(); L(.02, .07, 0, .17); O(0, .35, .05, 1); }
+  else if (name === 'idee') { ctx.beginPath(); ctx.arc(0, -.1 * s, .25 * s, Math.PI * .8, Math.PI * 2.2); ctx.stroke(); L(-.12, .13, -.1, .27, .1, .27, .12, .13); L(-.08, .37, .08, .37); for (let q = 0; q < 5; q++) { const a = -Math.PI / 2 + (q - 2) * .55; L(Math.cos(a) * .35, -.1 + Math.sin(a) * .35, Math.cos(a) * .45, -.1 + Math.sin(a) * .45); } }
+  else if (name === 'plan') { ctx.strokeRect(-.28 * s, -.38 * s, .56 * s, .76 * s); L(-.1, -.38, -.1, -.45, .1, -.45, .1, -.38); for (let q = 0; q < 3; q++) { L(-.18, -.18 + q * .2, -.1, -.1 + q * .2, .02, -.25 + q * .2); L(.08, -.15 + q * .2, .2, -.15 + q * .2); } }
+  else if (name === 'kolben') { L(-.1, -.42, -.1, -.1, -.35, .38, .35, .38, .1, -.1, .1, -.42); L(-.16, -.42, .16, -.42); ctx.globalAlpha = .35; ctx.beginPath(); ctx.moveTo(-.24 * s, .16 * s); ctx.lineTo(.24 * s, .16 * s); ctx.lineTo(.35 * s, .38 * s); ctx.lineTo(-.35 * s, .38 * s); ctx.fill(); ctx.globalAlpha = 1; }
+  else if (name === 'diagramm') { L(-.38, -.38, -.38, .36, .4, .36); ctx.globalAlpha = .4; [[-.26, .1], [-.06, -.05], [.14, -.2]].forEach(([bx, by]) => { ctx.fillRect(bx * s, by * s, .14 * s, (.36 - by) * s); }); ctx.globalAlpha = 1; L(-.3, .15, -.1, 0, .1, -.12, .32, -.32); }
+  else if (name === 'artikel') { ctx.strokeRect(-.3 * s, -.4 * s, .6 * s, .8 * s); for (let q = 0; q < 5; q++) L(-.2, -.25 + q * .13, q === 4 ? .05 : .2, -.25 + q * .13); }
+  else if (name === 'lupe') { O(-.08, -.08, .25); L(.1, .1, .36, .36); }
+  else if (name === 'person') { O(0, -.2, .15); ctx.beginPath(); ctx.arc(0, .35 * s, .3 * s, Math.PI, 0); ctx.stroke(); }
+  else if (name === 'stift') { ctx.rotate(-.7); ctx.strokeRect(-.08 * s, -.4 * s, .16 * s, .65 * s); L(-.08, .25, 0, .42, .08, .25); }
+  else if (name === 'buch') { ctx.strokeRect(-.32 * s, -.38 * s, .64 * s, .76 * s); ctx.globalAlpha = .3; ctx.fillRect(-.32 * s, -.38 * s, .64 * s, .22 * s); ctx.globalAlpha = 1; L(-.2, .0, .2, 0); L(-.2, .12, .2, .12); L(-.2, .24, .1, .24); }
+  else if (name === 'haken') { L(-.3, 0, -.08, .25, .32, -.25); }
+  ctx.restore();
+}
+
+/* Linien-Symbole für den Forschungsprozess (Mittelpunkt x, y; Größe s) */
+function fpIcon(ctx, name, x, y, s, c) {
+  ctx.save(); ctx.translate(x, y); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = Math.max(1.6, s * .09); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const L = (...p) => { ctx.beginPath(); for (let i = 0; i < p.length; i += 2) i ? ctx.lineTo(p[i] * s, p[i + 1] * s) : ctx.moveTo(p[i] * s, p[i + 1] * s); ctx.stroke(); };
+  const O = (cx, cy, r, f) => { ctx.beginPath(); ctx.arc(cx * s, cy * s, r * s, 0, 7); f ? ctx.fill() : ctx.stroke(); };
+  if (name === 'auge') { ctx.beginPath(); ctx.moveTo(-.45 * s, 0); ctx.quadraticCurveTo(0, -.4 * s, .45 * s, 0); ctx.quadraticCurveTo(0, .4 * s, -.45 * s, 0); ctx.stroke(); O(0, 0, .13, 1); }
+  else if (name === 'frage') { ctx.beginPath(); ctx.arc(0, -.15 * s, .2 * s, Math.PI * 1.1, Math.PI * 2.3); ctx.stroke(); L(.02, .07, 0, .17); O(0, .35, .05, 1); }
+  else if (name === 'idee') { ctx.beginPath(); ctx.arc(0, -.1 * s, .25 * s, Math.PI * .8, Math.PI * 2.2); ctx.stroke(); L(-.12, .13, -.1, .27, .1, .27, .12, .13); L(-.08, .37, .08, .37); for (let q = 0; q < 5; q++) { const a = -Math.PI / 2 + (q - 2) * .55; L(Math.cos(a) * .35, -.1 + Math.sin(a) * .35, Math.cos(a) * .45, -.1 + Math.sin(a) * .45); } }
+  else if (name === 'plan') { ctx.strokeRect(-.28 * s, -.38 * s, .56 * s, .76 * s); L(-.1, -.38, -.1, -.45, .1, -.45, .1, -.38); for (let q = 0; q < 3; q++) { L(-.18, -.18 + q * .2, -.1, -.1 + q * .2, .02, -.25 + q * .2); L(.08, -.15 + q * .2, .2, -.15 + q * .2); } }
+  else if (name === 'kolben') { L(-.1, -.42, -.1, -.1, -.35, .38, .35, .38, .1, -.1, .1, -.42); L(-.16, -.42, .16, -.42); ctx.globalAlpha = .35; ctx.beginPath(); ctx.moveTo(-.24 * s, .16 * s); ctx.lineTo(.24 * s, .16 * s); ctx.lineTo(.35 * s, .38 * s); ctx.lineTo(-.35 * s, .38 * s); ctx.fill(); ctx.globalAlpha = 1; }
+  else if (name === 'diagramm') { L(-.38, -.38, -.38, .36, .4, .36); ctx.globalAlpha = .4; [[-.26, .1], [-.06, -.05], [.14, -.2]].forEach(([bx, by]) => { ctx.fillRect(bx * s, by * s, .14 * s, (.36 - by) * s); }); ctx.globalAlpha = 1; L(-.3, .15, -.1, 0, .1, -.12, .32, -.32); }
+  else if (name === 'artikel') { ctx.strokeRect(-.3 * s, -.4 * s, .6 * s, .8 * s); for (let q = 0; q < 5; q++) L(-.2, -.25 + q * .13, q === 4 ? .05 : .2, -.25 + q * .13); }
+  else if (name === 'lupe') { O(-.08, -.08, .25); L(.1, .1, .36, .36); }
+  else if (name === 'person') { O(0, -.2, .15); ctx.beginPath(); ctx.arc(0, .35 * s, .3 * s, Math.PI, 0); ctx.stroke(); }
+  else if (name === 'stift') { ctx.rotate(-.7); ctx.strokeRect(-.08 * s, -.4 * s, .16 * s, .65 * s); L(-.08, .25, 0, .42, .08, .25); }
+  else if (name === 'buch') { ctx.strokeRect(-.32 * s, -.38 * s, .64 * s, .76 * s); ctx.globalAlpha = .3; ctx.fillRect(-.32 * s, -.38 * s, .64 * s, .22 * s); ctx.globalAlpha = 1; L(-.2, .0, .2, 0); L(-.2, .12, .2, .12); L(-.2, .24, .1, .24); }
+  else if (name === 'haken') { L(-.3, 0, -.08, .25, .32, -.25); }
+  ctx.restore();
+}
+
+/* Linien-Symbole für den Forschungsprozess (Mittelpunkt x, y; Größe s) */
+function fpIcon(ctx, name, x, y, s, c) {
+  ctx.save(); ctx.translate(x, y); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = Math.max(1.6, s * .09); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const L = (...p) => { ctx.beginPath(); for (let i = 0; i < p.length; i += 2) i ? ctx.lineTo(p[i] * s, p[i + 1] * s) : ctx.moveTo(p[i] * s, p[i + 1] * s); ctx.stroke(); };
+  const O = (cx, cy, r, f) => { ctx.beginPath(); ctx.arc(cx * s, cy * s, r * s, 0, 7); f ? ctx.fill() : ctx.stroke(); };
+  if (name === 'auge') { ctx.beginPath(); ctx.moveTo(-.45 * s, 0); ctx.quadraticCurveTo(0, -.4 * s, .45 * s, 0); ctx.quadraticCurveTo(0, .4 * s, -.45 * s, 0); ctx.stroke(); O(0, 0, .13, 1); }
+  else if (name === 'frage') { ctx.beginPath(); ctx.arc(0, -.15 * s, .2 * s, Math.PI * 1.1, Math.PI * 2.3); ctx.stroke(); L(.02, .07, 0, .17); O(0, .35, .05, 1); }
+  else if (name === 'idee') { ctx.beginPath(); ctx.arc(0, -.1 * s, .25 * s, Math.PI * .8, Math.PI * 2.2); ctx.stroke(); L(-.12, .13, -.1, .27, .1, .27, .12, .13); L(-.08, .37, .08, .37); for (let q = 0; q < 5; q++) { const a = -Math.PI / 2 + (q - 2) * .55; L(Math.cos(a) * .35, -.1 + Math.sin(a) * .35, Math.cos(a) * .45, -.1 + Math.sin(a) * .45); } }
+  else if (name === 'plan') { ctx.strokeRect(-.28 * s, -.38 * s, .56 * s, .76 * s); L(-.1, -.38, -.1, -.45, .1, -.45, .1, -.38); for (let q = 0; q < 3; q++) { L(-.18, -.18 + q * .2, -.1, -.1 + q * .2, .02, -.25 + q * .2); L(.08, -.15 + q * .2, .2, -.15 + q * .2); } }
+  else if (name === 'kolben') { L(-.1, -.42, -.1, -.1, -.35, .38, .35, .38, .1, -.1, .1, -.42); L(-.16, -.42, .16, -.42); ctx.globalAlpha = .35; ctx.beginPath(); ctx.moveTo(-.24 * s, .16 * s); ctx.lineTo(.24 * s, .16 * s); ctx.lineTo(.35 * s, .38 * s); ctx.lineTo(-.35 * s, .38 * s); ctx.fill(); ctx.globalAlpha = 1; }
+  else if (name === 'diagramm') { L(-.38, -.38, -.38, .36, .4, .36); ctx.globalAlpha = .4; [[-.26, .1], [-.06, -.05], [.14, -.2]].forEach(([bx, by]) => { ctx.fillRect(bx * s, by * s, .14 * s, (.36 - by) * s); }); ctx.globalAlpha = 1; L(-.3, .15, -.1, 0, .1, -.12, .32, -.32); }
+  else if (name === 'artikel') { ctx.strokeRect(-.3 * s, -.4 * s, .6 * s, .8 * s); for (let q = 0; q < 5; q++) L(-.2, -.25 + q * .13, q === 4 ? .05 : .2, -.25 + q * .13); }
+  else if (name === 'lupe') { O(-.08, -.08, .25); L(.1, .1, .36, .36); }
+  else if (name === 'person') { O(0, -.2, .15); ctx.beginPath(); ctx.arc(0, .35 * s, .3 * s, Math.PI, 0); ctx.stroke(); }
+  else if (name === 'stift') { ctx.rotate(-.7); ctx.strokeRect(-.08 * s, -.4 * s, .16 * s, .65 * s); L(-.08, .25, 0, .42, .08, .25); }
+  else if (name === 'buch') { ctx.strokeRect(-.32 * s, -.38 * s, .64 * s, .76 * s); ctx.globalAlpha = .3; ctx.fillRect(-.32 * s, -.38 * s, .64 * s, .22 * s); ctx.globalAlpha = 1; L(-.2, .0, .2, 0); L(-.2, .12, .2, .12); L(-.2, .24, .1, .24); }
+  else if (name === 'haken') { L(-.3, 0, -.08, .25, .32, -.25); }
+  ctx.restore();
+}
+
 /* ================= KREISLAUF ================= */
 (() => {
   const S = ['Beobachtung', 'Fragestellung', 'Hypothese', 'Experiment planen', 'Durchführung', 'Auswertung', 'Veröffentlichung', 'Prüfung und Wiederholung'];
-  canvasLoop($('#cv-kr'), 'kreislauf', (ctx, w, h, t) => {
-    const cx = w / 2, cy = h / 2, R = Math.min(w * .36, h * .38), act = Math.floor(t * .6) % S.length;
-    ctx.strokeStyle = alpha(C.accent, .35); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
-    S.forEach((s, i) => { const a = i / S.length * Math.PI * 2 - Math.PI / 2, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R * .9; ctx.fillStyle = i === act ? C.accent : C.surface; ctx.strokeStyle = C.accent; ctx.lineWidth = 2; roundRect(ctx, x - 62, y - 15, 124, 30, 15); ctx.fill(); ctx.stroke(); label(ctx, s, x, y, {size: 12, color: i === act ? C.surface : C.ink}); });
-    const a = (act + .5) / S.length * Math.PI * 2 - Math.PI / 2; arrow(ctx, cx + Math.cos(a - .15) * R, cy + Math.sin(a - .15) * R * .9, cx + Math.cos(a + .1) * R, cy + Math.sin(a + .1) * R * .9, 'accent', 3, 10);
-    label(ctx, 'neue Fragen', cx, cy, {size: 14, color: C.ink2});
+  const IC = ['auge', 'frage', 'idee', 'plan', 'kolben', 'diagramm', 'artikel', 'lupe'];
+  const D = ['Etwas fällt auf: ein Phänomen, ein Widerspruch, ein Messwert.', 'Daraus wird eine genaue, überprüfbare Frage.', 'Eine begründete Vermutung – sie muss widerlegbar sein.', 'Variablen festlegen, Kontrollversuch, Sicherheit.', 'Messen, beobachten, sorgfältig protokollieren.', 'Daten darstellen, Fehler abschätzen: Hypothese bestätigt oder verworfen?', 'Ergebnisse werden in einer Fachzeitschrift begutachtet und publiziert.', 'Andere wiederholen den Versuch – aus Antworten entstehen neue Fragen.'];
+  const cv = $('#cv-kr'); let pos = 0, hold = -1, P = [];
+  cv.style.cursor = 'pointer';
+  cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; let b = -1, bd = 60; P.forEach(([px, py], i) => { const d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; b = i; } }); hold = b === hold ? -1 : b; if (b >= 0) pos = b; });
+  canvasLoop(cv, 'kreislauf', (ctx, w, h, t, dt) => {
+    const fs = Math.max(11, w * .018), cx = w / 2, cy = h / 2, R = Math.min(w * .38, h * .4), n = S.length;
+    if (hold < 0) pos = (pos + dt * .35) % n;
+    const act = hold >= 0 ? hold : Math.floor(pos), ang = i => i / n * Math.PI * 2 - Math.PI / 2, pt = (a, r = R) => [cx + Math.cos(a) * r * 1.25, cy + Math.sin(a) * r * .92];
+    // Ring mit Fortschritt
+    ctx.strokeStyle = alpha(C.accent, .2); ctx.lineWidth = 6; ctx.beginPath(); for (let q = 0; q <= 80; q++) { const [x, y] = pt(q / 80 * Math.PI * 2); q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    ctx.strokeStyle = C.accent; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); const a0 = ang(act), a1 = ang(hold >= 0 ? act + 1 : pos); for (let q = 0; q <= 20; q++) { const [x, y] = pt(lerp(a0, hold >= 0 ? a0 : a1, q / 20)); q ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    if (hold < 0) { const [x, y] = pt(ang(pos)); const g = ctx.createRadialGradient(x, y, 0, x, y, 14); g.addColorStop(0, alpha(C.accent, .9)); g.addColorStop(1, alpha(C.accent, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 14, 0, 7); ctx.fill(); }
+    P = [];
+    S.forEach((s, i) => {
+      const [x, y] = pt(ang(i)), on = i === act, r = (on ? .075 : .055) * Math.min(w, h * 1.6);
+      P.push([x, y]);
+      ctx.fillStyle = on ? C.accent : C.surface; ctx.strokeStyle = C.accent; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+      fpIcon(ctx, IC[i], x, y, r * 1.2, on ? C.surface : C.accent);
+      label(ctx, s, x, i === 0 ? y - r - fs * .8 : y + r + fs * .9, {size: fs * (on ? .9 : .78), color: on ? C.ink : C.ink2});
+    });
+    // Mitte: aktueller Schritt
+    fpIcon(ctx, IC[act], cx, cy - h * .1, Math.min(w, h) * .14, alpha(C.accent, .9));
+    label(ctx, `${act + 1}. ${S[act]}`, cx, cy + h * .02, {size: fs * 1.05, color: C.ink});
+    wrapText(ctx, D[act], cx, cy + h * .07, w * .4, fs * 1.25, {size: fs * .92, color: C.ink2, align: 'center'});
+    label(ctx, hold >= 0 ? 'angehalten – nochmal klicken' : 'Klicke auf einen Schritt', w - 8, fs * .8, {size: fs * .7, color: C.ink2, weight: 400, align: 'right'});
   });
   orderer($('#or'), ['Beobachtung', 'Fragestellung', 'Hypothese aufstellen', 'Experiment planen', 'Experiment durchführen', 'Daten auswerten', 'Ergebnis veröffentlichen'].map((t, i) => ({t, v: i})), {low: 'zuerst', high: 'zuletzt'});
 })();
@@ -2407,47 +2487,132 @@ function seenColor(nm, wd = 40, absMax = .95) {
     [1985, 'Akira Yoshino (Asahi Kasei, Japan)', 'Experiment', 'Yoshino ersetzt das Lithium-Metall durch Kohlenstoff (Petrolkoks), der Li⁺-Ionen einlagert. Kein metallisches Lithium mehr – der erste sichere Lithium-<b>Ionen</b>-Akku.', 'Sicherheitstest: Ein Gewicht wird auf den Akku fallen gelassen – er brennt nicht.'],
     [1991, 'Sony (Japan)', 'Anwendung', 'Der erste kommerzielle Lithium-Ionen-Akku kommt in einer Videokamera auf den Markt.', 'Seitdem wurden Energiedichte und Lebensdauer stetig verbessert – durch die Arbeit Tausender Forschender.'],
     [2019, 'Nobelpreis für Chemie', 'Anerkennung', 'Goodenough (mit 97 Jahren der älteste Nobelpreisträger), Whittingham und Yoshino erhalten den Nobelpreis „für die Entwicklung von Lithium-Ionen-Batterien“.', 'Heute: Forschung an Natrium-Ionen- und Festkörper-Akkus – der Kreislauf geht weiter.']];
-  let k = 0;
-  stepper($('#bs-step'), B.length, i => { k = i; const b = B[i]; $('#bs-h').textContent = b[0]; $('#bs-lead').innerHTML = `<b>${b[1]}</b>: ${b[3]}`; $('#bs-tag').textContent = b[2]; $('#bs-txt').innerHTML = b[4]; });
-  canvasLoop($('#cv-bs'), 'beispiel', (ctx, w, h, t) => {
-    const y = h * .55, X = yr => w * .06 + (yr - 1970) / 52 * w * .88;
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X(1970), y); ctx.lineTo(X(2022), y); ctx.stroke();
-    for (const yr of [1970, 1980, 1990, 2000, 2010, 2020]) { ctx.beginPath(); ctx.moveTo(X(yr), y - 5); ctx.lineTo(X(yr), y + 5); ctx.stroke(); label(ctx, String(yr), X(yr), y + 18, {size: 11, color: C.ink2, weight: 400}); }
-    B.forEach((b, i) => { const on = i === k; dotAt(ctx, X(b[0]), y, on ? 'accent' : 'ink2', on ? 10 : 6); label(ctx, b[2], X(b[0]), y - (i % 2 ? 50 : 26), {size: on ? 13 : 11, color: on ? C.accent : C.ink2}); });
-    // Akku-Skizze passend zum Schritt
-    const bx = w * .62, by = h * .7, bw = w * .32, bh = h * .2;
-    if (k >= 0) { ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bw, bh); ctx.fillStyle = k === 0 || k === 1 ? '#c8ccd2' : '#3c454d'; ctx.fillRect(bx + 2, by + 2, bw * .3, bh - 4); ctx.fillStyle = k === 0 ? '#c9a400' : '#3c3ca8'; ctx.fillRect(bx + bw * .7 - 2, by + 2, bw * .3, bh - 4); label(ctx, k <= 1 ? 'Li-Metall' : 'Kohlenstoff', bx + bw * .15, by + bh + 12, {size: 10, color: C.ink2}); label(ctx, k === 0 ? 'TiS₂' : 'LiCoO₂', bx + bw * .85, by + bh + 12, {size: 10, color: C.ink2}); for (let i = 0; i < 4; i++) { const p = (t * .4 + i / 4) % 1; ctx.fillStyle = '#B07AD8'; ctx.beginPath(); ctx.arc(lerp(bx + bw * .32, bx + bw * .68, p), by + bh * (.25 + i * .17), 4, 0, 7); ctx.fill(); } if (k === 0) for (let i = 0; i < 3; i++) { ctx.strokeStyle = C.bad; ctx.beginPath(); ctx.moveTo(bx + bw * .3, by + bh * (.3 + i * .2)); ctx.lineTo(bx + bw * (.38 + .04 * Math.sin(t + i)), by + bh * (.25 + i * .2)); ctx.stroke(); } }
+  let k = 0, tt = 0;
+  stepper($('#bs-step'), B.length, i => { k = i; tt = 0; const b = B[i]; $('#bs-h').textContent = b[0]; $('#bs-lead').innerHTML = `<b>${b[1]}</b>: ${b[3]}`; $('#bs-tag').textContent = b[2]; $('#bs-txt').innerHTML = b[4]; });
+  const LI = '#B07AD8';
+  canvasLoop($('#cv-bs'), 'beispiel', (ctx, w, h, t, dt) => {
+    tt += dt;
+    const fs = Math.max(11, w * .018), y = h * .14, X = yr => w * .06 + (yr - 1972) / 50 * w * .88;
+    // Zeitstrahl
+    ctx.strokeStyle = alpha(C.ink2, .4); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X(1972), y); ctx.lineTo(X(2022), y); ctx.stroke();
+    ctx.strokeStyle = C.accent; ctx.beginPath(); ctx.moveTo(X(1972), y); ctx.lineTo(X(lerp(B[Math.max(0, k - 1)][0], B[k][0], ease(clamp(tt, 0, 1)))), y); ctx.stroke();
+    for (const yr of [1980, 1990, 2000, 2010, 2020]) label(ctx, String(yr), X(yr), y + fs * 1.2, {size: fs * .7, color: C.ink2, weight: 400});
+    B.forEach((b, i) => { const on = i === k; dotAt(ctx, X(b[0]), y, i <= k ? 'accent' : 'ink2', on ? 9 : 6); label(ctx, b[2], X(b[0]), y - fs * (i % 2 ? 1.9 : 1), {size: fs * (on ? .85 : .72), color: on ? C.accent : C.ink2}); });
+    // Bühne
+    const sx = w * .04, sy = h * .3, sw = w * .92, sh = h * .66;
+    ctx.fillStyle = mix(C.surface, C.surface2, .5); roundRect(ctx, sx, sy, sw, sh, 12); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+    if (k <= 2) {
+      // Zelle: Minuspol | Elektrolyt | Pluspol
+      const cx0 = sx + sw * .06, cw = sw * .62, cy0 = sy + sh * .12, ch = sh * .76, aw = cw * .32, kw = cw * .32, ax = cx0, kx = cx0 + cw - kw;
+      ctx.fillStyle = alpha(C.water, .15); ctx.fillRect(cx0, cy0, cw, ch); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.strokeRect(cx0, cy0, cw, ch);
+      const charge = (Math.sin(tt * 1.2) + 1) / 2; // Lade-/Entladezyklus
+      if (k < 2) { // Lithium-Metall mit Dendriten
+        const g = ctx.createLinearGradient(ax, 0, ax + aw, 0); g.addColorStop(0, '#c8ccd2'); g.addColorStop(1, '#e8ebee'); ctx.fillStyle = g; ctx.fillRect(ax, cy0, aw * .6, ch);
+        ctx.strokeStyle = C.bad; ctx.lineWidth = 2; const grow = Math.min(1, tt / 6); for (let q = 0; q < 5; q++) { const yy = cy0 + ch * (.15 + q * .17), L = cw * .25 * grow * (.5 + (q % 3) * .25); ctx.beginPath(); ctx.moveTo(ax + aw * .6, yy); ctx.lineTo(ax + aw * .6 + L, yy - 6); ctx.moveTo(ax + aw * .6 + L * .5, yy - 3); ctx.lineTo(ax + aw * .6 + L * .7, yy + 7); ctx.stroke(); }
+        label(ctx, 'Dendriten!', ax + aw * .6 + cw * .12, cy0 + ch * .95, {size: fs * .75, color: C.bad});
+        label(ctx, 'Li-Metall', ax + aw * .3, cy0 - fs * .7, {size: fs * .8, color: C.ink2});
+      } else { // Graphitschichten
+        for (let q = 0; q < 7; q++) { const yy = cy0 + ch * (.08 + q * .14); ctx.strokeStyle = '#3c454d'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = ax + 4; x < ax + aw; x += 10) { ctx.lineTo(x, yy); ctx.lineTo(x + 5, yy + 4); } ctx.stroke(); }
+        label(ctx, 'Graphit (Kohlenstoff)', ax + aw / 2, cy0 - fs * .7, {size: fs * .8, color: C.ink2});
+      }
+      // Pluspol: Schichtstruktur TiS₂ bzw. LiCoO₂
+      for (let q = 0; q < 7; q++) { const yy = cy0 + ch * (.08 + q * .14); ctx.fillStyle = k === 0 ? '#c9a400' : '#3c3ca8'; ctx.fillRect(kx + 6, yy - 3, kw - 12, 6); }
+      label(ctx, k === 0 ? 'TiS₂ (Schichten)' : 'LiCoO₂ (Schichten)', kx + kw / 2, cy0 - fs * .7, {size: fs * .8, color: C.ink2});
+      // Li⁺ pendelt zwischen den Schichten
+      for (let q = 0; q < 6; q++) { const yy = cy0 + ch * (.15 + q * .14), side = (q / 6 + charge) % 1 > .5, x = lerp(k < 2 ? ax + aw * .65 : ax + aw * .5, kx + kw * .5, side ? 1 : 0) + Math.sin(t * 2 + q) * 3; ctx.fillStyle = LI; ctx.beginPath(); ctx.arc(x, yy, 5, 0, 7); ctx.fill(); label(ctx, '+', x, yy, {size: 8, color: '#fff'}); }
+      label(ctx, 'Li⁺', cx0 + cw / 2, cy0 + ch * .5, {size: fs, color: LI});
+      // Spannungsanzeige
+      const U = k === 0 ? 2 : 4, mx = sx + sw * .83, my = sy + sh * .45; ctx.fillStyle = '#0f2a1c'; roundRect(ctx, mx - sw * .1, my - sh * .1, sw * .2, sh * .2, 8); ctx.fill(); label(ctx, `≈ ${U} V`, mx, my, {size: fs * 1.3, font: MONO, color: '#7CFFB2'});
+      label(ctx, k === 2 ? 'sicher: kein Li-Metall' : 'Zellspannung', mx, my + sh * .17, {size: fs * .8, color: k === 2 ? C.good : C.ink2});
+      if (k === 2) { const d = (tt % 3) / 3; ctx.fillStyle = C.ink2; roundRect(ctx, mx - sw * .05, sy + sh * .05 + ease(Math.min(1, d * 2)) * sh * .12, sw * .1, sh * .08, 3); ctx.fill(); label(ctx, '5 kg', mx, sy + sh * .09 + ease(Math.min(1, d * 2)) * sh * .12, {size: fs * .7, color: C.surface}); }
+    } else if (k === 3) {
+      // Videokamera mit Akku
+      const cx = sx + sw * .4, cy = sy + sh * .5, s = Math.min(sw, sh) * .5;
+      ctx.fillStyle = mix(C.ink2, C.surface, .1); roundRect(ctx, cx - s * .6, cy - s * .3, s * 1.1, s * .6, 10); ctx.fill(); ctx.fillStyle = '#2b2b2b'; ctx.beginPath(); ctx.arc(cx + s * .55, cy, s * .22, 0, 7); ctx.fill(); ctx.fillStyle = alpha(C.water, .6); ctx.beginPath(); ctx.arc(cx + s * .55, cy, s * .14, 0, 7); ctx.fill(); ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(cx - s * .45, cy - s * .18, s * .04 * (.6 + .4 * Math.sin(t * 5)), 0, 7); ctx.fill();
+      ctx.fillStyle = '#3a6dd0'; roundRect(ctx, cx - s * .5, cy + s * .05, s * .5, s * .18, 4); ctx.fill(); label(ctx, 'Li-Ion', cx - s * .25, cy + s * .14, {size: fs * .75, color: '#fff'});
+      const g = Math.min(1, tt / 3); ctx.fillStyle = C.good; ctx.fillRect(cx - s * .48, cy + s * .26, s * .46 * g, s * .05);
+      label(ctx, '1991: erster Lithium-Ionen-Akku im Handel', sx + sw * .5, sy + sh * .9, {size: fs * .9, color: C.ink});
+      // Energiedichte wächst
+      const gx = sx + sw * .72, gy = sy + sh * .75; [[1991, .3], [2000, .5], [2010, .75], [2020, .95]].forEach(([yr, v], i) => { const bh = sh * .5 * v * Math.min(1, tt * 1.5 - i * .3); if (bh <= 0) return; ctx.fillStyle = alpha(C.accent, .7); ctx.fillRect(gx + i * sw * .055, gy - bh, sw * .04, bh); label(ctx, String(yr), gx + i * sw * .055 + sw * .02, gy + fs * .7, {size: fs * .65, color: C.ink2, weight: 400}); });
+      label(ctx, 'Energiedichte', gx + sw * .1, sy + sh * .12, {size: fs * .75, color: C.ink2});
+    } else {
+      // Nobelmedaille und drei Preisträger
+      const cx = sx + sw * .5, cy = sy + sh * .4, r = Math.min(sw, sh) * .2, sp = Math.sin(t * 1.5);
+      const g = ctx.createRadialGradient(cx - r * .3, cy - r * .3, r * .1, cx, cy, r); g.addColorStop(0, '#fff2b0'); g.addColorStop(1, '#b8860b'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy, r * Math.max(.15, Math.abs(Math.cos(t * .8))), r, 0, 0, 7); ctx.fill(); ctx.strokeStyle = '#8a6200'; ctx.lineWidth = 2; ctx.stroke();
+      if (Math.abs(Math.cos(t * .8)) > .5) label(ctx, '2019', cx, cy, {size: fs * 1.1, color: '#6a4a00'});
+      ['Goodenough', 'Whittingham', 'Yoshino'].forEach((n, i) => { const x = sx + sw * (.22 + i * .28), yy = sy + sh * .82; fpIcon(ctx, 'person', x, yy - fs * 1.4, fs * 2.2, C.accent); label(ctx, n, x, yy + fs * .4, {size: fs * .85, color: C.ink}); });
+      for (let q = 0; q < 14; q++) { const r2 = rng(q * 7919 + 1); r2(); r2(); const p = (t * .2 + r2()) % 1; ctx.fillStyle = alpha(C.gold, 1 - p); ctx.beginPath(); ctx.arc(cx + (r2() - .5) * sw * .6, sy + p * sh * .6, 2.5, 0, 7); ctx.fill(); }
+    }
   });
 })();
 
 /* ================= NOBELPREISE ================= */
 (() => {
   const N = [[1909, 'Wilhelm Ostwald', 'Katalyse, Gleichgewichte und Reaktionsgeschwindigkeit', '11-Gleichgewicht'], [1918, 'Fritz Haber', 'Ammoniaksynthese aus den Elementen', '11-Gleichgewicht'], [1931, 'Carl Bosch, Friedrich Bergius', 'Hochdruckverfahren (BASF)', '11-Gleichgewicht'], [1953, 'Hermann Staudinger (Freiburg)', 'Makromoleküle – Grundlage der Kunststoffchemie', '12-Kunststoffe'], [1963, 'Karl Ziegler, Giulio Natta', 'Katalysatoren für die Polymerisation von Ethen und Propen', '12-Kunststoffe'], [1996, 'Curl, Kroto, Smalley', 'Entdeckung der Fullerene', '12-Forschung'], [2000, 'Heeger, MacDiarmid, Shirakawa', 'elektrisch leitfähige Polymere', '12-Kunststoffe'], [2007, 'Gerhard Ertl', 'Reaktionen an Oberflächen, z. B. im Haber-Bosch-Katalysator', '11-Gleichgewicht'], [2010, 'Heck, Negishi, Suzuki', 'Palladium-katalysierte Kreuzkupplungen (C–C-Bindungen)', '12-Aromaten'], [2019, 'Goodenough, Whittingham, Yoshino', 'Lithium-Ionen-Akkus', '12-Elektrochemie'], [2020, 'Emmanuelle Charpentier, Jennifer Doudna', 'Genschere CRISPR/Cas9', '11-Naturstoffe'], [2023, 'Bawendi, Brus, Ekimov', 'Quantenpunkte (Nanokristalle)', '12-Forschung'], [2024, 'David Baker, Demis Hassabis, John Jumper', 'Proteindesign und Vorhersage von Proteinstrukturen mit KI', '11-Naturstoffe'], [2025, 'Kitagawa, Robson, Yaghi', 'Metall-organische Gerüstverbindungen (MOFs)', '12-Forschung']];
-  let sel = 9, P = [];
-  const show = () => { const n = N[sel]; $('#no-status').innerHTML = `<b>${n[0]} · ${n[1]}</b>: ${n[2]}. Bezug: Reihe <b>${n[3]}</b>.`; };
+  let sel = 9, P = [], ts = 0, hov = -1;
+  const show = () => { const n = N[sel]; ts = 0; $('#no-status').innerHTML = `<b>${n[0]} · ${n[1]}</b>: ${n[2]}. Bezug: Reihe <b>${n[3]}</b>.`; };
   const cv = $('#cv-no');
-  cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; let b = -1, bd = 30; P.forEach(([px, py], i) => { const d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; b = i; } }); if (b >= 0) { sel = b; show(); } });
+  const near = e => { const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; let b = -1, bd = 30; P.forEach(([px, py], i) => { const d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; b = i; } }); return b; };
+  cv.addEventListener('click', e => { const b = near(e); if (b >= 0) { sel = b; show(); } });
+  cv.addEventListener('mousemove', e => { hov = near(e); });
   show();
-  canvasLoop(cv, 'nobel', (ctx, w, h, t) => {
-    const X = yr => w * .04 + (yr - 1900) / 130 * w * .92, y = h * .55;
+  // Medaille
+  const medal = (ctx, x, y, r, c, on) => { const g = ctx.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r); g.addColorStop(0, mix(c, '#ffffff', .6)); g.addColorStop(1, c); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.strokeStyle = mix(c, '#000000', .3); ctx.lineWidth = on ? 2.5 : 1.2; ctx.stroke(); if (on) { ctx.strokeStyle = alpha(c, .4); ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(x, y, r + 5, 0, 7); ctx.stroke(); } };
+  canvasLoop(cv, 'nobel', (ctx, w, h, t, dt) => {
+    ts += dt;
+    const fs = Math.max(11, w * .013), X = yr => w * .04 + (yr - 1900) / 130 * w * .92, y = h * .62;
+    // Epochen-Bänder
+    [[1900, 1950, 'Grundlagen: Gleichgewicht, Katalyse'], [1950, 1990, 'Kunststoff-Zeitalter'], [1990, 2030, 'Materialien, Energie, Biochemie']].forEach(([a, b, n], i) => { ctx.fillStyle = alpha(C.accent, .05 + i * .03); ctx.fillRect(X(a), h * .06, X(b) - X(a), y - h * .06); label(ctx, n, (X(a) + X(b)) / 2, h * .1, {size: fs * .8, color: C.ink2, weight: 400}); });
     ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X(1900), y); ctx.lineTo(X(2030), y); ctx.stroke();
-    for (let yr = 1900; yr <= 2030; yr += 20) { label(ctx, String(yr), X(yr), y + 20, {size: 11, color: C.ink2, weight: 400}); ctx.beginPath(); ctx.moveTo(X(yr), y - 4); ctx.lineTo(X(yr), y + 4); ctx.stroke(); }
-    P = N.map((n, i) => [X(n[0]), y - (40 + (i % 4) * 40) * h / 300]);
-    N.forEach((n, i) => { const [px, py] = P[i], on = i === sel; ctx.strokeStyle = alpha(C.ink2, .4); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, y); ctx.lineTo(px, py); ctx.stroke(); dotAt(ctx, px, py, on ? 'accent' : (n[3].startsWith('12') ? 'gold' : 'hot'), on ? 9 : 6); label(ctx, String(n[0]), px, py - 14, {size: on ? 12 : 10, color: on ? C.accent : C.ink2}); });
+    for (let yr = 1900; yr <= 2030; yr += 10) { ctx.lineWidth = yr % 50 ? 1 : 2; ctx.beginPath(); ctx.moveTo(X(yr), y - 4); ctx.lineTo(X(yr), y + 4); ctx.stroke(); if (yr % 20 === 0) label(ctx, String(yr), X(yr), y + fs * 1.3, {size: fs * .85, color: C.ink2, weight: 400}); }
+    P = N.map((n, i) => [X(n[0]), y - h * (.14 + (i % 4) * .095)]);
+    N.forEach((n, i) => {
+      const [px, py] = P[i], on = i === sel, c = n[3].startsWith('12') ? '#d4a017' : '#e07a3a';
+      ctx.strokeStyle = alpha(C.ink2, on ? .8 : .35); ctx.lineWidth = on ? 2 : 1; ctx.beginPath(); ctx.moveTo(px, y); ctx.lineTo(px, py); ctx.stroke();
+      medal(ctx, px, py, (on ? 11 : hov === i ? 9 : 7) * (on ? 1 + .06 * Math.sin(t * 4) : 1), c, on);
+      label(ctx, String(n[0]), px, py - (on ? 22 : 16), {size: fs * (on ? .95 : .78), color: on ? C.accent : C.ink2});
+    });
+    // Karte zum gewählten Preis
+    const n = N[sel], [px] = P[sel], cw = Math.min(w * .42, 420), chh = h * .26, cx = clamp(px - cw / 2, w * .02, w * .98 - cw), cy2 = y + h * .1, a = clamp(ts * 4, 0, 1);
+    ctx.globalAlpha = a; ctx.fillStyle = C.surface; ctx.strokeStyle = C.accent; ctx.lineWidth = 2; roundRect(ctx, cx, cy2 + (1 - a) * 10, cw, chh, 10); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px - 8, cy2 + 1); ctx.lineTo(px, cy2 - 8); ctx.lineTo(px + 8, cy2 + 1); ctx.fillStyle = C.accent; ctx.fill();
+    label(ctx, `${n[0]} · ${n[1]}`, cx + 14, cy2 + chh * .27, {size: fs * 1.05, align: 'left', color: C.ink});
+    label(ctx, n[2], cx + 14, cy2 + chh * .55, {size: fs * .9, align: 'left', color: C.ink2, weight: 400});
+    ctx.fillStyle = alpha(n[3].startsWith('12') ? '#d4a017' : '#e07a3a', .2); ctx.font = `700 ${fs * .8}px ${SANS}`; const tw = ctx.measureText('Reihe ' + n[3]).width + 16; roundRect(ctx, cx + 14, cy2 + chh * .7, tw, fs * 1.5, 6); ctx.fill(); label(ctx, 'Reihe ' + n[3], cx + 22, cy2 + chh * .7 + fs * .75, {size: fs * .8, align: 'left', color: C.ink});
+    ctx.globalAlpha = 1;
+    // Legende
+    medal(ctx, w * .82, h * .03, 6, '#e07a3a'); label(ctx, 'Klasse 11', w * .82 + 10, h * .03, {size: fs * .8, align: 'left', color: C.ink2}); medal(ctx, w * .9, h * .03, 6, '#d4a017'); label(ctx, 'Klasse 12', w * .9 + 10, h * .03, {size: fs * .8, align: 'left', color: C.ink2});
   });
 })();
 
 /* ================= PEER REVIEW ================= */
 (() => {
   const S = [['Labor', 'Die Arbeitsgruppe führt Experimente durch und schreibt ein Manuskript mit Methoden, Daten und Schlussfolgerungen.'], ['Zeitschrift', 'Das Manuskript wird bei einer Fachzeitschrift eingereicht. Die Herausgeber prüfen, ob es zum Thema passt.'], ['Gutachter', 'Zwei oder drei unabhängige Fachleute prüfen den Artikel – meist anonym – und empfehlen: annehmen, überarbeiten oder ablehnen.'], ['Überarbeitung', 'Die Autoren beantworten die Kritik, ergänzen Experimente und reichen eine verbesserte Fassung ein.'], ['Veröffentlichung', 'Der Artikel erscheint. Jetzt kann die ganze Fachwelt die Ergebnisse lesen und nutzen.'], ['Reproduktion', 'Andere Gruppen wiederholen die Experimente. Erst wenn sie das Ergebnis bestätigen, gilt es als gesichert. Fehlerhafte Artikel werden korrigiert oder zurückgezogen.']];
-  let k = 0;
-  stepper($('#pe-step'), S.length, i => { k = i; $('#pe-status').innerHTML = `<b>${S[i][0]}:</b> ${S[i][1]}`; });
-  canvasLoop($('#cv-pe'), 'peer', (ctx, w, h, t) => {
-    const n = S.length, xs = i => w * (.1 + i * .8 / (n - 1)), y = h * .5;
-    for (let i = 0; i < n - 1; i++) arrow(ctx, xs(i) + 30, y, xs(i + 1) - 30, y, alpha(C.ink2, .5), 2, 8);
-    ctx.strokeStyle = alpha(C.bad, .5); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(xs(3), y + 30); ctx.quadraticCurveTo((xs(2) + xs(3)) / 2, y + 80, xs(2), y + 30); ctx.stroke(); ctx.setLineDash([]); label(ctx, 'evtl. mehrere Runden', (xs(2) + xs(3)) / 2, y + 74, {size: 10, color: C.bad, weight: 400});
-    S.forEach(([s], i) => { const on = i === k; ctx.fillStyle = on ? C.accent : C.surface2; ctx.beginPath(); ctx.arc(xs(i), y, on ? 28 : 22, 0, 7); ctx.fill(); label(ctx, String(i + 1), xs(i), y, {size: 14, color: on ? C.surface : C.ink}); label(ctx, s, xs(i), y - 42 - (i % 2) * 16, {size: 11, color: on ? C.accent : C.ink2}); });
-    const p = (t * .3) % 1, x = lerp(xs(Math.max(0, k - 1)), xs(k), k ? ease(p) : 0); ctx.fillStyle = '#f4f1e6'; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1; ctx.fillRect(x - 9, y + 34, 18, 24); ctx.strokeRect(x - 9, y + 34, 18, 24); for (let l = 0; l < 4; l++) { ctx.beginPath(); ctx.moveTo(x - 6, y + 39 + l * 5); ctx.lineTo(x + 6, y + 39 + l * 5); ctx.stroke(); }
+  const IC = ['kolben', 'buch', 'person', 'stift', 'artikel', 'lupe'];
+  let k = 0, prev = 0, tt = 0;
+  stepper($('#pe-step'), S.length, i => { prev = k; k = i; tt = 0; $('#pe-status').innerHTML = `<b>${S[i][0]}:</b> ${S[i][1]}`; });
+  const paper = (ctx, x, y, s, marks) => { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(performance.now() / 500) * .04); ctx.fillStyle = '#fbf8ef'; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.2; ctx.fillRect(-s * .35, -s * .45, s * .7, s * .9); ctx.strokeRect(-s * .35, -s * .45, s * .7, s * .9); for (let l = 0; l < 6; l++) { ctx.strokeStyle = alpha(C.ink2, .5); ctx.beginPath(); ctx.moveTo(-s * .25, -s * .3 + l * s * .12); ctx.lineTo(s * (l === 5 ? 0 : .25), -s * .3 + l * s * .12); ctx.stroke(); } (marks || []).forEach(([mx, my]) => { ctx.strokeStyle = C.bad; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mx * s, my * s, s * .08, 0, 7); ctx.stroke(); }); ctx.restore(); };
+  canvasLoop($('#cv-pe'), 'peer', (ctx, w, h, t, dt) => {
+    tt += dt;
+    const fs = Math.max(11, w * .018), n = S.length, xs = i => w * (.09 + i * .82 / (n - 1)), y = h * .38, r = Math.min(w * .05, h * .1);
+    // Pfad
+    for (let i = 0; i < n - 1; i++) { ctx.strokeStyle = i < k ? C.accent : alpha(C.ink2, .35); ctx.lineWidth = 3; ctx.setLineDash(i < k ? [] : [5, 5]); ctx.beginPath(); ctx.moveTo(xs(i) + r, y); ctx.lineTo(xs(i + 1) - r, y); ctx.stroke(); ctx.setLineDash([]); }
+    // Überarbeitungsschleife
+    ctx.strokeStyle = alpha(C.bad, k === 2 || k === 3 ? .8 : .3); ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(xs(3), y + r); ctx.bezierCurveTo(xs(3), y + r * 2.6, xs(2), y + r * 2.6, xs(2), y + r); ctx.stroke(); ctx.setLineDash([]);
+    label(ctx, 'evtl. mehrere Runden', (xs(2) + xs(3)) / 2, y + r * 2.75, {size: fs * .72, color: C.bad, weight: 400});
+    S.forEach(([s], i) => { const on = i === k, done = i < k; ctx.fillStyle = on ? C.accent : done ? alpha(C.accent, .2) : C.surface2; ctx.strokeStyle = C.accent; ctx.lineWidth = on ? 3 : 1.5; ctx.beginPath(); ctx.arc(xs(i), y, r * (on ? 1.1 : 1), 0, 7); ctx.fill(); ctx.stroke(); fpIcon(ctx, IC[i], xs(i), y, r * 1.1, on ? C.surface : C.accent); label(ctx, s, xs(i), y - r * 1.5 - (i % 2) * fs * 1.1, {size: fs * (on ? .9 : .75), color: on ? C.accent : C.ink2}); });
+    // Manuskript wandert zum aktuellen Schritt
+    const u = ease(clamp(tt / 1.2, 0, 1)), mx = lerp(xs(prev), xs(k), u), my = y + r * 1.9 + Math.sin(u * Math.PI) * -r;
+    // Szenen unter dem Pfad
+    const by = h * .78, ps = r * 1.1;
+    if (k === 2) { [-1, 0, 1].forEach((d, q) => { const x = xs(2) + d * r * 1.5 - r * .2; fpIcon(ctx, 'person', x, by, r * .9, C.ink2); const v = (tt - .8 - q * .5); if (v > 0) { const verdict = ['überarbeiten', 'annehmen', 'überarbeiten'][q]; ctx.fillStyle = alpha(verdict === 'annehmen' ? C.good : C.gold, .2); roundRect(ctx, x - r * .7, by - r * 1.25, r * 1.4, fs * 1.3, 5); ctx.fill(); label(ctx, verdict, x, by - r * 1.25 + fs * .65, {size: fs * .6, color: C.ink}); } }); paper(ctx, mx, my, ps, tt > 1.5 ? [[.1, -.1], [-.15, .2]] : []); }
+    else if (k === 3) { paper(ctx, mx, my, ps, tt < 1.5 ? [[.1, -.1], [-.15, .2]] : []); if (tt > .8) { ctx.save(); ctx.translate(mx + ps * .4, my - ps * .2 + Math.sin(t * 8) * 3); fpIcon(ctx, 'stift', 0, 0, ps * .8, C.electron); ctx.restore(); } }
+    else if (k === 4) { // Zeitschrift aufgeschlagen
+      const jx = xs(4), jy = by; ctx.fillStyle = alpha(C.accent, .15); roundRect(ctx, jx - r * 1.4, jy - r * .9, r * 2.8, r * 1.8, 6); ctx.fill(); ctx.strokeStyle = C.accent; ctx.lineWidth = 2; ctx.stroke(); label(ctx, 'J. Chem.', jx, jy - r * .5, {size: fs * .8, color: C.accent}); for (let l = 0; l < 3; l++) { ctx.strokeStyle = alpha(C.ink2, .5); ctx.beginPath(); ctx.moveTo(jx - r * 1.1, jy - r * .1 + l * r * .25); ctx.lineTo(jx + r * 1.1, jy - r * .1 + l * r * .25); ctx.stroke(); }
+      for (let q = 0; q < 8; q++) { const a = q / 8 * 6.283 + t * .5, d = r * (1.8 + .3 * Math.sin(t * 2 + q)); fpIcon(ctx, 'person', jx + Math.cos(a) * d * 1.5, jy + Math.sin(a) * d * .5, r * .5, alpha(C.ink2, .6)); }
+      paper(ctx, mx, my, ps * .8); }
+    else if (k === 5) { [-1, 1].forEach((d, q) => { const x = xs(5) + d * r * 1.3 - r * .5, ok = tt > 1 + q * .6; fpIcon(ctx, 'kolben', x, by, r * .9, C.ink2); if (ok) { ctx.fillStyle = C.good; ctx.beginPath(); ctx.arc(x + r * .5, by - r * .5, r * .3, 0, 7); ctx.fill(); fpIcon(ctx, 'haken', x + r * .5, by - r * .5, r * .4, '#fff'); } }); label(ctx, tt > 1.6 ? 'bestätigt ⟶ gesichertes Wissen' : 'unabhängige Labore prüfen …', xs(5) - r, by + r * 1.1, {size: fs * .75, color: tt > 1.6 ? C.good : C.ink2}); paper(ctx, mx, my, ps * .8); }
+    else paper(ctx, mx, my, ps);
   });
   flipCards($('#be'), [['Chemielaborant/in', 'Ausbildung (3,5 Jahre): Synthesen, Analysen, Messgeräte – in Forschungslabors von Industrie und Hochschulen.'], ['Chemiker/in', 'Studium (Bachelor, Master, meist Promotion): plant und leitet Forschungsprojekte.'], ['Chemieingenieur/in', 'Studium: überträgt Laborergebnisse in den großtechnischen Maßstab (Anlagenbau, Verfahrenstechnik).'], ['Materialwissenschaftler/in', 'Studium: entwickelt neue Werkstoffe, z. B. für Akkus, Solarzellen, Leichtbau.'], ['Lebensmittelchemiker/in', 'Studium mit Staatsexamen: prüft Lebensmittel auf Inhaltsstoffe und Schadstoffe.'], ['Pharmazeutisch-technische/r Assistent/in', 'Ausbildung: stellt Arzneimittel her und prüft sie.']]);
 })();

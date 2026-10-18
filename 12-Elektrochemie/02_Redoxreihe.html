@@ -719,7 +719,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
     <div class="vis">
       <div class="vis-head"><h3>Halogen-Raster</h3></div>
       <div class="table-wrap"><table class="data" id="hl-tab"></table></div>
-      <canvas id="cv-hl" class="low" aria-label="Reagenzglas mit Heptan-Phase"></canvas>
+      <canvas id="cv-hl" class="wide" aria-label="Reagenzglas mit Heptan-Phase"></canvas>
       <p class="status" id="hl-status"></p>
     </div>
   </div>
@@ -2461,18 +2461,65 @@ canvasLoop($('#cv-rh'), 'reihe', (ctx, w, h) => {
 /* ================= HALOGENE ================= */
 (() => {
   const X = [['Cl₂', 'Chlorwasser', 0], ['Br₂', 'Bromwasser', 1], ['I₂', 'Iodlösung', 2]], S = [['KCl', 'Cl'], ['KBr', 'Br'], ['KI', 'I']];
-  const colH = ['#f2f6e4', '#c8641e', '#8a2fa8'];
-  let sel = [0, 1];
+  // Farben: in Wasser bzw. in Heptan
+  const colW = ['#e4ecb8', '#d98a3a', '#a0602a'], colH = ['#eef2d0', '#c8641e', '#8a2fa8'], EL = ['atom-cl', 'bromine', 'atom-i'];
+  let sel = [0, 1], tt = 0;
   $('#hl-tab').innerHTML = '<thead><tr><th></th>' + S.map(s => `<th>${s[0]}</th>`).join('') + '</tr></thead><tbody>' + X.map((x, i) => `<tr><td><b>${x[1]}</b></td>` + S.map((s, j) => `<td class="c"><button class="btn" data-i="${i}" data-j="${j}" style="padding:.2rem .5rem">${i === j ? '·' : '?'}</button></td>`).join('') + '</tr>').join('') + '</tbody>';
-  const upd = () => { const [i, j] = sel, re = i < j; $('#hl-status').innerHTML = i === j ? 'Gleiches Halogen: keine Reaktion.' : re ? `<b>Reaktion:</b> ${X[i][0]} + 2 ${S[j][1]}⁻ ⟶ 2 ${S[i][1]}⁻ + ${['Cl₂', 'Br₂', 'I₂'][j]}. Die Heptan-Phase färbt sich ${j === 1 ? 'braun' : 'violett'}.` : `<b>Keine Reaktion:</b> ${X[i][0]} ist ein schwächeres Oxidationsmittel als ${['Cl₂', 'Br₂', 'I₂'][j]}.`; $$('#hl-tab button').forEach(b => { if (b.dataset.seen) b.textContent = +b.dataset.i === +b.dataset.j ? '·' : +b.dataset.i < +b.dataset.j ? '+' : '–'; b.setAttribute('aria-pressed', +b.dataset.i === i && +b.dataset.j === j); }); };
+  const upd = () => { tt = 0; const [i, j] = sel, re = i < j; $('#hl-status').innerHTML = i === j ? 'Gleiches Halogen: keine Reaktion.' : re ? `<b>Reaktion:</b> ${X[i][0]} + 2 ${S[j][1]}⁻ ⟶ 2 ${S[i][1]}⁻ + ${['Cl₂', 'Br₂', 'I₂'][j]}. Die Heptan-Phase färbt sich ${j === 1 ? 'braun' : 'violett'}.` : `<b>Keine Reaktion:</b> ${X[i][0]} ist ein schwächeres Oxidationsmittel als ${['Cl₂', 'Br₂', 'I₂'][j]}.`; $$('#hl-tab button').forEach(b => { if (b.dataset.seen) b.textContent = +b.dataset.i === +b.dataset.j ? '·' : +b.dataset.i < +b.dataset.j ? '+' : '–'; b.setAttribute('aria-pressed', +b.dataset.i === i && +b.dataset.j === j); }); };
   $('#hl-tab').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; b.dataset.seen = 1; sel = [+b.dataset.i, +b.dataset.j]; upd(); });
   $('#hl-tab button[data-i="0"][data-j="1"]').dataset.seen = 1; upd();
-  canvasLoop($('#cv-hl'), 'halogene', (ctx, w, h) => {
-    const [i, j] = sel, re = i < j, top = re ? colH[j] : i === 0 ? '#f8f8f0' : colH[i];
-    const cx = w * .5, y = h * .05, th = h * .9, tw = Math.min(w * .1, 50);
-    ctx.fillStyle = alpha(top, .85); ctx.fillRect(cx - tw / 2 + 2, y + th * .2, tw - 4, th * .25);
-    tube(ctx, cx, y, tw, th, {fill: '#eef2f4', level: .5});
-    label(ctx, 'Heptan', cx + tw, y + th * .32, {size: 11, align: 'left', color: C.ink2}); label(ctx, 'wässrige Phase', cx + tw, y + th * .7, {size: 11, align: 'left', color: C.ink2});
+  canvasLoop($('#cv-hl'), 'halogene', (ctx, w, h, t, dt) => {
+    tt += dt;
+    const [i, j] = sel, re = i < j, fs = Math.max(11, w * .018);
+    const drip = clamp((tt - .4) / 1.4, 0, 1), shake = tt > 2 && tt < 3.6 ? Math.sin(tt * 30) * (1 - Math.abs(tt - 2.8) / .8) : 0, sep = clamp((tt - 3.6) / 1.2, 0, 1);
+    // --- Oxidationskraft-Leiter links
+    const lx = w * .03, ly = h * .12, lh = h * .7;
+    label(ctx, 'Oxidationskraft', lx, ly - fs, {size: fs * .8, align: 'left', color: C.ink2});
+    ctx.fillStyle = alpha(C.ink2, .1); roundRect(ctx, lx, ly, w * .17, lh, 8); ctx.fill();
+    arrow(ctx, lx + w * .025, ly + lh - 10, lx + w * .025, ly + 12, 'accent', 3);
+    ['Cl₂', 'Br₂', 'I₂'].forEach((n, q) => { const yy = ly + lh * (.18 + q * .32), on = q === i || q === j; ctx.fillStyle = on ? alpha(C.accent, .18) : 'transparent'; roundRect(ctx, lx + w * .05, yy - fs, w * .11, fs * 2, 6); ctx.fill(); sphere(ctx, lx + w * .07, yy, fs * .55, C[EL[q].replace('-', '')]); sphere(ctx, lx + w * .07 + fs * .8, yy, fs * .55, C[EL[q].replace('-', '')]); label(ctx, n, lx + w * .1 + fs * .5, yy, {size: fs, align: 'left', color: on ? C.ink : C.ink2}); });
+    // --- Reagenzglas
+    const cx = w * .37, ty = h * .14, th = h * .76, tw = w * .08, hep = .26, aq = .42;
+    const water = mix(mix('#f4f6f8', colW[i], .5), '#f4f6f8', re ? sep * .6 : 0), heptC = j === i ? '#f6f6f2' : re ? mix('#f6f6f2', colH[j], sep) : mix('#f6f6f2', colH[i], sep * (i === 0 ? .4 : 1));
+    ctx.save(); ctx.translate(cx, ty + th); ctx.rotate(shake * .12); ctx.translate(-cx, -(ty + th));
+    // Füllungen
+    const r = tw / 2, by = ty + th - r, yAq = ty + th - (th - 6) * aq, yHep = yAq - th * hep * (1 - .15 * (1 - sep) * (tt > 2 && sep < 1 ? 1 : 0));
+    const mixc = tt > 2 && sep < 1 ? mix(water, heptC, .5) : null;
+    ctx.fillStyle = alpha(drip > 0 ? water : '#eef2f4', .8); ctx.beginPath(); ctx.moveTo(cx - r + 2, yAq); ctx.lineTo(cx + r - 2, yAq); ctx.lineTo(cx + r - 2, by); ctx.arc(cx, by, r - 2, 0, Math.PI); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = alpha(heptC, .9); ctx.fillRect(cx - r + 2, yHep, tw - 4, yAq - yHep);
+    if (mixc) { ctx.globalAlpha = 1 - sep; ctx.fillStyle = alpha(mixc, .9); ctx.fillRect(cx - r + 2, yHep, tw - 4, by - yHep); for (let q = 0; q < 14; q++) { const rr = rng(q * 7919 + 1); rr(); rr(); ctx.fillStyle = alpha(heptC, .9); ctx.beginPath(); ctx.arc(cx + (rr() - .5) * tw * .7, yHep + (by - yHep) * rr(), 2 + rr() * 4, 0, 7); ctx.fill(); } ctx.globalAlpha = 1; }
+    // Tropfen der Halogenlösung in die wässrige Phase
+    if (drip > 0 && drip < 1) for (let q = 0; q < 3; q++) { const p = (drip * 3 - q) % 1; if (drip * 3 < q) continue; ctx.fillStyle = colW[i]; ctx.beginPath(); ctx.arc(cx, lerp(ty - h * .02, yAq, p), 4, 0, 7); ctx.fill(); }
+    tube(ctx, cx, ty, tw, th, {stopper: tt > 1.9 ? '#8a6a4a' : null});
+    ctx.restore();
+    if (tt < 2) { ctx.fillStyle = alpha(colW[i], .7); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; roundRect(ctx, cx - 5, ty - h * .2, 10, h * .14, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink2; roundRect(ctx, cx - 9, ty - h * .26, 18, h * .07, 6); ctx.fill(); }
+    label(ctx, 'Heptan', cx + tw * .7, (yHep + yAq) / 2, {size: fs * .8, align: 'left', color: C.ink2}); label(ctx, `${S[j][0]}-Lösung + ${X[i][1]}`, cx + tw * .7, (yAq + by) / 2, {size: fs * .8, align: 'left', color: C.ink2});
+    label(ctx, tt < 2 ? 'zutropfen …' : sep < 1 ? 'schütteln …' : 'Phasen getrennt', cx, h * .97, {size: fs * .85, color: C.accent});
+    // --- Teilchenebene rechts
+    const px = w * .62, pw = w * .36, py = h * .06, ph = h * .86, ccx = px + pw / 2, s = pw * .055;
+    ctx.fillStyle = mix(C.surface, C.surface2, .55); roundRect(ctx, px, py, pw, ph, 12); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = alpha(C.ink2, .35); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(px + 8, py + ph * .38); ctx.lineTo(px + pw - 8, py + ph * .38); ctx.stroke(); ctx.setLineDash([]);
+    label(ctx, 'Heptan', px + 12, py + fs, {size: fs * .75, align: 'left', color: C.ink2}); label(ctx, 'Wasser', px + 12, py + ph * .38 + fs, {size: fs * .75, align: 'left', color: C.ink2});
+    const cX = C[EL[i].replace('-', '')], cY = C[EL[j].replace('-', '')], m = clamp((tt - .8) / 2, 0, 1), react = re && m >= 1, after = clamp((tt - 2.8) / 1.6, 0, 1);
+    const mx2 = ccx - pw * .15, my2 = py + ph * .62;
+    if (i === j) label(ctx, 'gleiches Halogen – nichts passiert', ccx, py + ph * .9, {size: fs * .8, color: C.ink2});
+    // zwei Halogenid-Ionen
+    const ion = (x, y, c, n, q) => { sphere(ctx, x, y, s * 1.05, c); label(ctx, n + '⁻', x + s * 1.1, y - s * 1.1, {size: fs * .75, color: C.electron}); };
+    const ixs = [ccx + pw * .18, ccx + pw * .3];
+    if (!react) {
+      const bounce = re ? 0 : Math.sin(clamp(m, 0, 1) * Math.PI);
+      const xm = lerp(px + pw * .15, ixs[0] - s * 3.3, i === j ? 0 : m < .5 ? m * 2 : 1 - (m - .5) * 1.2);
+      const ym = !re && i !== j ? lerp(my2, py + ph * .2, ease(after)) : my2; sphere(ctx, xm - s * .7, ym, s, cX); sphere(ctx, xm + s * .7, ym, s, cX); label(ctx, X[i][0], xm, ym + s * 2, {size: fs * .8, color: C.ink2});
+      ixs.forEach((x, q) => ion(x, my2 + (q - .5) * s * 2.6, cY, S[j][1]));
+      if (!re && i !== j && m > .4) label(ctx, 'zu schwach – keine e⁻-Übertragung', ccx, py + ph * .9, {size: fs * .8, color: C.bad});
+      if (re && m > .5) { const q = (m - .5) * 2; ctx.fillStyle = C.electron; for (let e = 0; e < 2; e++) { ctx.beginPath(); ctx.arc(lerp(ixs[e], xm, q), my2 + (e - .5) * s * 2.6 * (1 - q) - s * 1.4 * Math.sin(q * Math.PI), 4, 0, 7); ctx.fill(); } label(ctx, '2 e⁻', ccx, my2 - s * 3, {size: fs * .8, color: C.electron}); }
+    } else {
+      // Produkte: 2 X⁻ bleiben im Wasser, Y₂ wandert ins Heptan
+      ion(mx2 - s * 1.4, my2 + s * 1.5, cX, S[i][1]); ion(mx2 + s * 1.6, my2 - s * 1.2, cX, S[i][1]);
+      const yy = lerp(my2, py + ph * .2, ease(after)), xx = lerp(ixs[0] + s, ccx + pw * .1, after);
+      sphere(ctx, xx - s * .7, yy, s, cY); sphere(ctx, xx + s * .7, yy, s, cY); label(ctx, ['Cl₂', 'Br₂', 'I₂'][j], xx, yy + s * 2, {size: fs * .8, color: C.ink});
+      label(ctx, `${X[i][0]} oxidiert ${S[j][1]}⁻ zu ${['Cl₂', 'Br₂', 'I₂'][j]}`, ccx, py + ph * .9, {size: fs * .8, color: C.good});
+    }
   });
 })();
 

@@ -2487,23 +2487,99 @@ function seenColor(nm, wd = 40, absMax = .95) {
   let k = 'chlor', t0 = 0;
   for (const x of Object.keys(F)) cloze($('#al-cz-' + x), F[x][2]);
   seg($('#al-seg'), [['chlor', 'Chlorreiniger'], ['gummi', 'Gummibärchen']], v => { k = v; t0 = 0; const f = F[v]; $('#al-h').textContent = f[0]; $('#al-lead').textContent = f[1]; $('#al-cz-chlor').hidden = v !== 'chlor'; $('#al-cz-gummi').hidden = v !== 'gummi'; $('#al-status').innerHTML = `<span class="eq-line" style="font-size:1rem">${f[3]}</span>`; });
+  const GAS = '#b9c94a';
+  const oxn = (ctx, s, x, y, fs, c) => { ctx.fillStyle = alpha(C.surface, .85); roundRect(ctx, x - fs * 1.1, y - fs * .6, fs * 2.2, fs * 1.2, 4); ctx.fill(); label(ctx, s, x, y, {size: fs * .9, color: c || C.accent, font: MONO}); };
+  // Gummibärchen
+  const bear = (ctx, x, y, s, a = 0, c = '#e0303c') => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = alpha(c, .88);
+    const blob = (bx, by, rx, ry) => { ctx.beginPath(); ctx.ellipse(bx * s, by * s, rx * s, ry * s, 0, 0, 7); ctx.fill(); };
+    blob(0, .15, .36, .42); blob(0, -.42, .28, .24); blob(-.2, -.6, .1, .1); blob(.2, -.6, .1, .1); blob(-.33, .02, .12, .17); blob(.33, .02, .12, .17); blob(-.2, .52, .14, .12); blob(.2, .52, .14, .12);
+    ctx.fillStyle = alpha('#ffffff', .4); blob(-.1, -.5, .07, .05); blob(-.14, .05, .06, .14); ctx.restore();
+  };
   canvasLoop($('#cv-al'), 'alltag', (ctx, w, h, t, dt) => {
     t0 += dt;
+    const fs = Math.max(11, w * .018), px = w * .64, pw = w * .33, py = h * .06, ph = h * .84;
+    // Inset „Teilchenebene“
+    const panel = title => { ctx.fillStyle = mix(C.surface, C.surface2, .55); roundRect(ctx, px, py, pw, ph, 12); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke(); label(ctx, title, px + pw / 2, py + fs * 1.1, {size: fs * .9, color: C.ink2}); };
     if (k === 'chlor') {
-      const pour = clamp(t0 / 2, 0, 1), gas = clamp((t0 - 2) / 3, 0, 1);
-      ctx.save(); ctx.translate(w * .3, h * .3); ctx.rotate(-pour * 1.1); ctx.fillStyle = alpha('#7ab0e0', .8); roundRect(ctx, -22, -50, 44, 80, 8); ctx.fill(); ctx.fillStyle = C.surface; ctx.fillRect(-14, -20, 28, 22); label(ctx, 'WC', 0, -9, {size: 10, color: C.ink}); ctx.restore();
-      if (pour > .3 && pour < 1) { ctx.strokeStyle = alpha('#7ab0e0', .8); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(w * .36, h * .25); ctx.quadraticCurveTo(w * .45, h * .3, w * .5, h * .55); ctx.stroke(); }
-      beaker(ctx, w * .4, h * .5, w * .22, h * .4, {fill: mix('#e8f0d0', '#c8d860', gas), level: .55});
-      for (let i = 0; i < 14; i++) { const p = ((t0 * .3 + i * .07) % 1) * gas; if (!gas) break; ctx.fillStyle = alpha('#b8d040', .45 * (1 - p)); ctx.beginPath(); ctx.arc(w * .51 + Math.sin(i * 2 + t0) * 30 * p, h * .5 - p * h * .45, 10 + p * 18, 0, 7); ctx.fill(); }
-      if (gas > .3) { label(ctx, 'Cl₂', w * .72, h * .2, {size: 20, color: '#8aa020'}); }
-      label(ctx, 'Chlorreiniger (OCl⁻)', w * .51, h * .95, {size: 12, color: C.ink2});
+      const T = t0 % 9, pour = clamp(T / 1.8, 0, 1), back = clamp((T - 2.6) / .8, 0, 1), gas = clamp((T - 2.2) / 3, 0, 1) * (T > 8 ? 1 - (T - 8) : 1);
+      // Badezimmer: Fliesen und Boden
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w * .6, h); ctx.clip();
+      ctx.strokeStyle = alpha(C.ink2, .12); ctx.lineWidth = 1; const tl = h * .1; for (let x = 0; x < w * .6; x += tl) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h * .82); ctx.stroke(); } for (let y = 0; y < h * .82; y += tl) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w * .6, y); ctx.stroke(); }
+      ctx.fillStyle = alpha(C.ink2, .15); ctx.fillRect(0, h * .82, w * .6, h * .18);
+      // Eimer mit Chlorreiniger
+      const ex = w * .3, ey = h * .5, ew = w * .2, eh = h * .32;
+      ctx.fillStyle = mix('#eef3d8', GAS, gas * .6); ctx.beginPath(); ctx.moveTo(ex - ew * .46, ey + eh * .25); ctx.lineTo(ex + ew * .46, ey + eh * .25); ctx.lineTo(ex + ew * .4, ey + eh); ctx.lineTo(ex - ew * .4, ey + eh); ctx.closePath(); ctx.fill();
+      if (gas > 0) bubbles(ctx, ex - ew * .35, ey + eh * .3, ew * .7, eh * .65, t, 14, '#8a9a20', 4);
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex - ew * .5, ey); ctx.lineTo(ex - ew * .4, ey + eh); ctx.lineTo(ex + ew * .4, ey + eh); ctx.lineTo(ex + ew * .5, ey); ctx.stroke();
+      ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(ex, ey, ew * .5, eh * .06, 0, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.arc(ex, ey, ew * .48, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+      // Chlorreiniger-Flasche am Boden
+      const cx = w * .08, cy = h * .82; ctx.fillStyle = '#f4f6f2'; roundRect(ctx, cx - w * .035, cy - h * .3, w * .07, h * .3, 8); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.stroke(); ctx.fillStyle = '#2e9e5b'; ctx.fillRect(cx - w * .035, cy - h * .2, w * .07, h * .09); ctx.fillStyle = '#2e9e5b'; roundRect(ctx, cx - w * .015, cy - h * .35, w * .03, h * .06, 3); ctx.fill(); label(ctx, 'Chlor', cx, cy - h * .155, {size: fs * .7, color: '#fff'});
+      // WC-Reiniger kippt und gießt
+      const tilt = pour * 1.9 * (1 - back), bx = lerp(w * .14, w * .2, pour), by = lerp(h * .38, h * .26, pour);
+      ctx.save(); ctx.translate(bx, by); ctx.rotate(tilt); ctx.fillStyle = '#3d7fd0'; ctx.beginPath(); ctx.moveTo(-w * .035, h * .12); ctx.lineTo(-w * .035, -h * .06); ctx.quadraticCurveTo(-w * .035, -h * .1, 0, -h * .11); ctx.lineTo(w * .03, -h * .16); ctx.lineTo(w * .045, -h * .14); ctx.lineTo(w * .025, -h * .08); ctx.quadraticCurveTo(w * .035, -h * .06, w * .035, -h * .03); ctx.lineTo(w * .035, h * .12); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(-w * .025, -h * .01, w * .05, h * .08); label(ctx, 'WC', 0, h * .03, {size: fs * .75, color: '#3d7fd0'}); ctx.restore();
+      if (pour > .6 && back < .5) { const sx = bx + Math.cos(tilt - Math.PI / 2 + .3) * h * .16, sy = by + Math.sin(tilt - Math.PI / 2 + .3) * h * .16; ctx.strokeStyle = alpha('#3d7fd0', .7); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + w * .03, sy, ex - ew * .05, ey + eh * .25); ctx.stroke(); }
+      // Gaswolke
+      for (let i = 0; i < 18; i++) { const r = rng(i * 37 + 1); r(); const p = ((t * .12 + r()) % 1), a = gas * (1 - p) * .55; if (a <= 0) continue; const gx = ex + (r() - .5) * ew * .6 + Math.sin(t * .7 + i) * w * .05 * p + p * w * .06, gy = ey - p * h * .5; ctx.fillStyle = alpha(GAS, a); ctx.beginPath(); ctx.arc(gx, gy, h * (.04 + p * .08), 0, 7); ctx.fill(); }
+      if (gas > .4) { ctx.globalAlpha = Math.min(1, (gas - .4) * 3); ctx.fillStyle = '#f5c400'; ctx.beginPath(); ctx.moveTo(w * .5, h * .06); ctx.lineTo(w * .56, h * .17); ctx.lineTo(w * .44, h * .17); ctx.closePath(); ctx.fill(); label(ctx, '!', w * .5, h * .13, {size: fs * 1.1, color: '#222'}); label(ctx, 'Cl₂ – giftig!', w * .5, h * .21, {size: fs, color: '#7a8a10'}); ctx.globalAlpha = 1; }
+      ctx.restore();
+      // Teilchenebene: OCl⁻ + Cl⁻ + 2 H₃O⁺ → Cl₂ + 3 H₂O, ein Elektron wandert
+      panel('Teilchenebene');
+      const s = pw * .075, cxp = px + pw / 2, cyp = py + ph * .5, m = clamp((T - 2.2) / 2.2, 0, 1), done = clamp((T - 4.4) / .6, 0, 1), up = clamp((T - 5) / 2.5, 0, 1);
+      if (done < 1) {
+        const ax = lerp(px + pw * .2, cxp - s * 1.05, ease(m)), bx2 = lerp(px + pw * .8, cxp + s * 1.05, ease(m));
+        ctx.globalAlpha = 1 - done;
+        sphere(ctx, ax - s * 1.7, cyp, s * .85, C.atomo, 'O', '#fff'); sphere(ctx, ax, cyp, s, C.atomcl, 'Cl', '#fff'); oxn(ctx, '+I', ax, cyp - s * 1.9, fs, C.bad); label(ctx, 'OCl⁻', ax - s * .8, cyp + s * 1.9, {size: fs * .8, color: C.ink2});
+        sphere(ctx, bx2, cyp, s, C.atomcl, 'Cl', '#fff'); oxn(ctx, '−I', bx2, cyp - s * 1.9, fs, C.electron); label(ctx, 'Cl⁻', bx2, cyp + s * 1.9, {size: fs * .8, color: C.ink2});
+        for (const sg of [-1, 1]) { const hx = lerp(cxp + sg * pw * .25, cxp - s * 2.2, ease(m)), hy = cyp + sg * ph * .22 * (1 - .6 * ease(m)); sphere(ctx, hx, hy, s * .6, C.atomo); sphere(ctx, hx - s * .55, hy - s * .4, s * .35, C.atomh, '', '', alpha('#000', .3)); sphere(ctx, hx + s * .55, hy - s * .4, s * .35, C.atomh, '', '', alpha('#000', .3)); sphere(ctx, hx, hy + s * .65, s * .35, C.atomh, '', '', alpha('#000', .3)); label(ctx, 'H₃O⁺', hx + s * 1.3, hy, {size: fs * .7, color: C.ink2, align: 'left'}); }
+        if (m > .3) { const q = clamp((m - .3) / .7, 0, 1); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(lerp(bx2, ax, q), cyp - s * 1.1 - Math.sin(q * Math.PI) * s * 1.2, 4, 0, 7); ctx.fill(); label(ctx, 'e⁻', lerp(bx2, ax, q), cyp - s * 1.1 - Math.sin(q * Math.PI) * s * 1.2 - 10, {size: fs * .7, color: C.electron}); }
+        ctx.globalAlpha = 1;
+      }
+      if (done > 0) {
+        ctx.globalAlpha = done; const yy = cyp - up * ph * .28;
+        sphere(ctx, cxp - s * .8, yy, s, C.atomcl, 'Cl', '#fff'); sphere(ctx, cxp + s * .8, yy, s, C.atomcl, 'Cl', '#fff'); oxn(ctx, '0', cxp - s * .8, yy - s * 1.9, fs); oxn(ctx, '0', cxp + s * .8, yy - s * 1.9, fs);
+        label(ctx, 'Cl₂', cxp + s * 2.4, yy, {size: fs, color: '#7a8a10', align: 'left'});
+        for (let q = 0; q < 3; q++) { const wx = px + pw * (.22 + q * .28), wy = py + ph * .82; sphere(ctx, wx, wy, s * .6, C.atomo); sphere(ctx, wx - s * .6, wy + s * .35, s * .35, C.atomh, '', '', alpha('#000', .3)); sphere(ctx, wx + s * .6, wy + s * .35, s * .35, C.atomh, '', '', alpha('#000', .3)); }
+        label(ctx, '3 H₂O', cxp, py + ph * .93, {size: fs * .8, color: C.ink2}); ctx.globalAlpha = 1;
+      }
+      label(ctx, 'Komproportionierung: +I und −I ⟶ 0', cxp, py + ph * .12, {size: fs * .78, color: C.accent});
     } else {
-      const drop = clamp(t0 / 1.2, 0, 1), fire = clamp((t0 - 1.4) / .4, 0, 1) * (t0 < 6 ? 1 : 0);
-      tube(ctx, w * .5, h * .35, w * .08, h * .55, {fill: '#f4f0e0', level: .25, tilt: .25});
-      burner(ctx, w * .5, h * .98, h * .2, t, {on: true});
-      if (drop < 1) { const y = lerp(h * .05, h * .75, ease(drop)); ctx.fillStyle = '#e04050'; roundRect(ctx, w * .5 - 8, y - 12, 16, 22, 6); ctx.fill(); }
-      if (fire > 0) for (let i = 0; i < 3; i++) flame(ctx, w * .5 + 10 + Math.sin(t * 9 + i) * 6, h * .34, h * (.12 + .05 * i) * fire, t + i, {color: i % 2 ? '#a050ff' : '#ff80ff'});
-      label(ctx, 'KClO₃-Schmelze', w * .72, h * .78, {size: 12, color: C.ink2, align: 'left'});
+      const T = t0 % 9, drop = clamp((T - .6) / 1, 0, 1), fire = T > 1.6 && T < 7.5 ? clamp((T - 1.6) / .3, 0, 1) * (T > 6.5 ? 1 - (T - 6.5) : 1) : 0;
+      // Stativ, schräg eingespanntes Reagenzglas, Brenner
+      const tx = w * .32, ty = h * .52, L = h * .55, a = .5, r = w * .03;
+      ctx.fillStyle = C.ink2; roundRect(ctx, w * .04, h * .92, w * .22, h * .03, 3); ctx.fill(); ctx.fillRect(w * .07, h * .1, 6, h * .83);
+      burner(ctx, tx - Math.sin(a) * L * .5, h * .99, h * .17, t, {on: true, size: .55});
+      ctx.save(); ctx.translate(tx, ty); ctx.rotate(a);
+      // Inhalt: Schmelze, glühend bei Reaktion
+      ctx.fillStyle = fire ? mix('#fff2c0', '#ffd27a', .5 + .5 * Math.sin(t * 20)) : alpha('#f3eee0', .9); ctx.beginPath(); ctx.moveTo(-r + 2, L * .32); ctx.lineTo(r - 2, L * .32); ctx.lineTo(r - 2, L * .5 - r); ctx.arc(0, L * .5 - r, r - 2, 0, Math.PI); ctx.closePath(); ctx.fill();
+      if (drop >= 1 && T < 4) bear(ctx, 0, L * .38, r * 1.1 * (1 - clamp((T - 1.6) / 2.4, 0, 1)), 0);
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-r - 3, -L * .5); ctx.lineTo(-r, -L * .48); ctx.lineTo(-r, L * .5 - r); ctx.arc(0, L * .5 - r, r, Math.PI, 0, true); ctx.lineTo(r, -L * .48); ctx.lineTo(r + 3, -L * .5); ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(w * .07, ty - L * .05); ctx.lineTo(tx + Math.sin(a) * L * .1, ty - L * .05); ctx.stroke(); ctx.fillStyle = '#8a6a4a'; roundRect(ctx, tx + Math.sin(a) * L * .1 - r * 1.4, ty - L * .05 - 7, r * 2.8, 14, 4); ctx.fill();
+      const opx = tx + Math.sin(a) * L * .5, opy = ty - Math.cos(a) * L * .5, bxb = tx - Math.sin(a) * L * .5;
+      if (drop < 1) bear(ctx, opx + (1 - drop) * w * .04, lerp(h * .02, opy + h * .03, ease(drop)), r * 1.2, drop * 2);
+      // violette Flammen, Funken und Rauch aus der Öffnung
+      if (fire > 0) {
+        const g = ctx.createRadialGradient(opx, opy, 0, opx, opy, h * .4); g.addColorStop(0, alpha('#e8b0ff', .5 * fire)); g.addColorStop(1, alpha('#e8b0ff', 0)); ctx.fillStyle = g; ctx.fillRect(0, 0, w * .62, h);
+        for (let i = 0; i < 4; i++) { ctx.save(); ctx.translate(opx, opy); ctx.rotate(a + (i - 1.5) * .12); flame(ctx, 0, 0, h * (.22 + .07 * Math.sin(t * 13 + i * 2)) * fire, t + i, {color: i % 2 ? '#9b4dff' : '#d070ff'}); ctx.restore(); }
+        for (let i = 0; i < 22; i++) { const r2 = rng(i * 53 + 3); r2(); const p = (t * (1 + r2()) + r2()) % 1, an = -Math.PI / 2 + a + (r2() - .5) * 1.8, d = p * h * .35; ctx.fillStyle = alpha(i % 3 ? '#ffd27a' : '#ffffff', (1 - p) * fire); ctx.beginPath(); ctx.arc(opx + Math.cos(an) * d, opy + Math.sin(an) * d + p * p * h * .1, 2, 0, 7); ctx.fill(); }
+        for (let i = 0; i < 8; i++) { const p = (t * .3 + i / 8) % 1; ctx.fillStyle = alpha('#d8d8d8', .35 * (1 - p) * fire); ctx.beginPath(); ctx.arc(opx + h * .1 + Math.sin(t + i) * 10 + p * w * .05, opy - h * .25 - p * h * .2, h * (.04 + p * .06), 0, 7); ctx.fill(); }
+      }
+      label(ctx, 'KClO₃-Schmelze', bxb + w * .05, ty + L * .47, {size: fs * .85, color: C.ink2, align: 'left'});
+      // Teilchenebene: Elektronen vom Zucker-C zum Chlorat-Cl
+      panel('Wer gibt, wer nimmt Elektronen?');
+      const s = pw * .065, x1 = px + pw * .25, x2 = px + pw * .75, y1 = py + ph * .32, y2 = py + ph * .66;
+      label(ctx, 'Zucker-C', x1, y1 - s * 2.6, {size: fs * .8, color: C.ink2}); label(ctx, 'Chlorat-Cl', x2, y1 - s * 2.6, {size: fs * .8, color: C.ink2});
+      sphere(ctx, x1, y1, s, C.atomc, 'C', '#fff'); oxn(ctx, '0', x1, y1 + s * 1.9, fs, C.ink);
+      sphere(ctx, x2, y1, s, C.atomcl, 'Cl', '#fff'); for (let q = 0; q < 3; q++) { const an = -Math.PI / 2 + (q - 1) * 1.2 + Math.PI; sphere(ctx, x2 + Math.cos(an) * s * 1.6, y1 + Math.sin(an) * s * 1.6, s * .6, C.atomo); } oxn(ctx, '+V', x2 + s * 2, y1 - s * 1.4, fs, C.bad);
+      const go = fire > 0 ? clamp((T - 1.8) / 3.5, 0, 1) : 0;
+      for (let q = 0; q < 6; q++) { const p = clamp(go * 1.6 - q * .1, 0, 1); if (p <= 0 || p >= 1) continue; ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(lerp(x1 + s, x2 - s, p), y1 - Math.sin(p * Math.PI) * s * 1.8 + q * 2, 4, 0, 7); ctx.fill(); }
+      arrow(ctx, x1, y1 + s * 4.6, x1, y2 - s * 1.6, 'ink-2', 2); arrow(ctx, x2, y1 + s * 4.6, x2, y2 - s * 1.6, 'ink-2', 2);
+      ctx.globalAlpha = .3 + .7 * go;
+      sphere(ctx, x1, y2, s, C.atomc, 'C', '#fff'); sphere(ctx, x1 - s * 1.7, y2, s * .75, C.atomo); sphere(ctx, x1 + s * 1.7, y2, s * .75, C.atomo); oxn(ctx, '+IV', x1, y2 + s * 1.9, fs, C.bad); label(ctx, 'CO₂', x1, y2 + s * 3.4, {size: fs * .8, color: C.ink2}); label(ctx, 'Oxidation', x1, y2 + s * 4.6, {size: fs * .8, color: C.bad});
+      sphere(ctx, x2, y2, s, C.atomcl, 'Cl', '#fff'); oxn(ctx, '−I', x2, y2 + s * 1.9, fs, C.electron); label(ctx, 'Cl⁻ (in KCl)', x2, y2 + s * 3.4, {size: fs * .8, color: C.ink2}); label(ctx, 'Reduktion', x2, y2 + s * 4.6, {size: fs * .8, color: C.electron});
+      ctx.globalAlpha = 1;
+      label(ctx, 'gibt 4 e⁻ ab', x1, y1 + s * 3.5, {size: fs * .7, color: C.bad}); label(ctx, 'nimmt 6 e⁻ auf', x2, y1 + s * 3.5, {size: fs * .7, color: C.electron});
     }
   });
 })();

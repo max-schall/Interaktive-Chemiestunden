@@ -2409,38 +2409,74 @@ function seenColor(nm, wd = 40, absMax = .95) {
 
 /* ================= KETTENLÄNGE ================= */
 (() => {
-  let ch = [], act = [], M = 0, run = false, tt = 0;
+  // Teilchensimulation im Einheitsquadrat: Monomere (Ethen), Startermoleküle (R–R), wachsende Ketten (Kopf = Radikal)
+  const NM = 240;
+  let mon = [], st = [], ch = [], done = [], run = false;
   const I = () => +$('#ke-i').value;
-  const init = () => { ch = []; act = []; M = 3000; run = false; $('#ke-io').textContent = ['', 'sehr wenig', 'wenig', 'wenig', 'mittel', 'mittel', 'mittel', 'viel', 'viel', 'sehr viel', 'sehr viel'][I()]; $('#ke-status').textContent = '3000 Monomere warten. Klicke auf „Polymerisieren“.'; };
+  const init = () => {
+    const r = rng(7); mon = [...Array(NM)].map(() => ({x: .03 + r() * .94, y: .03 + r() * .94, a: r() * 7, vx: (r() - .5) * .1, vy: (r() - .5) * .1}));
+    st = [...Array(I() * 3)].map(() => ({x: .1 + r() * .8, y: .1 + r() * .8, a: r() * 7, vx: 0, vy: 0, tt: r() * 4}));
+    ch = []; done = []; run = false;
+    $('#ke-io').textContent = ['', 'sehr wenig', 'wenig', 'wenig', 'mittel', 'mittel', 'mittel', 'viel', 'viel', 'sehr viel', 'sehr viel'][I()];
+    $('#ke-status').innerHTML = `${NM} Monomere und ${st.length} Startermoleküle warten. Klicke auf „Polymerisieren“.`;
+  };
   $('#ke-i').oninput = init;
   $('#ke-go').onclick = () => { init(); run = true; };
   init();
+  const move = (p, dt, sp, damp = 1) => { p.vx += (Math.random() - .5) * sp * dt * 6; p.vy += (Math.random() - .5) * sp * dt * 6; const v = Math.hypot(p.vx, p.vy), m = sp * damp; if (v > m) { p.vx *= m / v; p.vy *= m / v; } p.x += p.vx * dt; p.y += p.vy * dt; if (p.x < .02 || p.x > .98) { p.vx *= -1; p.x = clamp(p.x, .02, .98); } if (p.y < .02 || p.y > .98) { p.vy *= -1; p.y = clamp(p.y, .02, .98); } };
+  const SEG = .022, RC = .03;
   canvasLoop($('#cv-ke'), 'kette', (ctx, w, h, t, dt) => {
-    if (run) { tt += dt; while (tt > .005) { tt -= .005;
-      if (M > 0 && Math.random() < I() * .035) { act.push(ch.length); ch.push(0); }
-      for (const i of act) if (M > 0) { ch[i] += 2; M -= 1; }
-      // Abbruch: Wahrscheinlichkeit wächst mit der Zahl aktiver Radikale
-      if (act.length > 1 && Math.random() < .004 * act.length * act.length) { const a = act.splice(Math.floor(Math.random() * act.length), 1)[0], b = act.splice(Math.floor(Math.random() * act.length), 1)[0]; ch[a] += ch[b]; ch[b] = -1; }
-      if (M <= 0) { run = false; act = []; }
+    dt = Math.min(dt, .05);
+    const fs = Math.max(11, w * .018);
+    if (run) {
+      // Starter zerfallen nach und nach in zwei Radikale
+      st = st.filter(s => { s.tt -= dt * (.6 + Math.random() * .3); if (s.tt > 0) return true;
+        for (const sg of [-1, 1]) { const head = {x: s.x + sg * .015, y: s.y, vx: sg * .2, vy: (Math.random() - .5) * .2}; ch.push({head, body: [[head.x, head.y]], n: 0, act: true, hue: ch.length}); } return false; });
+      for (const c of ch) if (c.act) {
+        move(c.head, dt, .22);
+        // Kette folgt dem Kopf wie ein Seil
+        c.body[0] = [c.head.x, c.head.y];
+        for (let i = 1; i < c.body.length; i++) { const [px, py] = c.body[i - 1], [x, y] = c.body[i], d = Math.hypot(x - px, y - py) || 1; if (d > SEG) c.body[i] = [px + (x - px) / d * SEG, py + (y - py) / d * SEG]; }
+        // Monomer einfangen
+        for (let k = mon.length - 1; k >= 0; k--) { const m = mon[k]; if (Math.hypot(m.x - c.head.x, m.y - c.head.y) < RC) { mon.splice(k, 1); c.n++; c.body.splice(1, 0, [c.head.x, c.head.y]); c.head.x = m.x; c.head.y = m.y; c.body[0] = [m.x, m.y]; break; } }
+      }
+      // Abbruch: zwei Radikale treffen sich (Kombination)
+      const A = ch.filter(c => c.act);
+      for (let i = 0; i < A.length; i++) for (let j = i + 1; j < A.length; j++) { const a = A[i], b = A[j]; if (a.act && b.act && a.n + b.n > 0 && Math.hypot(a.head.x - b.head.x, a.head.y - b.head.y) < RC * 1.2) { a.act = b.act = false; a.mate = b; b.mate = a; done.push(a.n + b.n); } }
+      for (const m of mon) move(m, dt, .06);
+      if (!st.length && !ch.some(c => c.act)) run = false;
+      if (!mon.length) { ch.filter(c => c.act).forEach(c => { c.act = false; done.push(c.n); }); run = false; }
+      const avg = done.reduce((s, x) => s + x, 0) / (done.length || 1);
+      $('#ke-status').innerHTML = `Monomere übrig: <b>${mon.length}</b> · aktive Radikale: <b>${ch.filter(c => c.act).length}</b> · fertige Ketten: <b>${done.length}</b> · mittlere Kettenlänge: <b>${numDE(avg, 0)}</b> Monomere${run ? '' : ' – fertig.'}`;
+    } else for (const m of mon) move(m, dt, .03);
+    // --- Reaktionsgefäß
+    const bx = w * .03, by = h * .05, bs = Math.min(w * .6, h * .9), X = x => bx + x * bs, Y = y => by + y * bs, r = bs * .011;
+    ctx.fillStyle = mix(C.surface, C.surface2, .5); roundRect(ctx, bx, by, bs, bs, 10); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+    for (const m of mon) { const dx = Math.cos(m.a + t * .3) * r * .8, dy = Math.sin(m.a + t * .3) * r * .8; ctx.strokeStyle = alpha(C.ink2, .5); ctx.lineWidth = r * .5; ctx.beginPath(); ctx.moveTo(X(m.x) - dx, Y(m.y) - dy); ctx.lineTo(X(m.x) + dx, Y(m.y) + dy); ctx.stroke(); sphere(ctx, X(m.x) - dx, Y(m.y) - dy, r, C.atomc); sphere(ctx, X(m.x) + dx, Y(m.y) + dy, r, C.atomc); }
+    for (const s of st) { const dx = Math.cos(s.a) * r * 1.3, dy = Math.sin(s.a) * r * 1.3; sphere(ctx, X(s.x) - dx, Y(s.y) - dy, r * 1.4, C.hot); sphere(ctx, X(s.x) + dx, Y(s.y) + dy, r * 1.4, C.hot); }
+    for (const c of ch) {
+      const pts = c.body.map(([x, y]) => [X(x), Y(y)]);
+      if (pts.length > 1) polyline(ctx, pts, c.act ? C.accent : alpha(C.ink, .55), r * 1.1);
+      sphere(ctx, pts[pts.length - 1][0], pts[pts.length - 1][1], r * 1.2, C.hot);
+      const [hx, hy] = pts[0];
+      if (c.act) { const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, r * 4); g.addColorStop(0, alpha(C.bad, .55)); g.addColorStop(1, alpha(C.bad, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx, hy, r * 4, 0, 7); ctx.fill(); ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(hx, hy, r * .9, 0, 7); ctx.fill(); }
+      else if (c.mate) { ctx.strokeStyle = alpha(C.ink, .55); ctx.lineWidth = r * 1.1; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(X(c.mate.body[0][0]), Y(c.mate.body[0][1])); ctx.stroke(); }
     }
-      const done = ch.filter(x => x > 0), avg = done.reduce((s, x) => s + x, 0) / (done.length || 1);
-      $('#ke-status').innerHTML = `Monomere übrig: <b>${Math.max(0, M)}</b> · Ketten: <b>${done.length}</b> · mittlere Kettenlänge: <b>${numDE(avg, 0)}</b> C-Atome${run ? '' : ' – fertig.'}`; }
-    // Ketten als Balken
-    const list = ch.map((x, i) => [x, i]).filter(([x]) => x > 0).slice(-18), mx = Math.max(400, ...list.map(l => l[0]));
-    const bx = w * .04, bw = w * .55;
-    list.forEach(([x, i], r) => { const y = h * .06 + r * (h * .88 / 18); ctx.fillStyle = act.includes(i) ? C.accent : alpha(C.ink2, .55); ctx.fillRect(bx, y, bw * x / mx, h * .88 / 18 - 3); if (act.includes(i)) { ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(bx + bw * x / mx + 4, y + (h * .88 / 18 - 3) / 2, 3.5, 0, 7); ctx.fill(); } });
-    label(ctx, 'rot: aktives Radikal-Ende', bx, h * .985, {size: 10, align: 'left', color: C.ink2, weight: 400, base: 'bottom'});
-    // Monomer-Vorrat
-    const fx = w * .65, fw = w * .06, fh = h * .7, fy = h * .12;
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.strokeRect(fx, fy, fw, fh); ctx.fillStyle = alpha(C.water, .6); const lv = Math.max(0, M) / 3000; ctx.fillRect(fx + 1, fy + fh * (1 - lv), fw - 2, fh * lv);
-    label(ctx, 'Monomer', fx + fw / 2, fy + fh + 14, {size: 11, color: C.ink2});
-    // Histogramm
-    const done = ch.filter(x => x > 0); if (done.length) {
-      const hx = w * .76, hw = w * .22, hy = h * .12, hh = h * .7, bins = 8, top = Math.max(...done), cnt = Array(bins).fill(0); done.forEach(x => cnt[Math.min(bins - 1, Math.floor(x / (top + 1) * bins))]++);
-      const cm = Math.max(...cnt); cnt.forEach((c, k) => { const bh = hh * c / cm; ctx.fillStyle = alpha(C.accent, .7); ctx.fillRect(hx + k * hw / bins + 1, hy + hh - bh, hw / bins - 2, bh); });
-      ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(hx, hy + hh); ctx.lineTo(hx + hw, hy + hh); ctx.stroke();
-      label(ctx, 'Häufigkeit', hx + hw / 2, hy - 8, {size: 11, color: C.ink2}); label(ctx, `Länge bis ${top}`, hx + hw / 2, hy + hh + 14, {size: 11, color: C.ink2, weight: 400});
-    }
+    // Legende
+    const lx = bx + bs + w * .03, ly = by + fs * .5;
+    const leg = [[() => { sphere(ctx, lx + 4, ly, r, C.atomc); sphere(ctx, lx + 4 + r * 1.6, ly, r, C.atomc); }, 'Monomer (Ethen)'], [() => { sphere(ctx, lx + 4, ly + fs * 1.5, r * 1.3, C.hot); sphere(ctx, lx + 4 + r * 2.4, ly + fs * 1.5, r * 1.3, C.hot); }, 'Starter R–R'], [() => { ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(lx + 4 + r, ly + fs * 3, r * 1.2, 0, 7); ctx.fill(); polyline(ctx, [[lx + 4 + r, ly + fs * 3], [lx + 24, ly + fs * 3 - 3]], C.accent, r * 1.1); }, 'wachsende Kette'], [() => polyline(ctx, [[lx + 2, ly + fs * 4.5], [lx + 24, ly + fs * 4.5 - 3]], alpha(C.ink, .55), r * 1.1), 'Kette fertig (Abbruch)']];
+    leg.forEach(([f, s], i) => { f(); label(ctx, s, lx + 32, ly + i * fs * 1.5, {size: fs * .85, align: 'left', color: C.ink2, weight: 600}); });
+    // Histogramm der Kettenlängen
+    const hx = lx, hw = w - lx - w * .03, hy = ly + fs * 7.5, hh = by + bs - hy - fs * 1.6, bins = 8, bwid = 6, cnt = Array(bins).fill(0);
+    done.forEach(x => cnt[Math.min(bins - 1, Math.floor(x / bwid))]++);
+    const cm = Math.max(3, ...cnt);
+    label(ctx, 'Häufigkeit der Kettenlängen', hx, hy - fs * .9, {size: fs * .85, align: 'left'});
+    cnt.forEach((c, k) => { const bh = hh * c / cm, x = hx + k * hw / bins; ctx.fillStyle = alpha(C.accent, .75); ctx.fillRect(x + 1, hy + hh - bh, hw / bins - 2, bh); if (c) label(ctx, c, x + hw / bins / 2, hy + hh - bh - 8, {size: fs * .7, color: C.ink2}); });
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(hx, hy + hh); ctx.lineTo(hx + hw, hy + hh); ctx.stroke();
+    for (let k = 0; k <= bins; k += 2) label(ctx, k === bins ? '' : k * bwid, hx + k * hw / bins, hy + hh + fs * .8, {size: fs * .7, color: C.ink2, weight: 400});
+    label(ctx, `≥${(bins - 1) * bwid}`, hx + (bins - .5) * hw / bins, hy + hh + fs * .8, {size: fs * .7, color: C.ink2, weight: 400});
+    label(ctx, 'Monomere pro Kette', hx + hw / 2, hy + hh + fs * 1.8, {size: fs * .75, color: C.ink2});
+    if (done.length) { const avg = done.reduce((s, x) => s + x, 0) / done.length, ax = hx + clamp(avg / (bins * bwid), 0, 1) * hw; ctx.strokeStyle = C.bad; ctx.setLineDash([4, 3]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax, hy); ctx.lineTo(ax, hy + hh); ctx.stroke(); ctx.setLineDash([]); label(ctx, 'Mittelwert', ax + 4, hy + 6, {size: fs * .7, align: 'left', color: C.bad}); }
   });
 })();
 

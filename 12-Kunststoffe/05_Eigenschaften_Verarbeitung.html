@@ -2395,61 +2395,200 @@ function seenColor(nm, wd = 40, absMax = .95) {
     ka: ['Kalandrieren', ['Die Schmelze läuft zwischen mehreren beheizten <b>Walzen</b> hindurch.', 'Die Walzen geben Dicke und Oberfläche vor.', 'Folien und Platten, z. B. PVC-Bodenbeläge, Kreditkarten-Rohlinge.'], 'Schmelze ⟶ Walzenspalt ⟶ Folie']};
   let k = 'ex', t0 = 0;
   seg($('#vf-seg'), Object.keys(V).map(x => [x, V[x][0]]), v => { k = v; t0 = 0; $('#vf-h').textContent = V[v][0]; $('#vf-facts').innerHTML = V[v][1].map(s => `<li>${s}</li>`).join(''); $('#vf-status').textContent = V[v][2]; });
-  const melt = '#d9a441', solid = '#5aa0d0';
-  const screw = (ctx, x, y, L, R, ph) => { ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); for (let s = 0; s <= 60; s++) { const xx = x + s / 60 * L, yy = y + Math.sin(s / 60 * L / 14 + ph) * R; s ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); ctx.fillStyle = C.ink2; ctx.fillRect(x, y - 2, L, 4); };
-  const barrel = (ctx, x, y, L, H) => { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.strokeRect(x, y - H / 2, L, H); for (let i = 0; i < 4; i++) { ctx.fillStyle = alpha(C.hot, .7); ctx.fillRect(x + L * (.2 + i * .2) - 10, y - H / 2 - 8, 20, 6); ctx.fillRect(x + L * (.2 + i * .2) - 10, y + H / 2 + 2, 20, 6); } };
-  const hopper = (ctx, x, y, t) => { ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x - 26, y - 40); ctx.lineTo(x - 8, y); ctx.moveTo(x + 26, y - 40); ctx.lineTo(x + 8, y); ctx.stroke(); for (let i = 0; i < 12; i++) { ctx.fillStyle = solid; const px = x - 16 + (i % 4) * 10, py = y - 34 + Math.floor(i / 4) * 9 + (t * 8 % 9); ctx.beginPath(); ctx.arc(px, py, 3, 0, 7); ctx.fill(); } label(ctx, 'Granulat', x, y - 52, {size: 11, color: C.ink2}); };
+  const MELT = '#e8913a', SOLID = '#4f95cf', COOL = '#5ab0e8';
+  const matCol = c => { c = clamp(c, 0, 1); return c < .5 ? mix(MELT, '#eadfcf', c * 2) : mix('#eadfcf', SOLID, (c - .5) * 2); };
+  let fs = 12;
+  const lab = (s, x, y, o = {}) => label(ctx0, s, x, y, {size: fs * (o.s || .85), color: o.c || C.ink2, align: o.a || 'center', weight: o.wt || 600});
+  let ctx0;
+  // Stahlteile mit Glanz
+  const steel = (ctx, x, y, ww, hh, vert, r = 3) => { const g = vert ? ctx.createLinearGradient(x, 0, x + ww, 0) : ctx.createLinearGradient(0, y, 0, y + hh); g.addColorStop(0, '#7f8993'); g.addColorStop(.35, '#dfe4e9'); g.addColorStop(.6, '#aab3bc'); g.addColorStop(1, '#6d7780'); ctx.fillStyle = g; roundRect(ctx, x, y, ww, hh, r); ctx.fill(); ctx.strokeStyle = alpha('#2a3036', .5); ctx.lineWidth = 1; ctx.stroke(); };
+  const pellet = (ctx, x, y, s, a) => { ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = SOLID; ctx.beginPath(); ctx.ellipse(0, 0, s, s * .7, 0, 0, 7); ctx.fill(); ctx.fillStyle = alpha('#ffffff', .45); ctx.beginPath(); ctx.ellipse(-s * .3, -s * .25, s * .35, s * .2, 0, 0, 7); ctx.fill(); ctx.restore(); };
+  // Ablaufleiste für Taktverfahren
+  const phases = (ctx, w, h, P, tc) => {
+    const tot = P.reduce((s, p) => s + p[1], 0), x0 = w * .04, ww = w * .92, y = h * .93, bh = fs * 1.5; let x = x0, acc = 0;
+    P.forEach(([n, d], i) => { const pw = ww * d / tot, on = tc >= acc && tc < acc + d; ctx.fillStyle = on ? C.accent : alpha(C.ink2, .12); roundRect(ctx, x + 1, y - bh / 2, pw - 2, bh, 5); ctx.fill(); if (on) { ctx.fillStyle = alpha('#ffffff', .25); roundRect(ctx, x + 1, y - bh / 2, (pw - 2) * (tc - acc) / d, bh, 5); ctx.fill(); } label(ctx, n, x + pw / 2, y, {size: fs * .75, color: on ? C.surface : C.ink2, weight: 700}); x += pw; acc += d; });
+  };
+  const phaseAt = (P, tc) => { let acc = 0; for (const [n, d] of P) { if (tc < acc + d) return [n, (tc - acc) / d]; acc += d; } return [P[P.length - 1][0], 1]; };
+  // Plastifiziereinheit: Trichter, Zylinder mit Heizbändern, Schnecke; gibt das Düsenende zurück
+  const extruder = (ctx, x, y, L, R, t, o = {}) => {
+    const wall = R * .35, sx = o.push || 0, ph = o.rot ?? t * 2;
+    // Antrieb
+    ctx.fillStyle = mix(C.ink2, C.surface, .2); roundRect(ctx, x - R * 2.2, y - R * 1.3, R * 2, R * 2.6, 6); ctx.fill(); label(ctx, 'M', x - R * 1.2, y, {size: fs * 1.1, color: C.surface});
+    // Innenraum: Granulat → Schmelze
+    const g = ctx.createLinearGradient(x, 0, x + L, 0); g.addColorStop(0, alpha(SOLID, .12)); g.addColorStop(.3, alpha(SOLID, .2)); g.addColorStop(.55, alpha(MELT, .85)); g.addColorStop(1, MELT);
+    ctx.fillStyle = g; ctx.fillRect(x, y - R, L, 2 * R);
+    for (let i = 0; i < 26; i++) { const r = rng(i * 97 + 5); r(); const u = ((r() + t * .05 * (o.flow ?? 1)) % 1) * .5, py = y + (r() - .5) * R * 1.6; ctx.globalAlpha = clamp(1 - (u - .25) / .25, 0, 1); pellet(ctx, x + u * L, py, R * .14, r() * 3); ctx.globalAlpha = 1; }
+    // Schnecke: Welle + Stege (wandern scheinbar beim Drehen)
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y - R, L, 2 * R); ctx.clip();
+    steel(ctx, x - 4 + sx, y - R * .32, L - R * .8, R * .64, false, 2);
+    const pitch = R * 1.4; for (let xx = x + sx + ((ph * pitch / 6.283) % pitch) - pitch; xx < x + sx + L - R * 1.6; xx += pitch) { ctx.fillStyle = '#9aa4ae'; ctx.beginPath(); ctx.moveTo(xx, y - R * .95); ctx.lineTo(xx + pitch * .18, y - R * .95); ctx.lineTo(xx + pitch * .55, y + R * .95); ctx.lineTo(xx + pitch * .37, y + R * .95); ctx.closePath(); ctx.fill(); ctx.strokeStyle = alpha('#2a3036', .4); ctx.stroke(); }
+    ctx.restore();
+    // Zylinderwand (Schnitt) und Heizbänder
+    steel(ctx, x, y - R - wall, L, wall, false, 2); steel(ctx, x, y + R, L, wall, false, 2);
+    for (let i = 0; i < 4; i++) { const hx = x + L * (.3 + i * .17), pul = .6 + .4 * Math.sin(t * 3 + i); ctx.fillStyle = mix(C.hot, '#ffd0a0', 1 - pul); ctx.fillRect(hx, y - R - wall * 1.9, L * .1, wall * .9); ctx.fillRect(hx, y + R + wall, L * .1, wall * .9); }
+    // Trichter
+    const hx = x + L * .1, hy = y - R - wall, hw = R * 1.6;
+    ctx.fillStyle = alpha(C.ink2, .12); ctx.beginPath(); ctx.moveTo(hx - hw, hy - R * 2.4); ctx.lineTo(hx + hw, hy - R * 2.4); ctx.lineTo(hx + R * .45, hy); ctx.lineTo(hx - R * .45, hy); ctx.closePath(); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.stroke();
+    for (let i = 0; i < 14; i++) { const r = rng(i * 31 + 7); r(); const px = hx + (r() - .5) * hw * (1.3 - .9 * ((i % 5) / 5)), py = hy - R * (.5 + r() * 1.7) + ((t * 6) % 3) * .3; pellet(ctx, px, py, R * .14, r() * 3); }
+    if (o.lab !== false) { label(ctx, 'Granulat', hx, hy - R * 2.4 - fs * .7, {size: fs * .8, color: C.ink2}); label(ctx, 'Heizbänder', x + L * .64, y - R - wall * 2.6, {size: fs * .8, color: C.hot}); label(ctx, 'Schnecke', x + L * .45, y + R + wall * 2.9, {size: fs * .8, color: C.ink2}); }
+    return [x + L, y];
+  };
   canvasLoop($('#cv-vf'), 'verfahren', (ctx, w, h, t, dt) => {
-    t0 += dt;
-    const y = h * .45;
+    t0 += dt; ctx0 = ctx; fs = Math.max(11, w * .018);
     if (k === 'ex') {
-      const x = w * .1, L = w * .5, H = h * .16; hopper(ctx, x + 30, y - H / 2, t0); barrel(ctx, x, y, L, H);
-      const g = ctx.createLinearGradient(x, 0, x + L, 0); g.addColorStop(0, alpha(solid, .5)); g.addColorStop(1, alpha(melt, .8)); ctx.fillStyle = g; ctx.fillRect(x + 2, y - H / 2 + 2, L - 4, H - 4);
-      screw(ctx, x + 6, y, L - 12, H * .38, -t0 * 6);
-      ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(x + L, y - H / 2); ctx.lineTo(x + L + 22, y - H * .3); ctx.lineTo(x + L + 22, y + H * .3); ctx.lineTo(x + L, y + H / 2); ctx.closePath(); ctx.fill();
-      const len = (t0 * 40) % (w * .3);
-      ctx.fillStyle = mix(melt, solid, .5); ctx.fillRect(x + L + 22, y - H * .22, len + 20, H * .44); ctx.fillStyle = C.surface; ctx.fillRect(x + L + 22, y - H * .1, len + 20, H * .2);
-      for (let i = 0; i < 3; i++) { ctx.fillStyle = alpha(C.water, .6); ctx.beginPath(); ctx.arc(x + L + 60 + i * 30, y - H * .4 - ((t0 * 30 + i * 10) % 20), 3, 0, 7); ctx.fill(); }
-      label(ctx, 'Schnecke', x + L / 2, y + H / 2 + 24, {size: 11, color: C.ink2}); label(ctx, 'Heizung', x + L * .8, y - H / 2 - 18, {size: 11, color: C.hot}); label(ctx, 'Düse', x + L + 11, y + H / 2 + 24, {size: 11, color: C.ink2}); label(ctx, 'Rohr, Wasserkühlung', x + L + 90, y + H / 2 + 24, {size: 11, color: C.ink2});
+      const y = h * .47, R = h * .075, L = w * .33, [ex] = extruder(ctx, w * .11, y, L, R, t0, {});
+      // Düse (Werkzeug) mit Dorn
+      steel(ctx, ex, y - R * 1.6, w * .05, R * 3.2, true); ctx.fillStyle = MELT; ctx.fillRect(ex, y - R * .55, w * .05, R * 1.1); steel(ctx, ex + w * .005, y - R * .22, w * .045, R * .44, false, 2);
+      label(ctx, 'Düse', ex + w * .025, y + R * 1.6 + fs * .9, {size: fs * .8, color: C.ink2});
+      // Rohr läuft durch Kühlbad, Abzug und Säge
+      const px = ex + w * .05, pr = R * .55, v = w * .04, cut = w * .9, P = w * .12;
+      const pipe = (x1, x2) => { if (x2 <= x1) return; const g = ctx.createLinearGradient(0, y - pr, 0, y + pr); const cc = c => matCol((c - px) / (w * .25)); const gx = ctx.createLinearGradient(px, 0, px + w * .3, 0); gx.addColorStop(0, MELT); gx.addColorStop(1, SOLID); ctx.fillStyle = gx; ctx.fillRect(x1, y - pr, x2 - x1, 2 * pr); g.addColorStop(0, alpha('#000', .25)); g.addColorStop(.3, alpha('#fff', .35)); g.addColorStop(1, alpha('#000', .3)); ctx.fillStyle = g; ctx.fillRect(x1, y - pr, x2 - x1, 2 * pr); ctx.strokeStyle = alpha('#fff', .5); ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x1, y - pr * .6); ctx.lineTo(x2, y - pr * .6); ctx.moveTo(x1, y + pr * .6); ctx.lineTo(x2, y + pr * .6); ctx.stroke(); ctx.setLineDash([]); };
+      pipe(px, cut);
+      // Aufdruck läuft mit
+      ctx.save(); ctx.beginPath(); ctx.rect(px + w * .26, y - pr, cut - px - w * .26, 2 * pr); ctx.clip(); for (let x = px + ((t0 * v) % (w * .1)) - w * .1; x < cut; x += w * .1) label(ctx, 'PE 32×3', x, y + 1, {size: fs * .6, color: alpha('#ffffff', .85), font: MONO}); ctx.restore();
+      // abgesägte Stücke
+      const ph = (t0 * v) % P; for (let x = cut + ph - P; x < w + P; x += P) { const x1 = Math.max(cut + 3, x + 4), x2 = Math.min(w, x + P - 4); pipe(x1, x2); }
+      // Kühlbad
+      const bx1 = px + w * .06, bx2 = px + w * .22, by = y - R * 1.4;
+      ctx.fillStyle = alpha(COOL, .3); ctx.fillRect(bx1, by, bx2 - bx1, R * 3); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.strokeRect(bx1, by, bx2 - bx1, R * 3);
+      for (let i = 0; i < 10; i++) { const r = rng(i * 13 + 3); r(); const p = (t0 * (.8 + r() * .6) + r()) % 1, dx = bx1 + (bx2 - bx1) * r(); ctx.fillStyle = alpha(COOL, 1 - p); ctx.beginPath(); ctx.arc(dx, by + 4 + p * R * 1.2, 2, 0, 7); ctx.fill(); }
+      label(ctx, 'Kühlbad', (bx1 + bx2) / 2, by + R * 3 + fs * .9, {size: fs * .8, color: C.ink2});
+      // Raupenabzug
+      const ax = px + w * .26, aw = w * .1;
+      for (const sg of [-1, 1]) { const yy = y + sg * (pr + R * .35); ctx.fillStyle = mix(C.ink2, C.surface, .1); roundRect(ctx, ax, yy - R * .3, aw, R * .6, R * .3); ctx.fill(); ctx.strokeStyle = alpha('#ffffff', .4); ctx.lineWidth = 2; for (let x = ax + ((t0 * v * (sg > 0 ? 1 : -1)) % 10 + 10) % 10; x < ax + aw; x += 10) { ctx.beginPath(); ctx.moveTo(x, yy - R * .25); ctx.lineTo(x, yy + R * .25); ctx.stroke(); } }
+      label(ctx, 'Abzug', ax + aw / 2, y + pr + R * .9 + fs * .9, {size: fs * .8, color: C.ink2});
+      // Säge
+      const sd = ph < P * .15 ? Math.sin(ph / (P * .15) * Math.PI) : 0, sr = R * .9, sy = y - pr - sr - 6 + sd * (pr * 2 + 8);
+      ctx.save(); ctx.translate(cut, sy); ctx.rotate(t0 * 12); ctx.fillStyle = '#b9c1c9'; ctx.beginPath(); for (let i = 0; i < 24; i++) { const a = i / 24 * 6.283, rr = i % 2 ? sr : sr * .85; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1; ctx.stroke(); ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(0, 0, sr * .2, 0, 7); ctx.fill(); ctx.restore();
+      label(ctx, 'Säge', cut, y - pr - sr * 2 - 10, {size: fs * .8, color: C.ink2});
+      // Zonen der Schnecke
+      const zx = w * .11; [['Einzug', .15], ['Kompression', .45], ['Ausstoß', .8]].forEach(([n, u]) => label(ctx, n, zx + L * u, y + R * 2.7 + fs * 1.7, {size: fs * .75, color: C.ink2, weight: 400}));
+      label(ctx, 'kontinuierlich: Granulat ⟶ Schmelze ⟶ Rohr', w / 2, h * .93, {size: fs * .9, color: C.accent});
     } else if (k === 'sg') {
-      const cyc = t0 % 5, x = w * .06, L = w * .44, H = h * .16; hopper(ctx, x + 30, y - H / 2, t0); barrel(ctx, x, y, L, H);
-      ctx.fillStyle = alpha(melt, .7); ctx.fillRect(x + 2, y - H / 2 + 2, L - 4, H - 4);
-      const push = cyc < 1.2 ? cyc / 1.2 : cyc < 3.5 ? 1 : 1 - (cyc - 3.5) / 1.5;
-      screw(ctx, x + 6 + push * 20, y, L - 32, H * .38, cyc > 3.5 ? -t0 * 6 : 0);
-      const mx = x + L + 30, open = cyc > 3 ? Math.min(1, (cyc - 3) / .4) * (cyc > 4.4 ? 1 - (cyc - 4.4) / .6 : 1) : 0, fill = Math.min(1, cyc / 1.2);
-      ctx.fillStyle = C.ink2; ctx.fillRect(mx - 10, y - h * .3, 24, h * .6); ctx.fillRect(mx + 70 + open * 40, y - h * .3, 24, h * .6);
-      ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.strokeRect(mx + 14, y - 30, 56, 60);
-      ctx.fillStyle = cyc < 3 ? alpha(melt, .9) : solid; if (cyc < 4.4 || open < .5) { const pw = 56 * (cyc < 1.2 ? fill : 1); ctx.fillRect(mx + 14 + open * 40, y - 30, pw, 60); if (cyc > 3) for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = mix(solid, '#ffffff', .25); ctx.beginPath(); ctx.arc(mx + 26 + open * 40 + i * 16, y - 34, 5, Math.PI, 0); ctx.fill(); } }
-      label(ctx, cyc < 1.2 ? 'einspritzen' : cyc < 3 ? 'abkühlen' : cyc < 4.4 ? 'Form öffnen, auswerfen' : 'schließen, neu dosieren', mx + 50, y + h * .38, {size: 12, color: C.accent});
-      label(ctx, 'Form', mx + 42, y - h * .36, {size: 11, color: C.ink2});
+      const P = [['einspritzen', 1.2], ['Nachdruck', .8], ['kühlen + dosieren', 1.6], ['öffnen', .7], ['auswerfen', .7], ['schließen', .7]], tc = t0 % 5.7, [ph, u] = phaseAt(P, tc);
+      const y = h * .44, R = h * .06, L = w * .34;
+      const push = ph === 'einspritzen' ? ease(u) : ph === 'Nachdruck' ? 1 : ph === 'kühlen + dosieren' ? 1 - ease(u) : 0, rot = ph === 'kühlen + dosieren' ? t0 * 6 : 0;
+      const [ex] = extruder(ctx, w * .07, y, L, R, t0, {push: push * R * 1.2, rot, flow: ph === 'kühlen + dosieren' ? 1 : 0});
+      steel(ctx, ex, y - R * .5, w * .03, R, false); ctx.fillStyle = MELT; ctx.fillRect(ex, y - R * .15, w * .03, R * .3);
+      // Werkzeug: feste und bewegliche Hälfte, Holme
+      const fx = ex + w * .03, fw = w * .07, mh = h * .62, my = y - mh / 2, open = ph === 'öffnen' ? ease(u) : ph === 'auswerfen' ? 1 : ph === 'schließen' ? 1 - ease(u) : 0, mx = fx + fw + open * w * .12, mw = w * .08;
+      for (const yy of [my + mh * .08, my + mh * .92]) steel(ctx, fx, yy - 4, w * .42, 8, false, 4);
+      steel(ctx, fx, my, fw, mh, true, 4); steel(ctx, mx, my, mw, mh, true, 4);
+      steel(ctx, mx + mw, y - R * .4, w * .2, R * .8, false, 2); ctx.fillStyle = mix(C.ink2, C.surface, .15); roundRect(ctx, fx + w * .34, my + mh * .15, w * .06, mh * .7, 5); ctx.fill(); label(ctx, 'Hydraulik', fx + w * .37, my + mh * .5, {size: fs * .7, color: C.surface});
+      // Kühlkanäle
+      const cool = ph === 'kühlen + dosieren'; for (const [xx, ww] of [[fx, fw], [mx, mw]]) for (const yy of [y - mh * .3, y + mh * .3]) { ctx.fillStyle = cool ? mix(COOL, '#ffffff', .3 + .3 * Math.sin(t0 * 8 + yy)) : alpha(COOL, .45); ctx.beginPath(); ctx.arc(xx + ww / 2, yy, R * .22, 0, 7); ctx.fill(); }
+      // Formteil (Klemmbaustein, seitlich): Körper in der beweglichen Hälfte, Noppen zeigen nach rechts
+      const bh = mh * .36, bw = mw * .5, partX = (ph === 'auswerfen' ? mx + u * mw * .2 : mx), drop = ph === 'auswerfen' && u > .5 ? (u - .5) * 2 : 0;
+      const fillF = ph === 'einspritzen' ? u : 1, cold = ph === 'einspritzen' || ph === 'Nachdruck' ? 0 : ph === 'kühlen + dosieren' ? u : 1;
+      const brick = (x0, y0, bg) => { ctx.beginPath(); ctx.rect(x0, y0 - bh / 2, bw, bh); for (let i = 0; i < 2; i++) ctx.rect(x0 + bw, y0 - bh * .35 + i * bh * .5, bw * .25, bh * .2); if (bg) { ctx.fillStyle = bg; ctx.fill(); } };
+      if (!(ph === 'schließen' || (ph === 'auswerfen' && drop >= 1))) {
+        brick(open > 0 ? mx : fx + fw, y, alpha(C.bg, 1));
+        ctx.save(); brick(partX + (open > 0 ? 0 : 0), y + drop * h * .3); ctx.clip(); ctx.fillStyle = matCol(cold); ctx.fillRect(partX, y - bh, bw * 1.3 * fillF, bh * 2 + drop * h * .3 + bh); ctx.restore();
+      } else brick(mx, y, alpha(C.bg, 1));
+      if (ph === 'schließen' || ph === 'einspritzen' && u < .02) brick(mx, y, alpha(C.bg, 1));
+      // Angusskanal
+      ctx.fillStyle = ph === 'einspritzen' || ph === 'Nachdruck' ? MELT : mix(C.ink2, C.surface, .4); ctx.fillRect(fx, y - R * .12, fw, R * .24);
+      // Auswerferstifte
+      if (ph === 'auswerfen') { ctx.fillStyle = '#c9d0d6'; ctx.fillRect(mx + mw * .5, y - bh * .3, mw * .5 * (1 - u * .4), 4); ctx.fillRect(mx + mw * .5, y + bh * .3 - 4, mw * .5 * (1 - u * .4), 4); }
+      if (drop > 0) { ctx.fillStyle = alpha(C.ink2, .15); roundRect(ctx, mx - w * .02, h * .8, w * .12, h * .06, 4); ctx.fill(); }
+      label(ctx, 'Form (gekühlt)', fx + fw, my - fs * .8, {size: fs * .8, color: C.ink2}); label(ctx, 'Düse', ex + w * .015, y + R * 1.6 + fs, {size: fs * .8, color: C.ink2});
+      if (push > 0 && push < 1 && ph === 'einspritzen') arrow(ctx, w * .07 + L * .2, y - R * 2.4, w * .07 + L * .45, y - R * 2.4, 'accent', 2.5);
+      phases(ctx, w, h, P, tc);
     } else if (k === 'bf') {
-      const cyc = t0 % 5, cx = w * .5, blow = clamp((cyc - 1.5) / 1, 0, 1), close = clamp((cyc - .6) / .6, 0, 1) * (cyc > 4 ? 1 - (cyc - 4) / .8 : 1);
-      const bw = 34 + blow * 62, top = y - h * .3, bot = y + h * .3;
-      ctx.fillStyle = blow > 0 && cyc > 2.5 ? alpha(solid, .7) : alpha(melt, .8);
-      ctx.beginPath(); ctx.moveTo(cx - 14, top); ctx.lineTo(cx - 14, top + 24); ctx.bezierCurveTo(cx - bw / 2, top + 40, cx - bw / 2, top + 40, cx - bw / 2, top + 60); ctx.lineTo(cx - bw / 2, bot - 14); ctx.quadraticCurveTo(cx - bw / 2, bot, cx, bot); ctx.quadraticCurveTo(cx + bw / 2, bot, cx + bw / 2, bot - 14); ctx.lineTo(cx + bw / 2, top + 60); ctx.bezierCurveTo(cx + bw / 2, top + 40, cx + bw / 2, top + 40, cx + 14, top + 24); ctx.lineTo(cx + 14, top); ctx.closePath(); ctx.fill();
-      const gap = 120 - close * 70;
-      ctx.fillStyle = alpha(C.ink2, .8); ctx.fillRect(cx - gap - 50, top - 10, 50, bot - top + 20); ctx.fillRect(cx + gap, top - 10, 50, bot - top + 20);
-      if (blow > 0 && blow < 1) for (let i = 0; i < 5; i++) arrow(ctx, cx, y, cx + Math.cos(i * 1.25) * (20 + blow * 25), y + Math.sin(i * 1.25) * (20 + blow * 25), 'electron', 2, 8);
-      ctx.fillStyle = C.ink; ctx.fillRect(cx - 4, top - 30, 8, 30); label(ctx, 'Druckluft', cx + 10, top - 22, {size: 11, align: 'left', color: C.electron});
-      label(ctx, cyc < .6 ? 'Vorformling' : cyc < 1.5 ? 'Form schließt' : cyc < 2.5 ? 'aufblasen' : cyc < 4 ? 'abkühlen' : 'Form öffnet', cx, bot + 26, {size: 12, color: C.accent});
+      const P = [['Vorformling', 1.2], ['Form schließt', .6], ['aufblasen', 1], ['kühlen', 1], ['öffnen', .6], ['entnehmen', .8]], tc = t0 % 5.2, [ph, u] = phaseAt(P, tc);
+      const cx = w * .55, top = h * .2, bot = h * .78, H = bot - top, rp = w * .025;
+      // kleiner Extruder oben links mit Umlenkkopf
+      extruder(ctx, w * .1, h * .1, w * .3, h * .035, t0, {lab: false});
+      steel(ctx, w * .4, h * .06, cx - w * .4 + w * .04, h * .08, false); steel(ctx, cx - w * .04, h * .06, w * .08, top - h * .06, true);
+      label(ctx, 'Extruder', w * .25, h * .1 + h * .07, {size: fs * .75, color: C.ink2});
+      // Flaschenprofil r(v), v = 0 (oben) … 1 (unten)
+      const bottle = v => v < .14 ? w * .022 : v < .32 ? lerp(w * .022, w * .085, Math.sin((v - .14) / .18 * Math.PI / 2)) : v < .93 ? w * .085 : w * .085 * Math.sqrt(Math.max(0, 1 - ((v - .93) / .07) ** 2) * .85 + .15);
+      const len = ph === 'Vorformling' ? u : 1, blow = ph === 'aufblasen' ? ease(u) : ph === 'Vorformling' || ph === 'Form schließt' ? 0 : 1;
+      const close = ph === 'Form schließt' ? ease(u) : ph === 'öffnen' ? 1 - ease(u) : ph === 'entnehmen' || ph === 'Vorformling' ? 0 : 1;
+      const cold = ph === 'kühlen' ? u : ph === 'öffnen' || ph === 'entnehmen' ? 1 : 0, drop = ph === 'entnehmen' ? ease(u) : 0;
+      // Formhälften mit Flaschenhohlraum
+      const gap = (1 - close) * w * .14, mw = w * .14;
+      for (const sg of [-1, 1]) {
+        const x0 = cx + sg * gap; ctx.save(); ctx.beginPath(); ctx.rect(sg < 0 ? x0 - mw : x0, top - h * .02, mw, H + h * .05); ctx.clip();
+        steel(ctx, sg < 0 ? x0 - mw : x0, top - h * .02, mw, H + h * .05, true, 4);
+        ctx.fillStyle = mix(C.surface, C.ink2, .12); ctx.beginPath(); for (let i = 0; i <= 40; i++) { const v = i / 40; ctx.lineTo(x0 + sg * bottle(v) * 1.02, top + v * H); } ctx.lineTo(x0, bot); ctx.lineTo(x0, top); ctx.closePath(); ctx.fill();
+        for (const yy of [top + H * .3, top + H * .6, top + H * .85]) { ctx.fillStyle = alpha(COOL, ph === 'kühlen' ? .9 : .45); ctx.beginPath(); ctx.arc(x0 + sg * mw * .75, yy, h * .015, 0, 7); ctx.fill(); }
+        ctx.restore();
+      }
+      // Vorformling / Flasche
+      if (drop < 1) {
+        const oy = drop * h * .3, a = 1 - drop;
+        ctx.globalAlpha = a; ctx.fillStyle = matCol(cold); ctx.beginPath();
+        const n = 40, vmax = len;
+        for (let i = 0; i <= n; i++) { const v = i / n * vmax, r = lerp(rp * (1 + .15 * Math.sin(v * 9 + t0 * 2) * (1 - close)), bottle(v), blow); ctx.lineTo(cx - r, top + v * H + oy); }
+        for (let i = n; i >= 0; i--) { const v = i / n * vmax, r = lerp(rp * (1 + .15 * Math.sin(v * 9 + t0 * 2) * (1 - close)), bottle(v), blow); ctx.lineTo(cx + r, top + v * H + oy); }
+        ctx.closePath(); ctx.fill(); ctx.strokeStyle = alpha('#000', .25); ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = alpha('#ffffff', .3); ctx.fillRect(cx - bottle(.6) * .6 * (blow || .4), top + H * .35 + oy, w * .008, H * .5); ctx.globalAlpha = 1;
+      }
+      // Blasdorn mit Druckluft
+      const pin = ph === 'aufblasen' || ph === 'kühlen' ? 1 : ph === 'Form schließt' ? u : 0;
+      steel(ctx, cx - w * .008, top - h * .05 + pin * h * .04, w * .016, h * .07, true, 2);
+      if (ph === 'aufblasen') for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + (i - 2.5) * .5, rr = (h * .05 + u * h * .1); arrow(ctx, cx, top + H * .5, cx + Math.cos(a + Math.PI) * rr * 0 + Math.sin(a) * rr, top + H * .5 + Math.cos(a) * rr * .6, 'electron', 2, 8); }
+      if (ph === 'aufblasen') label(ctx, 'Druckluft', cx + w * .03, top - h * .03, {size: fs * .8, color: C.electron, align: 'left'});
+      label(ctx, 'Formhälfte', cx - gap - mw / 2, bot + h * .05, {size: fs * .8, color: C.ink2}); label(ctx, 'Formhälfte', cx + gap + mw / 2, bot + h * .05, {size: fs * .8, color: C.ink2});
+      phases(ctx, w, h, P, tc);
     } else if (k === 'tz') {
-      const cyc = t0 % 5, pull = clamp((cyc - 1.6) / .9, 0, 1), heat = cyc < 1.6, mx = w * .5, my = y + h * .1, sw = w * .5;
-      ctx.fillStyle = C.ink2; ctx.fillRect(mx - sw / 2, my, sw, h * .25);
-      for (const dx of [-sw * .25, sw * .25]) { ctx.fillStyle = C.surface; ctx.fillRect(mx + dx - 30, my, 60, h * .18); }
-      const pts = [[mx - sw / 2, my]]; for (const dx of [-sw * .25, sw * .25]) { pts.push([mx + dx - 30, my], [mx + dx - 30 + 6, my + pull * h * .18], [mx + dx + 30 - 6, my + pull * h * .18], [mx + dx + 30, my]); } pts.push([mx + sw / 2, my]);
-      const sy = heat ? my - 40 : lerp(my - 40, my, Math.min(1, (cyc - 1.6) / .3));
-      polyline(ctx, pts.map(([x, yy]) => [x, Math.max(yy, sy)]), cyc > 2.8 ? solid : melt, 5);
-      if (heat) { ctx.fillStyle = alpha(C.hot, .8); ctx.fillRect(mx - sw / 2, my - 90, sw, 10); for (let i = 0; i < 8; i++) { ctx.strokeStyle = alpha(C.hot, .5); ctx.beginPath(); ctx.moveTo(mx - sw / 2 + 20 + i * sw / 8, my - 78); ctx.lineTo(mx - sw / 2 + 20 + i * sw / 8, my - 50); ctx.stroke(); } label(ctx, 'Heizstrahler', mx, my - 100, {size: 11, color: C.hot}); }
-      if (pull > 0 && pull < 1) for (const dx of [-sw * .25, sw * .25]) arrow(ctx, mx + dx, my + h * .2, mx + dx, my + h * .26, 'electron', 2, 8);
-      label(ctx, heat ? 'Platte erwärmen' : cyc < 2.8 ? 'Vakuum zieht die Platte in die Form' : 'abkühlen, Becher ausstanzen', mx, my + h * .34, {size: 12, color: C.accent});
+      const P = [['erwärmen', 1.6], ['Form hoch', .5], ['Vakuum', .8], ['kühlen', .8], ['entformen', .6], ['stanzen', .8]], tc = t0 % 5.1, [ph, u] = phaseAt(P, tc);
+      const sx1 = w * .16, sx2 = w * .84, sy = h * .36, cw = w * .14, cd = h * .2, cxs = [w * .36, w * .64];
+      const heat = ph === 'erwärmen' ? u : 1, soft = ph === 'erwärmen' ? u : ph === 'Form hoch' || ph === 'Vakuum' ? 1 : ph === 'kühlen' ? 1 - u : 0;
+      // Heizstrahler fährt ein und aus
+      const hin = ph === 'erwärmen' ? Math.min(1, u * 5) * (u > .85 ? (1 - u) / .15 : 1) : 0, hx = lerp(-w * .7, sx1, hin);
+      if (hin > 0) { ctx.fillStyle = mix(C.ink2, C.surface, .2); roundRect(ctx, hx, sy - h * .2, sx2 - sx1, h * .06, 5); ctx.fill(); for (let i = 0; i < 9; i++) { const x = hx + (i + .5) * (sx2 - sx1) / 9; ctx.strokeStyle = mix(C.hot, '#ffd27a', .5 + .5 * Math.sin(t0 * 6 + i)); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x - 12, sy - h * .135); ctx.lineTo(x + 12, sy - h * .135); ctx.stroke(); } for (let i = 0; i < 9; i++) { const x = hx + (i + .5) * (sx2 - sx1) / 9; ctx.strokeStyle = alpha(C.hot, .4); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, sy - h * .12); for (let q = 0; q < 4; q++) ctx.lineTo(x + (q % 2 ? 4 : -4), sy - h * .12 + q * h * .02 + (t0 * 30 % 6)); ctx.stroke(); } label(ctx, 'Heizstrahler', hx + (sx2 - sx1) / 2, sy - h * .23, {size: fs * .8, color: C.hot}); }
+      // Form (Aluminium) mit zwei Bechernestern, fährt hoch
+      const up = ph === 'erwärmen' ? 0 : ph === 'Form hoch' ? ease(u) : ph === 'entformen' ? 1 - ease(u) : ph === 'stanzen' ? 0 : 1, my = sy + 4 + (1 - up) * h * .12;
+      ctx.save(); ctx.beginPath(); ctx.rect(sx1 + w * .04, my, sx2 - sx1 - w * .08, cd + h * .08); for (const c of cxs) { ctx.moveTo(c - cw / 2, my); ctx.lineTo(c - cw * .38, my + cd); ctx.lineTo(c + cw * .38, my + cd); ctx.lineTo(c + cw / 2, my); ctx.closePath(); } ctx.clip('evenodd'); steel(ctx, sx1 + w * .04, my, sx2 - sx1 - w * .08, cd + h * .08, false, 4); ctx.restore();
+      for (const c of cxs) { ctx.fillStyle = C.ink2; ctx.fillRect(c - 1.5, my + cd, 3, h * .08); }
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cxs[0], my + cd + h * .08); ctx.lineTo(cxs[1], my + cd + h * .08); ctx.moveTo(w * .5, my + cd + h * .08); ctx.lineTo(w * .5, my + cd + h * .12); ctx.stroke();
+      label(ctx, 'zur Vakuumpumpe', w * .5, my + cd + h * .14 + fs * .4, {size: fs * .75, color: C.electron});
+      if (ph === 'Vakuum') for (const c of cxs) for (let q = 0; q < 3; q++) { const p = (t0 * 2 + q / 3) % 1; ctx.fillStyle = alpha(C.electron, 1 - p); ctx.beginPath(); ctx.arc(c, my + cd - h * .03 + p * h * .1, 3, 0, 7); ctx.fill(); }
+      // Platte: flach (durchhängend) → in die Nester gezogen
+      const vac = ph === 'Vakuum' ? ease(u) : ph === 'erwärmen' || ph === 'Form hoch' ? 0 : 1, sag = soft * h * .025 * (1 - vac), pts = [];
+      for (let i = 0; i <= 120; i++) {
+        const x = lerp(sx1, sx2, i / 120); let yy = sy + Math.sin(Math.PI * (i / 120)) * sag;
+        for (const c of cxs) { const dx = Math.abs(x - c); if (dx < cw / 2) { const depth = dx < cw * .38 ? cd : cd * (cw / 2 - dx) / (cw * .12); yy = Math.max(yy, sy + depth * vac - 3 * vac); } }
+        pts.push([x, yy + (ph === 'entformen' || ph === 'stanzen' ? 0 : 0)]);
+      }
+      const drop = ph === 'stanzen' ? ease(clamp((u - .3) / .7, 0, 1)) : 0;
+      ctx.save(); if (drop > 0) { ctx.beginPath(); ctx.rect(0, 0, w, h); for (const c of cxs) ctx.rect(c - cw * .55, 0, cw * 1.1, h); ctx.clip('evenodd'); }
+      polyline(ctx, pts, mix(SOLID, MELT, soft), h * .012); ctx.restore();
+      if (drop > 0) for (const c of cxs) { ctx.save(); ctx.translate(0, drop * h * .25); ctx.globalAlpha = 1 - drop * .5; polyline(ctx, pts.filter(([x]) => Math.abs(x - c) < cw * .55), SOLID, h * .012); ctx.restore(); }
+      // Spannrahmen
+      for (const x of [sx1, sx2]) { ctx.fillStyle = C.ink2; ctx.fillRect(x - w * .03 * (x === sx1 ? 1 : 0), sy - h * .025, w * .03, h * .05); }
+      if (ph === 'stanzen') { const sd = Math.sin(clamp(u / .4, 0, 1) * Math.PI); for (const c of cxs) { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(c - cw * .55, sy - h * .1 + sd * h * .09); ctx.lineTo(c - cw * .55, sy - h * .02 + sd * h * .09); ctx.moveTo(c + cw * .55, sy - h * .1 + sd * h * .09); ctx.lineTo(c + cw * .55, sy - h * .02 + sd * h * .09); ctx.stroke(); } }
+      if (vac > .5 && ph !== 'stanzen') label(ctx, 'Wand wird dünner', cxs[1] + cw * .5 + 6, sy + cd * .55, {size: fs * .75, color: C.ink2, align: 'left'});
+      label(ctx, 'Kunststoffplatte', sx1 + w * .01, sy - h * .045, {size: fs * .8, color: C.ink2, align: 'left'});
+      phases(ctx, w, h, P, tc);
     } else {
-      const R = h * .13, rolls = [[w * .35, y - R * 1.05], [w * .35, y + R * 1.05], [w * .55, y + R * 1.05], [w * .55, y + R * 3.15]];
-      ctx.fillStyle = alpha(melt, .85); ctx.beginPath(); ctx.ellipse(w * .22, y, 34, 18, 0, 0, 7); ctx.fill(); label(ctx, 'Schmelze', w * .22, y - 30, {size: 11, color: C.ink2});
-      rolls.forEach(([x, yy], i) => { ctx.fillStyle = mix(C.ink2, C.surface, .3); ctx.beginPath(); ctx.arc(x, yy, R, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.stroke(); const a = t0 * (i % 2 ? -2 : 2); ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + Math.cos(a) * R * .8, yy + Math.sin(a) * R * .8); ctx.stroke(); });
-      ctx.strokeStyle = melt; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(w * .25, y); ctx.lineTo(w * .35 + R * .2, y); ctx.arc(w * .35, y + R * 1.05, R + 2, -Math.PI / 2 + .2, Math.PI / 2, true); ctx.stroke();
-      ctx.strokeStyle = solid; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(w * .35, y + R * 2.1); ctx.lineTo(w * .55, y + R * 2.1); ctx.lineTo(w * .95, y + R * 2.1); ctx.stroke();
-      for (let i = 0; i < 6; i++) { const x = w * .6 + ((t0 * 40 + i * 50) % (w * .35)); ctx.fillStyle = C.ink2; ctx.fillRect(x, y + R * 2.1 - 6, 2, 12); }
-      label(ctx, 'Folie', w * .88, y + R * 2.1 - 16, {size: 12, color: C.ink2});
+      // Kalander in L-Anordnung; Folienweg über die Walzen
+      const R = h * .09, g = h * .012, A = [w * .3, h * .14], B = [w * .3, h * .2 + 2 * R + g], Cc = [w * .3 + 2 * R + g, B[1]], D = [Cc[0], B[1] + 2 * R + g];
+      const rolls = [[A, 1], [B, -1], [Cc, 1], [D, -1]], om = .9;
+      const arc = (c, a1, a2, r, n = 24) => [...Array(n + 1)].map((_, i) => { const a = lerp(a1, a2, i / n); return [c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r]; });
+      const rf = R + g / 2, gx = w * .2, ex = w * .62, ey = D[1] + R + h * .07, wx = w * .86, wr = h * .05 + (t0 * .004 * h) % (h * .05);
+      const path = [[A[0] - R * .3, A[1] + R + g / 2], ...arc(B, -Math.PI / 2, 0, rf), ...arc(Cc, Math.PI, Math.PI / 2, rf), ...arc(D, -Math.PI / 2, 0, rf).slice(0, 24), [D[0] + rf, ey - h * .03], ...arc([D[0] + rf + h * .03, ey - h * .03], Math.PI, Math.PI / 2, h * .03, 8), [ex, ey], [wx - wr * .3, ey], [wx, wr ? ey - wr * 0 : ey]];
+      let tot = 0; const seglen = path.map((p, i) => i ? (tot += Math.hypot(p[0] - path[i - 1][0], p[1] - path[i - 1][1])) : 0);
+      // Folie mit Farbverlauf (heiß → abgekühlt) und laufender Markierung
+      for (let i = 1; i < path.length; i++) { ctx.strokeStyle = matCol((seglen[i] / tot - .45) * 2.2); ctx.lineWidth = h * .014; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(...path[i - 1]); ctx.lineTo(...path[i]); ctx.stroke(); }
+      ctx.strokeStyle = alpha('#ffffff', .55); ctx.lineWidth = 2; ctx.setLineDash([3, 14]); ctx.lineDashOffset = -t0 * 40; ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(...p) : ctx.moveTo(...p)); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      // Walzen
+      rolls.forEach(([c, d], i) => { const gr = ctx.createRadialGradient(c[0] - R * .3, c[1] - R * .3, R * .1, c[0], c[1], R); gr.addColorStop(0, '#eef1f4'); gr.addColorStop(1, '#79838d'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(c[0], c[1], R, 0, 7); ctx.fill(); ctx.strokeStyle = alpha(C.hot, .7); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c[0], c[1], R * .45, 0, 7); ctx.stroke(); ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(c[0], c[1], R * .12, 0, 7); ctx.fill(); const a = t0 * om * d; ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; for (let q = 0; q < 3; q++) { const aa = a + q * 2.094; ctx.beginPath(); ctx.moveTo(c[0] + Math.cos(aa) * R * .2, c[1] + Math.sin(aa) * R * .2); ctx.lineTo(c[0] + Math.cos(aa) * R * .85, c[1] + Math.sin(aa) * R * .85); ctx.stroke(); } });
+      // Knetwulst vor dem ersten Spalt und Zufuhrband
+      const kx = A[0] - R * .45, ky = A[1] + R + g / 2; ctx.fillStyle = MELT; ctx.beginPath(); ctx.ellipse(kx, ky, R * .38, R * .5, 0, 0, 7); ctx.fill(); ctx.strokeStyle = alpha('#ffffff', .5); ctx.lineWidth = 1.5; for (let q = 0; q < 2; q++) { ctx.beginPath(); ctx.arc(kx, ky, R * (.15 + q * .15), t0 * 3 + q, t0 * 3 + q + 4); ctx.stroke(); }
+      ctx.fillStyle = mix(C.ink2, C.surface, .2); ctx.fillRect(gx - w * .14, ky + R * .55, w * .14 + R * .1, 6);
+      for (let i = 0; i < 4; i++) { const x = gx - w * .14 + ((t0 * 20 + i * w * .04) % (w * .14)); ctx.fillStyle = MELT; ctx.beginPath(); ctx.ellipse(x, ky + R * .55 - 6, 9, 6, 0, 0, 7); ctx.fill(); }
+      label(ctx, 'Schmelze vom Kneter', gx - w * .07, ky + R * .55 + fs * 1.2, {size: fs * .75, color: C.ink2});
+      label(ctx, 'beheizte Walzen', Cc[0] + R * 1.2, A[1], {size: fs * .8, color: C.hot, align: 'left'});
+      label(ctx, 'Spalt bestimmt Dicke', Cc[0] + R * 1.25, (Cc[1] + D[1]) / 2, {size: fs * .8, color: C.ink2, align: 'left'});
+      // Kühlwalzen und Wickel
+      for (const x of [ex - w * .08, ex]) { ctx.fillStyle = mix(COOL, C.surface, .4); ctx.beginPath(); ctx.arc(x, ey + h * .035, h * .028, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.stroke(); }
+      label(ctx, 'Kühlwalzen', ex - w * .04, ey + h * .08, {size: fs * .8, color: C.ink2});
+      ctx.fillStyle = SOLID; ctx.beginPath(); ctx.arc(wx, ey - wr, wr, 0, 7); ctx.fill(); ctx.strokeStyle = alpha('#ffffff', .4); for (let q = 1; q < 5; q++) { ctx.beginPath(); ctx.arc(wx, ey - wr, wr * q / 5, 0, 7); ctx.stroke(); } ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(wx, ey - wr, 4, 0, 7); ctx.fill();
+      label(ctx, 'Folienwickel', wx, ey + fs * 1.1, {size: fs * .8, color: C.ink2});
+      label(ctx, 'kontinuierlich: Schmelze ⟶ Walzenspalt ⟶ Folie', w / 2, h * .93, {size: fs * .9, color: C.accent});
     }
   });
 })();

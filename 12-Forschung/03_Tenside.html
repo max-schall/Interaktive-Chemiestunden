@@ -2480,17 +2480,54 @@ function tensid(ctx, x, y, ang, s, head, oil) {
 (() => {
   let k = 'weich', t0 = 0;
   const T = {weich: '<b>Weiches Wasser + Seife:</b> Nach dem Schütteln bildet sich ein hoher, stabiler Schaum.', hart: '<b>Hartes Wasser + Seife:</b> Wenig Schaum, die Lösung wird trüb – Kalkseife fällt aus: Ca²⁺ + 2 RCOO⁻ ⟶ (RCOO)₂Ca↓.', tensid: '<b>Hartes Wasser + synthetisches Tensid:</b> Viel Schaum, keine Trübung. Sulfonate bilden keine schwerlöslichen Calciumsalze.'};
+  const K = ['weich', 'hart', 'tensid'], FOAM = {weich: .9, hart: .2, tensid: .85}, TURB = {weich: 0, hart: .8, tensid: 0};
   seg($('#um-seg'), [['weich', 'weich + Seife'], ['hart', 'hart + Seife'], ['tensid', 'hart + Tensid']], v => { k = v; t0 = 0; $('#um-status').innerHTML = T[v]; });
   canvasLoop($('#cv-um'), 'umwelt', (ctx, w, h, t, dt) => {
     t0 += dt;
-    const shake = t0 < 1.2 ? Math.sin(t0 * 30) * .1 : 0, u = clamp((t0 - 1.2) / 1, 0, 1), cx = w * .35;
-    const foam = k === 'hart' ? .12 : .45, turb = k === 'hart' ? .7 : 0;
-    tube(ctx, cx, h * .08, w * .12, h * .84, {fill: mix('#eef4f8', '#d8d4c8', turb * u), level: .55, tilt: shake, stopper: true});
-    if (u > 0) { ctx.save(); ctx.translate(cx, h * .5); ctx.rotate(shake); ctx.translate(-cx, -h * .5); for (let i = 0; i < 26 * foam / .45; i++) { const r = rng(i * 11 + 3); r(); ctx.strokeStyle = alpha(C.ink2, .5); ctx.fillStyle = alpha('#ffffff', .8); ctx.beginPath(); ctx.arc(cx - w * .045 + r() * w * .09, h * .45 - r() * h * .4 * foam * u, 4 + r() * 4, 0, 7); ctx.fill(); ctx.stroke(); } ctx.restore(); }
-    if (k === 'hart' && u > .5) for (let i = 0; i < 14; i++) { ctx.fillStyle = alpha('#9a9488', .8); ctx.beginPath(); ctx.arc(cx - w * .04 + (i * 13 % 10) / 10 * w * .08, h * (.6 + (i * 7 % 10) / 40), 2, 0, 7); ctx.fill(); }
-    label(ctx, k === 'weich' ? 'destilliertes Wasser' : 'Leitungswasser, hart', cx, h * .97, {size: 11, color: C.ink2, base: 'bottom'});
-    // Zoom
-    if (k === 'hart' && u > .3) { const zx = w * .72, zy = h * .5, zr = Math.min(w, h) * .22; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.stroke(); ionBall(ctx, zx, zy, 12, 'Ca', '2+'); tensid(ctx, zx - 16, zy, Math.PI, 6, '#d63e2b'); tensid(ctx, zx + 16, zy, 0, 6, '#d63e2b'); label(ctx, '(RCOO)₂Ca unlöslich', zx, zy + zr + 14, {size: 11, color: C.ink2}); }
+    const fs = Math.max(11, w * .018), tw = w * .075, tt = h * .14, th = h * .7, lvl = .45;
+    // Messlatte
+    const rx = w * .045; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(rx, tt + th * .1); ctx.lineTo(rx, tt + th); ctx.stroke(); for (let q = 0; q <= 8; q++) { const y = tt + th - q * th * .11; ctx.beginPath(); ctx.moveTo(rx, y); ctx.lineTo(rx + (q % 2 ? 5 : 9), y); ctx.stroke(); }
+    K.forEach((key, i) => {
+      const cx = w * (.12 + i * .15), sel = key === k, shake = sel && t0 < 1.4 ? Math.sin(t0 * 32) * .12 : 0, u = sel ? clamp((t0 - 1.4) / 1.2, 0, 1) : 1;
+      if (sel) { ctx.fillStyle = alpha(C.accent, .1); roundRect(ctx, cx - tw * 1.1, tt - h * .05, tw * 2.2, th + h * .17, 10); ctx.fill(); }
+      ctx.save(); ctx.translate(cx, tt + th); ctx.rotate(shake); ctx.translate(-cx, -(tt + th));
+      const ly = tt + th - (th - 6) * lvl, turb = TURB[key] * u, foamH = th * .42 * FOAM[key] * (sel && t0 < 1.4 ? t0 / 1.4 * .4 : u);
+      tube(ctx, cx, tt, tw, th, {fill: mix('#eef4f8', '#d6d0c0', turb), level: lvl, alpha: .6 + turb * .3, stopper: true});
+      // Trübung: Kalkseife-Flocken
+      if (turb > .1) for (let q = 0; q < 30; q++) { const r = rng(q * 7919 + 2); r(); r(); ctx.fillStyle = alpha('#8e8878', .8 * turb); ctx.beginPath(); ctx.arc(cx + (r() - .5) * tw * .8, ly + 8 + r() * (tt + th - ly - tw * .5) + Math.sin(t + q) * 1.5, 1.5 + r() * 1.5, 0, 7); ctx.fill(); }
+      // Schaum: dicht gepackte Bläschen
+      ctx.save(); ctx.beginPath(); ctx.rect(cx - tw / 2 + 2, ly - foamH, tw - 4, foamH); ctx.clip();
+      for (let q = 0; q < 70; q++) { const r = rng(q * 131 + i); r(); const yy = ly - r() * foamH, rr = tw * (.07 + r() * .07) * (key === 'hart' ? .7 : 1); ctx.fillStyle = alpha('#ffffff', .75); ctx.strokeStyle = alpha(C.ink2, .45); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx + (r() - .5) * tw * .9, yy, rr, 0, 7); ctx.fill(); ctx.stroke(); }
+      ctx.restore();
+      ctx.restore();
+      label(ctx, ['destilliert', 'Leitungswasser', 'Leitungswasser'][i], cx, tt + th + fs * 1, {size: fs * .75, color: C.ink2}); label(ctx, ['+ Seife', '+ Seife', '+ Tensid'][i], cx, tt + th + fs * 2, {size: fs * .75, color: C.ink2, weight: 400});
+      if (u >= 1) label(ctx, ['viel Schaum', 'trüb, kaum Schaum', 'viel Schaum, klar'][i], cx, h * .04, {size: fs * .72, color: i === 1 ? C.bad : C.good});
+    });
+    // Teilchenbild
+    const px = w * .55, pw = w * .43, py = h * .05, ph = h * .9, s = Math.min(pw, ph) * .045, cxp = px + pw / 2, cyp = py + ph * .5;
+    ctx.fillStyle = mix(C.surface, C.surface2, .55); roundRect(ctx, px, py, pw, ph, 12); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+    label(ctx, 'Teilchenebene', cxp, py + fs, {size: fs * .85, color: C.ink2});
+    const u = clamp((t0 - .4) / 2, 0, 1), head = k === 'tensid' ? C.atoms : C.bad;
+    if (k === 'weich' || k === 'tensid') {
+      // Schaumlamelle: Tenside an beiden Grenzflächen einer Wasserhaut
+      const y1 = cyp - ph * .12, y2 = cyp + ph * .12; ctx.fillStyle = alpha(C.water, .25); ctx.fillRect(px + 10, y1, pw - 20, y2 - y1);
+      label(ctx, 'Luft', px + 16, y1 - ph * .14, {size: fs * .8, color: C.ink2, align: 'left'}); label(ctx, 'Luft', px + 16, y2 + ph * .14, {size: fs * .8, color: C.ink2, align: 'left'}); label(ctx, 'Wasserhaut der Schaumblase', cxp, cyp, {size: fs * .75, color: C.water});
+      for (let q = 0; q < 9; q++) { const x = px + pw * (.1 + q * .1), d = (1 - ease(u)) * ph * .2; tensid(ctx, x, y1 + 4 + d, -Math.PI / 2, s, head); tensid(ctx, x + pw * .05, y2 - 4 - d, Math.PI / 2, s, head); }
+      if (k === 'tensid') { for (let q = 0; q < 3; q++) { const x = px + pw * (.25 + q * .25), y = cyp + ph * .07 + Math.sin(t + q) * 3; ionBall(ctx, x, y, s * 1.1, 'Ca', '2+'); } label(ctx, 'Ca²⁺ bleibt gelöst – kein Niederschlag', cxp, py + ph * .93, {size: fs * .8, color: C.good}); label(ctx, 'R–SO₃⁻ (Sulfonat)', cxp, py + ph * .86, {size: fs * .8, color: C.atoms}); }
+      else label(ctx, 'R–COO⁻ ordnet sich an der Oberfläche an', cxp, py + ph * .9, {size: fs * .8, color: C.ink2});
+    } else {
+      // Kalkseife: Ca²⁺ verbrückt zwei Seifen-Anionen, Niederschlag
+      const pairs = 3;
+      for (let q = 0; q < pairs; q++) {
+        const cy2 = py + ph * (.25 + q * .2), e2 = ease(clamp(u * 1.4 - q * .15, 0, 1)), sink = clamp((t0 - 3) / 3, 0, 1) * ph * .12;
+        const cx2 = cxp + (q - 1) * pw * .05, gap = lerp(pw * .3, s * 1.6, e2);
+        ionBall(ctx, cx2, cy2 + sink, s * 1.1, 'Ca', '2+');
+        tensid(ctx, cx2 - gap, cy2 + sink, Math.PI, s, C.bad); tensid(ctx, cx2 + gap, cy2 + sink, 0, s, C.bad);
+      }
+      ctx.fillStyle = alpha('#8e8878', .5); const pile = clamp((t0 - 3) / 3, 0, 1); ctx.beginPath(); ctx.ellipse(cxp, py + ph * .86, pw * .3, ph * .04 * pile + 1, 0, Math.PI, 0); ctx.fill();
+      label(ctx, 'Ca²⁺ + 2 RCOO⁻ ⟶ (RCOO)₂Ca ↓', cxp, py + ph * .93, {size: fs * .85, color: C.bad});
+      label(ctx, 'Seife wird verbraucht – kein Schaum', cxp, py + ph * .1 + fs * .4, {size: fs * .75, color: C.ink2});
+    }
   });
 })();
 

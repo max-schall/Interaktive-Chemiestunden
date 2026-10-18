@@ -2404,32 +2404,71 @@ function seenColor(nm, wd = 40, absMax = .95) {
   let k = 'o2', t0 = 0;
   const T = {o2: '<b>Sauerstoffkorrosion</b> (neutrales Salzwasser): Eisen gibt Elektronen ab, am Kupfer nimmt gelöster Sauerstoff sie auf. Fe²⁺ und OH⁻ treffen sich und bilden Rost.', h: '<b>Säurekorrosion</b> (saurer Regen, pH &lt; 4): Am Kupfer werden Oxonium-Ionen zu Wasserstoff reduziert – Gasbläschen steigen auf.'};
   seg($('#lo-seg'), [['o2', 'Sauerstoff'], ['h', 'Säure']], v => { k = v; t0 = 0; $('#lo-status').innerHTML = T[v]; });
+  const P = 5, NC = 2; // Dauer eines Reaktionszyklus, Zahl versetzter Zyklen
+  const metal = (ctx, x, y, w, h, c1, c2, seed) => { const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, c1); g.addColorStop(1, c2); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.strokeStyle = alpha('#000', .07); ctx.lineWidth = 1; for (let q = 0; q < 12; q++) { const r = rng(q * 97 + seed); r(); r(); const gx = x + r() * w, gy = y + r() * h; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + (r() - .5) * 40, gy + (r() - .5) * 24); ctx.stroke(); } };
+  const ion = (ctx, x, y, s, el, q, a = 1) => { ctx.globalAlpha = a; ionBall(ctx, x, y, s, el, q); ctx.globalAlpha = 1; };
+  const oh = (ctx, x, y, s, a = 1) => { ctx.globalAlpha = a; sphere(ctx, x, y, s * .75, C.atomo); sphere(ctx, x + s * .6, y - s * .45, s * .42, C.atomh, '', '', alpha('#000', .3)); label(ctx, '−', x - s * .75, y - s * .7, {size: s * 1.1, color: C.electron}); ctx.globalAlpha = 1; };
+  const o2m = (ctx, x, y, s, a = 1) => { ctx.globalAlpha = a; sphere(ctx, x - s * .45, y, s * .7, C.atomo); sphere(ctx, x + s * .45, y, s * .7, C.atomo); ctx.globalAlpha = 1; };
+  const h2o = (ctx, x, y, s, a = 1) => { ctx.globalAlpha = a; sphere(ctx, x, y, s * .6, C.atomo); sphere(ctx, x - s * .5, y + s * .35, s * .35, C.atomh, '', '', alpha('#000', .3)); sphere(ctx, x + s * .5, y + s * .35, s * .35, C.atomh, '', '', alpha('#000', .3)); ctx.globalAlpha = 1; };
+  const h3o = (ctx, x, y, s, a = 1) => { ctx.globalAlpha = a; sphere(ctx, x, y, s * .65, C.atomo); for (const an of [-2.3, -.8, 1.6]) sphere(ctx, x + Math.cos(an) * s * .62, y + Math.sin(an) * s * .62, s * .36, C.atomh, '', '', alpha('#000', .3)); label(ctx, '+', x + s * .9, y - s * .7, {size: s * 1.1, color: C.bad}); ctx.globalAlpha = 1; };
+  const el = (ctx, x, y, s) => { ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, s * .38, 0, 7); ctx.fill(); label(ctx, '−', x, y - .5, {size: s * .55, color: '#fff'}); };
   canvasLoop($('#cv-lo'), 'lokal', (ctx, w, h, t, dt) => {
     t0 += dt;
-    const y0 = h * .62, fx = w * .05, cxm = w * .55, ex = w * .95, rust = clamp(t0 / 15, 0, 1);
-    // Wassertropfen
-    ctx.fillStyle = alpha(C.water, .18); ctx.beginPath(); ctx.moveTo(w * .12, y0); ctx.bezierCurveTo(w * .2, h * .05, w * .8, h * .05, w * .88, y0); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = alpha(C.water, .6); ctx.lineWidth = 2; ctx.stroke();
-    // Metalle
-    ctx.fillStyle = '#7D8794'; ctx.fillRect(fx, y0, cxm - fx, h * .28); ctx.fillStyle = '#C46A3A'; ctx.fillRect(cxm, y0, ex - cxm, h * .28);
-    label(ctx, 'Eisen (Anode, −)', (fx + cxm) / 2, y0 + h * .2, {size: 13, color: '#fff'}); label(ctx, 'Kupfer (Kathode, +)', (cxm + ex) / 2, y0 + h * .2, {size: 13, color: '#fff'});
-    // Lochfraß / Rost
-    ctx.fillStyle = mix('#7D8794', '#a0522d', rust); for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(w * (.22 + i * .06), y0, 6 + rust * 6, Math.PI, 0); ctx.fill(); }
-    // Fe2+ verlässt die Oberfläche
-    for (let i = 0; i < 5; i++) { const p = (t * .25 + i / 5) % 1; ionBall(ctx, w * (.22 + i * .06), y0 - 8 - p * h * .3, 9, 'Fe', '2+'); }
-    // Elektronen im Metall von Fe zu Cu
-    for (let i = 0; i < 8; i++) { const p = (t * .35 + i / 8) % 1; ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(lerp(w * .25, w * .75, p), y0 + h * .08, 4, 0, 7); ctx.fill(); }
-    label(ctx, 'e⁻ ⟶', w * .5, y0 + h * .12, {size: 12, color: '#fff'});
-    if (k === 'o2') {
-      for (let i = 0; i < 4; i++) { const p = (t * .2 + i / 4) % 1, x = w * (.62 + i * .07); atomBall(ctx, x - 6, lerp(h * .2, y0 - 10, p), 6, 'O'); atomBall(ctx, x + 6, lerp(h * .2, y0 - 10, p), 6, 'O'); }
-      for (let i = 0; i < 4; i++) { const p = (t * .2 + i / 4 + .5) % 1; ionBall(ctx, lerp(w * .7, w * .45, p), y0 - h * .2 - (i % 2) * 14, 8, 'O', '−'); }
-      if (rust > .2) { ctx.fillStyle = alpha('#a0522d', .6 * rust); ctx.beginPath(); ctx.ellipse(w * .48, y0 - h * .22, 50 * rust, 14 * rust, 0, 0, 7); ctx.fill(); label(ctx, 'Rost', w * .48, y0 - h * .22, {size: 12, color: '#fff'}); }
-      label(ctx, 'O₂ + 2 H₂O + 4 e⁻ ⟶ 4 OH⁻', w * .75, h * .14, {size: 12, color: C.ink2});
-    } else {
-      bubbles(ctx, w * .6, h * .15, w * .3, y0 - h * .15, t, 16, '#ffffff', 2);
-      label(ctx, '2 H₃O⁺ + 2 e⁻ ⟶ H₂ + 2 H₂O', w * .75, h * .14, {size: 12, color: C.ink2});
+    const fs = Math.max(11, w * .018), o2 = k === 'o2', s = Math.max(8, Math.min(w, h) * .034);
+    const y0 = h * .66, jx = w * .5, px = w * .27, cx = w * .73, mh = h * .26;
+    const dL = w * .07, dR = w * .93, dH = h * .5, dropY = x => { const u = (x - (dL + dR) / 2) / ((dR - dL) / 2); return y0 - dH * Math.pow(Math.max(0, 1 - u * u), .55); };
+    const meet = [jx, y0 - h * .1];
+    // --- Metalle mit Korrosionsmulde im Eisen
+    metal(ctx, w * .03, y0, jx - w * .03, mh, '#a3acb6', '#6d7680', 3); metal(ctx, jx, y0, w * .97 - jx, mh, '#dc8f58', '#a55a2c', 7);
+    const pitR = Math.min(w * .09, w * .035 + t0 * w * .0012), pitD = Math.min(h * .1, h * .02 + t0 * h * (o2 ? .0013 : .0022));
+    // --- Tropfen (Wasser füllt auch die Mulde)
+    ctx.beginPath(); ctx.moveTo(dL, y0); for (let x = dL; x <= dR; x += 3) ctx.lineTo(x, dropY(x)); ctx.lineTo(dR, y0); ctx.closePath();
+    const dg = ctx.createLinearGradient(0, y0 - dH, 0, y0); dg.addColorStop(0, alpha(C.water, .12)); dg.addColorStop(1, alpha(C.water, .3)); ctx.fillStyle = dg; ctx.fill(); ctx.strokeStyle = alpha(C.water, .75); ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = mix(C.surface, C.water, .25); ctx.beginPath(); ctx.ellipse(px, y0, pitR, pitD, 0, 0, Math.PI); ctx.fill(); ctx.strokeStyle = '#4e555c'; ctx.lineWidth = 2; ctx.stroke();
+    label(ctx, 'Lochfraß', px, y0 + pitD + fs * .9, {size: fs * .75, color: '#fff'});
+    // Elektronenweg im Metall
+    const ey = y0 + mh * .45, path = [[px, y0 + pitD], [px, ey], [cx, ey], [cx, y0]];
+    ctx.strokeStyle = alpha('#ffffff', .5); ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(...p) : ctx.moveTo(...p)); ctx.stroke(); ctx.setLineDash([]);
+    label(ctx, 'Elektronen fließen zum Kupfer', jx, ey + fs * 1.2, {size: fs * .75, color: '#fff'});
+    const along = u => { const L = [0, 1, 2].map(i => Math.hypot(path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])), tot = L[0] + L[1] + L[2]; let d = clamp(u, 0, 1) * tot, i = 0; while (i < 2 && d > L[i]) { d -= L[i]; i++; } const f = d / L[i]; return [lerp(path[i][0], path[i + 1][0], f), lerp(path[i][1], path[i + 1][1], f)]; };
+    // --- Rostkruste bzw. Wasserstoffblasen (wachsen über die Zeit)
+    const nDone = Math.floor(Math.max(0, t0 - P * .9) / P * NC);
+    if (o2) {
+      const amt = Math.min(1, nDone / 14);
+      if (amt > 0) { ctx.fillStyle = mix('#5f7a3a', '#9a4a14', Math.min(1, amt * 1.5)); ctx.beginPath(); for (let i = 0; i <= 48; i++) { const a = Math.PI + i / 48 * Math.PI, r = (w * .04 + amt * w * .07) * (1 + .06 * Math.sin(i * .9)), rr = (h * .02 + amt * h * .05) * (1 + .12 * Math.sin(i * .7 + 1) + .06 * Math.sin(i * 2.1)); ctx.lineTo(meet[0] + Math.cos(a) * r, y0 + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); for (let i = 0; i < 18 * amt; i++) { const r = rng(i * 7919 + 4); r(); r(); ctx.fillStyle = alpha('#c4652a', .8); ctx.beginPath(); ctx.arc(meet[0] + (r() - .5) * w * .18 * amt, y0 - r() * h * .06 * amt, 2, 0, 7); ctx.fill(); }
+        label(ctx, 'Rost', meet[0], y0 - h * .03 - amt * h * .05, {size: fs * .85, color: '#fff'}); }
     }
-    label(ctx, 'Fe ⟶ Fe²⁺ + 2 e⁻', w * .25, h * .14, {size: 12, color: C.ink2});
+    // --- Reaktionszyklen
+    for (let c = 0; c < NC; c++) {
+      const tc = t0 - c * P / NC; if (tc < 0) continue;
+      const p = (tc % P) / P, cyc = Math.floor(tc / P), jit = (cyc * 37 + c * 11) % 7 / 7 - .5;
+      const fx = px + jit * pitR, fe1 = [fx, y0 + pitD * .6];
+      // Fe ⟶ Fe²⁺ + 2 e⁻
+      if (p < .15) { atomBall(ctx, fe1[0], fe1[1], s * .8, 'Fe'); }
+      const feTarget = o2 ? [meet[0] - w * .04 + jit * w * .04, meet[1]] : [fx + jit * w * .1, y0 - h * .3];
+      if (p >= .15) { const u = ease(clamp((p - .15) / (o2 ? .55 : .5), 0, 1)), x = lerp(fe1[0], feTarget[0], u), y = lerp(fe1[1], feTarget[1], u) - Math.sin(u * Math.PI) * h * .08; if (o2 ? p < .88 : true) ion(ctx, x, y, s * .9, 'Fe', '2+', o2 ? 1 : 1 - clamp((p - .8) / .2, 0, 1)); }
+      if (p >= .15 && p < .5) for (const off of [0, .05]) { const [x, y] = along((p - .15) / .3 - off); if ((p - .15) / .3 - off > 0) el(ctx, x, y, s); }
+      if (o2) {
+        // O₂ (mit H₂O) wird am Kupfer zu OH⁻ reduziert
+        const site = [cx + jit * w * .06, y0 - s * .7];
+        if (p < .45) { const u = ease(clamp(p / .4, 0, 1)), sx = site[0] + w * .05, sy = dropY(site[0] + w * .05) + s; o2m(ctx, lerp(sx, site[0], u), lerp(sy, site[1] - s * .4, u), s * .8); h2o(ctx, site[0] - s * 1.6, site[1] - s * .3 + Math.sin(t + c) * 2, s * .8); }
+        if (p >= .45 && p < .52) { ctx.fillStyle = alpha(C.electron, .25 * (1 - (p - .45) / .07)); ctx.beginPath(); ctx.arc(site[0], site[1], s * 2, 0, 7); ctx.fill(); }
+        if (p >= .45 && p < .88) for (let q = 0; q < 2; q++) { const u = ease(clamp((p - .5) / .33, 0, 1)), tx = meet[0] + w * .03 + q * s * 1.6, ty = meet[1] + (q - .5) * s * 1.4, x = lerp(site[0] + (q - .5) * s * 1.6, tx, u), y = lerp(site[1], ty, u) - Math.sin(u * Math.PI) * h * .06; oh(ctx, x, y, s * .9); }
+        if (p >= .88) { const u = (p - .88) / .12; ctx.globalAlpha = 1 - u; sphere(ctx, meet[0], meet[1] + u * h * .06, s * .9, '#6f8a46'); label(ctx, 'Fe(OH)₂', meet[0], meet[1] - s * 1.5, {size: fs * .75, color: '#5f7a3a'}); ctx.globalAlpha = 1; }
+      } else {
+        // 2 H₃O⁺ + 2 e⁻ ⟶ H₂ + 2 H₂O am Kupfer
+        const site = [cx + (cyc % 3 - 1) * w * .06, y0 - s * .6];
+        if (p < .5) for (let q = 0; q < 2; q++) { const u = ease(clamp(p / .45, 0, 1)), sx = site[0] + (q - .5) * w * .12, sy = y0 - h * .28 + q * h * .05; h3o(ctx, lerp(sx, site[0] + (q - .5) * s * 1.8, u), lerp(sy, site[1] - s * .3, u), s * .85); }
+        if (p >= .5) { const u = clamp((p - .5) / .5, 0, 1), r = s * (.4 + u * .7), by = u < .6 ? site[1] - r : lerp(site[1] - r, dropY(site[0]) + r, (u - .6) / .4); ctx.fillStyle = alpha('#ffffff', .5); ctx.strokeStyle = alpha(C.ink2, .8); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(site[0], by, r, 0, 7); ctx.fill(); ctx.stroke(); label(ctx, 'H₂', site[0], by, {size: Math.max(9, r * .8), color: C.ink}); if (u < .5) for (let q = 0; q < 2; q++) h2o(ctx, site[0] + (q - .5) * s * 3, site[1] - s * .6 - u * h * .1, s * .7, 1 - u * 2); }
+      }
+    }
+    // gelöste Ionen im Hintergrund (Salzwasser bzw. Säure)
+    for (let i = 0; i < 4; i++) { const r = rng(i * 7919 + 21); r(); r(); const x = lerp(dL + w * .08, dR - w * .08, r()), y = lerp(dropY(x) + s * 2, y0 - s * 3, r()) + Math.sin(t * .8 + i) * 3; if (o2) { ctx.globalAlpha = .3; if (i % 2) ionBall(ctx, x, y, s * .7, 'Na', '+'); else ionBall(ctx, x, y, s * .75, 'Cl', '−'); ctx.globalAlpha = 1; } }
+    // Beschriftung der Pole und Teilgleichungen
+    label(ctx, 'Eisen: Anode (−)', w * .14, y0 + mh * .82, {size: fs * .9, color: '#fff', align: 'left'}); label(ctx, 'Kupfer: Kathode (+)', w * .86, y0 + mh * .82, {size: fs * .9, color: '#fff', align: 'right'});
+    const tag = (s2, x, c) => { ctx.font = `700 ${fs * .8}px ${SANS}`; const tw = ctx.measureText(s2).width + 16; ctx.fillStyle = alpha(c, .14); roundRect(ctx, x - tw / 2, h * .015, tw, fs * 1.6, 6); ctx.fill(); label(ctx, s2, x, h * .015 + fs * .8, {size: fs * .8, color: c}); };
+    tag('Oxidation: Fe ⟶ Fe²⁺ + 2 e⁻', w * .25, C.bad); tag(o2 ? 'Reduktion: O₂ + 2 H₂O + 4 e⁻ ⟶ 4 OH⁻' : 'Reduktion: 2 H₃O⁺ + 2 e⁻ ⟶ H₂ + 2 H₂O', w * .74, C.electron);
+    if (o2) label(ctx, 'Fe²⁺ + 2 OH⁻ ⟶ Fe(OH)₂ ⟶ Rost', jx, h * .015 + fs * 2.6, {size: fs * .78, color: '#8a3a10'});
   });
 })();
 
@@ -2467,17 +2506,32 @@ function seenColor(nm, wd = 40, absMax = .95) {
   seg($('#sc-seg'), [['sn', 'verzinnt'], ['zn', 'verzinkt']], v => { k = v; t0 = 0; $('#sc-status').innerHTML = T[v]; });
   canvasLoop($('#cv-sc'), 'schutz', (ctx, w, h, t, dt) => {
     t0 += dt;
-    const u = clamp(t0 / 10, 0, 1), y = h * .45, gap = [w * .44, w * .56], ct = 18;
-    ctx.fillStyle = alpha(C.water, .2); ctx.fillRect(0, h * .15, w, y - h * .15 - ct);
-    ctx.fillStyle = '#7D8794'; ctx.fillRect(0, y, w, h * .4);
-    const coat = k === 'sn' ? '#d8dde2' : '#a8b4be';
-    ctx.fillStyle = coat; ctx.fillRect(0, y - ct, gap[0] - (k === 'zn' ? u * 30 : 0), ct); ctx.fillRect(gap[1] + (k === 'zn' ? u * 30 : 0), y - ct, w - gap[1], ct);
-    label(ctx, k === 'sn' ? 'Zinn' : 'Zink', w * .15, y - ct / 2, {size: 12, color: C.ink});
-    label(ctx, 'Kratzer', w * .5, y - ct - 14, {size: 12, color: C.ink2}); label(ctx, 'Eisen', w * .15, y + h * .2, {size: 13, color: '#fff'});
-    if (k === 'sn') { ctx.fillStyle = mix('#7D8794', '#8a3a10', u); ctx.beginPath(); ctx.ellipse(w * .5, y, w * .06 + u * w * .1, 10 + u * 34, 0, 0, Math.PI); ctx.fill(); for (let i = 0; i < 3; i++) { const p = (t * .3 + i / 3) % 1; ionBall(ctx, w * (.47 + i * .03), y - 6 - p * h * .2, 8, 'Fe', '2+'); } }
-    else { for (let i = 0; i < 4; i++) { const p = (t * .3 + i / 4) % 1, x = i % 2 ? gap[1] + u * 30 + 8 : gap[0] - u * 30 - 8; ionBall(ctx, x, y - ct - 6 - p * h * .2, 8, 'Zn', '2+'); } ctx.fillStyle = alpha('#e0409a', .25); ctx.fillRect(gap[0], y - 4, gap[1] - gap[0], 6); }
-    for (let i = 0; i < 6; i++) { const p = (t * .3 + i / 6) % 1, from = k === 'sn' ? w * .5 : (i % 2 ? w * .75 : w * .25), to = k === 'sn' ? (i % 2 ? w * .8 : w * .2) : w * .5; ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(lerp(from, to, p), y + h * .08, 3.5, 0, 7); ctx.fill(); }
-    label(ctx, k === 'sn' ? 'Eisen = Anode: Rost unter dem Überzug' : 'Zink = Anode, Eisen = Kathode (geschützt)', w / 2, h * .95, {size: 13, color: k === 'sn' ? C.bad : C.good});
+    const fs = Math.max(11, w * .018), u = clamp((t0 % 16) / 12, 0, 1), sn = k === 'sn', y = h * .5, ct = h * .06, s = Math.max(6, Math.min(w, h) * .022), g0 = w * .45, g1 = w * .55, cx = w / 2;
+    // Wasserfilm mit gelöstem O₂
+    ctx.fillStyle = alpha(C.water, .22); ctx.beginPath(); ctx.moveTo(w * .05, y - ct); ctx.bezierCurveTo(w * .2, h * .08, w * .8, h * .08, w * .95, y - ct); ctx.closePath(); ctx.fill(); ctx.strokeStyle = alpha(C.water, .6); ctx.lineWidth = 2; ctx.stroke();
+    // Eisen
+    const g = ctx.createLinearGradient(0, y, 0, h); g.addColorStop(0, '#9aa3ad'); g.addColorStop(1, '#5f6872'); ctx.fillStyle = g; ctx.fillRect(0, y, w, h * .86 - y); ctx.fillStyle = alpha(C.water, .3); ctx.fillRect(g0 - (sn ? 0 : u * w * .06), y - ct, g1 - g0 + (sn ? 0 : 2 * u * w * .06), ct);
+    // Korrosionsmulde im Eisen (nur bei Zinn): wächst unter den Überzug
+    const pw = sn ? w * .05 + u * w * .14 : 0, pd = sn ? h * .03 + u * h * .14 : 0;
+    if (sn) { ctx.fillStyle = mix('#7a4a2a', '#8a3a10', u); ctx.beginPath(); ctx.ellipse(cx, y, pw, pd, 0, 0, Math.PI); ctx.fill(); for (let i = 0; i < 26 * u; i++) { const r = rng(i * 7919 + 3); r(); r(); const a = r() * Math.PI, rr = r(); ctx.fillStyle = alpha('#b5541c', .8); ctx.beginPath(); ctx.arc(cx + Math.cos(a) * pw * rr * .9, y + Math.sin(a) * pd * rr * .9, 3, 0, 7); ctx.fill(); } }
+    // Überzug (Zinn glänzend, Zink mit Zinkblumen); Zink weicht am Kratzer zurück
+    const rec = sn ? 0 : u * w * .06, coat = sn ? ['#eef1f4', '#b9c1c9'] : ['#c9d3dc', '#8e9aa6'];
+    for (const [a, b] of [[0, g0 - rec], [g1 + rec, w]]) { const cg = ctx.createLinearGradient(0, y - ct, 0, y); cg.addColorStop(0, coat[0]); cg.addColorStop(1, coat[1]); ctx.fillStyle = cg; ctx.fillRect(a, y - ct, b - a, ct); if (!sn) { ctx.strokeStyle = alpha('#ffffff', .35); ctx.lineWidth = 1; for (let x = a + 10; x < b - 10; x += 28) { ctx.beginPath(); ctx.moveTo(x, y - ct); ctx.lineTo(x + 10, y); ctx.moveTo(x + 14, y - ct); ctx.lineTo(x + 4, y); ctx.stroke(); } } }
+    label(ctx, sn ? 'Zinn (edler als Eisen)' : 'Zink (unedler als Eisen)', w * .2, y - ct / 2, {size: fs * .8, color: '#333'}); label(ctx, 'Eisen', w * .15, y + h * .2, {size: fs, color: '#fff'});
+    label(ctx, 'Kratzer', cx, y - ct - fs * .8, {size: fs * .8, color: C.ink2});
+    // Ionen und Elektronen
+    const anode = sn ? [[cx - pw * .4, y + pd * .3], [cx + pw * .4, y + pd * .3]] : [[g0 - rec - 6, y - ct], [g1 + rec + 6, y - ct]];
+    for (let i = 0; i < 4; i++) { const p = (t * .3 + i / 4) % 1, [ax, ay] = anode[i % 2]; ionBall(ctx, ax + (i % 2 ? 1 : -1) * p * w * .03, ay - s - p * h * .25, s, sn ? 'Fe' : 'Zn', '2+'); }
+    // Elektronen: bei Zinn vom Eisen (Mulde) zur Zinnoberfläche, bei Zink vom Zink zum freiliegenden Eisen
+    for (let i = 0; i < 8; i++) { const p = (t * .35 + i / 8) % 1, sgn = i % 2 ? 1 : -1, from = sn ? cx : cx + sgn * w * .3, to = sn ? cx + sgn * w * .3 : cx; ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(lerp(from, to, p), y + h * .12 + (i % 2) * 6, 4, 0, 7); ctx.fill(); }
+    // O₂-Reduktion an der Kathode
+    const kat = sn ? [cx - w * .3, cx + w * .3] : [cx - w * .02, cx + w * .02];
+    kat.forEach((kx, q) => { const p = (t * .4 + q * .5) % 1; atomBall(ctx, kx - 4, lerp(y - h * .3, y - ct - s, p), s * .6, 'O'); atomBall(ctx, kx + 4, lerp(y - h * .3, y - ct - s, p), s * .6, 'O'); if (p > .7) { ctx.fillStyle = C.atomo; ctx.beginPath(); ctx.arc(kx + 14, y - ct - s * 2, s * .7, 0, 7); ctx.fill(); label(ctx, 'OH⁻', kx + 14, y - ct - s * 2, {size: s * .5, color: '#fff'}); } });
+    if (!sn) { for (let i = 0; i < 20 * u; i++) { const r = rng(i * 131 + 9); r(); ctx.fillStyle = alpha('#f4f4f0', .9); ctx.beginPath(); ctx.arc(cx + (r() - .5) * w * .2, y - ct - r() * h * .05, 2.5, 0, 7); ctx.fill(); } }
+    // Ergebnis
+    const res = sn ? 'Eisen = Anode: Rost frisst sich unter den Zinnüberzug' : 'Zink = Anode (Opfer), Eisen = Kathode: bleibt blank';
+    ctx.fillStyle = alpha(sn ? C.bad : C.good, .14); ctx.font = `700 ${fs * .9}px ${SANS}`; const tw = ctx.measureText(res).width + 24; roundRect(ctx, cx - tw / 2, h * .935 - fs * .8, tw, fs * 1.6, 8); ctx.fill(); label(ctx, res, cx, h * .935, {size: fs * .9, color: sn ? C.bad : C.good});
+    label(ctx, 'e⁻', cx + w * .33, y + h * .12, {size: fs * .85, color: '#fff'});
   });
   sorter($('#so'), [{id: 'u', name: 'Überzug (passiv)'}, {id: 'k', name: 'kathodischer Schutz'}, {id: 'o', name: 'Oxidschicht, Legierung'}], [
     {t: 'Autolack', c: 'u'}, {t: 'Emaille am Kochtopf', c: 'u'}, {t: 'Weißblech (verzinnt)', c: 'u'}, {t: 'Zinkblock am Schiffsrumpf', c: 'k'}, {t: 'Fremdstrom an einer Pipeline', c: 'k'}, {t: 'feuerverzinkte Leitplanke', c: 'k'},

@@ -2408,24 +2408,58 @@ function seenColor(nm, wd = 40, absMax = .95) {
 /* ================= PEM ================= */
 (() => {
   const L = () => +$('#pem-l').value;
-  const upd = () => { const l = L(), U = .95 - .35 * l, P = U * l * 1.5; $('#pem-lo').textContent = Math.round(l * 100) + ' %'; $('#pem-status').innerHTML = `Zellspannung ≈ <b>${numDE(U, 2)} V</b> · Je mehr Strom fließt, desto mehr H₂ und O₂ werden verbraucht und desto stärker sinkt die Spannung (Verluste).`; };
+  const Uc = l => .95 - .35 * l;
+  const upd = () => { const l = L(), U = Uc(l); $('#pem-lo').textContent = Math.round(l * 100) + ' %'; $('#pem-status').innerHTML = `Zellspannung ≈ <b>${numDE(U, 2)} V</b> · Je mehr Strom fließt, desto mehr H₂ und O₂ werden verbraucht und desto stärker sinkt die Spannung (Verluste).`; };
   $('#pem-l').oninput = upd; upd();
-  canvasLoop($('#cv-pem'), 'pem', (ctx, w, h, t) => {
-    const l = L(), x1 = w * .3, x2 = w * .42, x3 = w * .58, x4 = w * .7, top = h * .2, bot = h * .92;
-    ctx.fillStyle = alpha(C.water, .12); ctx.fillRect(w * .06, top, x1 - w * .06, bot - top); ctx.fillStyle = alpha(C.bad, .1); ctx.fillRect(x4, top, w * .94 - x4, bot - top);
-    ctx.fillStyle = '#3c454d'; ctx.fillRect(x1, top, x2 - x1, bot - top); ctx.fillRect(x3, top, x4 - x3, bot - top);
-    ctx.fillStyle = alpha('#e8d080', .8); ctx.fillRect(x2, top, x3 - x2, bot - top);
-    label(ctx, 'Anode (−)', (x1 + x2) / 2, top - 10, {size: 11, color: C.electron}); label(ctx, 'Membran', (x2 + x3) / 2, top - 10, {size: 11, color: C.ink2}); label(ctx, 'Kathode (+)', (x3 + x4) / 2, top - 10, {size: 11, color: C.bad});
-    label(ctx, 'H₂ ⟶', w * .1, bot + 2, {size: 13, color: C.water, base: 'bottom'}); label(ctx, '⟵ O₂ (Luft)', w * .9, bot + 2, {size: 13, color: C.bad, base: 'bottom'});
-    const sp = .2 + l * .8;
-    for (let i = 0; i < 6; i++) { const p = (t * .25 * sp + i / 6) % 1, y = top + 20 + i * (bot - top - 40) / 5; const x = lerp(w * .08, x1 + 6, p); atomBall(ctx, x - 6, y, 7, 'H'); atomBall(ctx, x + 6, y, 7, 'H'); }
-    for (let i = 0; i < 6; i++) { const p = (t * .25 * sp + i / 6 + .5) % 1, y = top + 30 + i * (bot - top - 50) / 5, x = lerp(x1 + 10, x4 - 10, p); ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); label(ctx, '+', x, y, {size: 8, color: '#fff'}); }
-    for (let i = 0; i < 5; i++) { const p = (t * .2 * sp + i / 5) % 1, y = top + 25 + i * (bot - top - 50) / 4, x = lerp(w * .92, x4 + 8, p); atomBall(ctx, x - 7, y, 8, 'O'); atomBall(ctx, x + 7, y, 8, 'O'); }
-    for (let i = 0; i < 4; i++) { const p = (t * .2 * sp + i / 4 + .3) % 1, y = lerp(top + 20, bot - 10, p), x = x4 + 18 + (i % 2) * 20; drawFormula(ctx, x, y, 6, 'H2O'); }
-    // äußerer Stromkreis
-    const wy = h * .08; ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo((x1 + x2) / 2, top); ctx.lineTo((x1 + x2) / 2, wy); ctx.lineTo((x3 + x4) / 2, wy); ctx.lineTo((x3 + x4) / 2, top); ctx.stroke();
-    ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(w / 2, wy, 16, 0, 7); ctx.fill(); ctx.stroke(); label(ctx, 'M', w / 2, wy, {size: 13});
-    for (let k = 0; k < 6; k++) { const p = (t * .3 * sp + k / 6) % 1, x = lerp((x1 + x2) / 2, (x3 + x4) / 2, p); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, wy, 4, 0, 7); ctx.fill(); }
+  let ev = [], acc = 0, rot = 0;
+  // Schichtgrenzen (Anteil der Breite): Platte | GDL | Katalysator | Membran | Katalysator | GDL | Platte
+  const X = [.03, .12, .2, .23, .37, .4, .48, .57];
+  canvasLoop($('#cv-pem'), 'pem', (ctx, w, h, t, dt) => {
+    const l = L(), fs = Math.max(11, w * .018), top = h * .2, bot = h * .95, x = i => w * X[i], s = Math.max(5, Math.min(w, h) * .016);
+    const chY = [0, 1, 2].map(i => top + (bot - top) * (.2 + i * .3));
+    // Schichten
+    const plate = (a, b) => { const g = ctx.createLinearGradient(x(a), 0, x(b), 0); g.addColorStop(0, '#3a4048'); g.addColorStop(.5, '#59616b'); g.addColorStop(1, '#3a4048'); ctx.fillStyle = g; ctx.fillRect(x(a), top, x(b) - x(a), bot - top); };
+    plate(0, 1); plate(6, 7);
+    for (const [a, c] of [[0, alpha(C.water, .25)], [6, alpha(C.bad, .18)]]) chY.forEach(y => { ctx.fillStyle = mix(C.surface, '#ffffff', .2); ctx.fillRect(x(a) + (x(a + 1) - x(a)) * (a ? 0 : .35), y - (bot - top) * .08, (x(a + 1) - x(a)) * .65, (bot - top) * .16); ctx.fillStyle = c; ctx.fillRect(x(a) + (x(a + 1) - x(a)) * (a ? 0 : .35), y - (bot - top) * .08, (x(a + 1) - x(a)) * .65, (bot - top) * .16); });
+    for (const [a, b] of [[1, 2], [5, 6]]) { ctx.fillStyle = '#b9b2a2'; ctx.fillRect(x(a), top, x(b) - x(a), bot - top); ctx.strokeStyle = alpha('#5a5346', .45); ctx.lineWidth = 1.2; for (let q = 0; q < 26; q++) { const r = rng(q * 31 + a); r(); const y = top + r() * (bot - top), dx = x(b) - x(a); ctx.beginPath(); ctx.moveTo(x(a), y); ctx.lineTo(x(b), y + (r() - .5) * dx * 1.5); ctx.stroke(); } }
+    for (const [a, b] of [[2, 3], [4, 5]]) { ctx.fillStyle = '#2b2b2b'; ctx.fillRect(x(a), top, x(b) - x(a), bot - top); for (let q = 0; q < 30; q++) { const r = rng(q * 17 + a); r(); ctx.fillStyle = '#c9cdd2'; ctx.beginPath(); ctx.arc(x(a) + r() * (x(b) - x(a)), top + r() * (bot - top), 1.6, 0, 7); ctx.fill(); } }
+    ctx.fillStyle = alpha('#e8d080', .85); ctx.fillRect(x(3), top, x(4) - x(3), bot - top); ctx.strokeStyle = alpha('#a08a30', .5); ctx.lineWidth = 1; for (let y = top + 8; y < bot; y += 14) { ctx.beginPath(); ctx.moveTo(x(3) + 4, y); ctx.quadraticCurveTo((x(3) + x(4)) / 2, y + 6, x(4) - 4, y); ctx.stroke(); }
+    // Beschriftung der Schichten
+    [['Bipolar-platte', 0, 1], ['Gasdiffusions-schicht', 1, 2], ['Pt-Kat.', 2, 3], ['Membran (PEM)', 3, 4], ['Pt-Kat.', 4, 5], ['Gasdiffusions-schicht', 5, 6], ['Bipolar-platte', 6, 7]].forEach(([n, a, b], i) => { const parts = n.split('-'); label(ctx, parts[0] + (parts[1] ? '-' : ''), (x(a) + x(b)) / 2, bot + fs * .7, {size: fs * .62, color: C.ink2}); if (parts[1]) label(ctx, parts[1], (x(a) + x(b)) / 2, bot + fs * 1.4, {size: fs * .62, color: C.ink2}); });
+    label(ctx, 'Anode (−)', (x(0) + x(3)) / 2, top - fs * .7, {size: fs * .85, color: C.electron}); label(ctx, 'Kathode (+)', (x(4) + x(7)) / 2, top - fs * .7, {size: fs * .85, color: C.bad});
+    // äußerer Stromkreis mit Motor
+    const wy = h * .07, ax = (x(0) + x(1)) / 2, kx = (x(6) + x(7)) / 2, mx = (ax + kx) / 2;
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ax, top); ctx.lineTo(ax, wy); ctx.lineTo(kx, wy); ctx.lineTo(kx, top); ctx.stroke();
+    rot += dt * (1 + l * 12); ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(mx, wy, h * .05, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.accent; for (let q = 0; q < 3; q++) { const a = rot + q * 2.094; ctx.beginPath(); ctx.ellipse(mx + Math.cos(a) * h * .022, wy + Math.sin(a) * h * .022, h * .02, h * .008, a, 0, 7); ctx.fill(); }
+    label(ctx, 'Motor', mx, wy + h * .075, {size: fs * .75, color: C.ink2});
+    // Reaktionsereignisse: H₂ → 2 H⁺ + 2 e⁻; ½ O₂ + 2 H⁺ + 2 e⁻ → H₂O
+    acc += dt * (.5 + 3.5 * l); while (acc > 1) { acc -= 1; const r = Math.random; ev.push({p: 0, c: Math.floor(r() * 3), y1: top + (bot - top) * (.1 + r() * .8), y2: top + (bot - top) * (.1 + r() * .8), k: Math.floor(r() * 3)}); }
+    const spd = .5 + .5 * l;
+    ev.forEach(e => e.p += dt * spd); ev = ev.filter(e => e.p < 3.4);
+    const cA = (x(2) + x(3)) / 2, cK = (x(4) + x(5)) / 2, chA = x(0) + (x(1) - x(0)) * .67, chK = x(6) + (x(7) - x(6)) * .33;
+    ev.forEach(e => {
+      const p = e.p;
+      if (p < 1) { const u = ease(p), xx = lerp(chA, cA, u), yy = lerp(chY[e.c], e.y1, u); atomBall(ctx, xx, yy - s * .55, s, 'H'); atomBall(ctx, xx, yy + s * .55, s, 'H'); }
+      if (p >= 1 && p < 2.3) { const u = (p - 1) / 1.3;
+        for (const sg of [-1, 1]) { const xx = lerp(cA, cK, u) + Math.sin(u * 20 + sg) * 2, yy = lerp(e.y1, e.y2, u) + sg * s * 1.1; ctx.fillStyle = C.bad; ctx.beginPath(); ctx.arc(xx, yy, s * .7, 0, 7); ctx.fill(); label(ctx, '+', xx, yy, {size: s * 1.1, color: '#fff'}); }
+        // Elektronen außen herum
+        const path = [[cA, e.y1], [ax, e.y1], [ax, wy], [kx, wy], [kx, e.y2], [cK, e.y2]], sl = path.slice(1).map((q, i) => Math.hypot(q[0] - path[i][0], q[1] - path[i][1])), tot = sl.reduce((a, b) => a + b, 0);
+        for (const off of [0, .04]) { let d = clamp(u - off, 0, 1) * tot, j = 0; while (j < sl.length - 1 && d > sl[j]) { d -= sl[j]; j++; } const f = d / sl[j], xx = lerp(path[j][0], path[j + 1][0], f), yy = lerp(path[j][1], path[j + 1][1], f); if (Math.hypot(xx - mx, yy - wy) < h * .05) continue; ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(xx, yy, s * .55, 0, 7); ctx.fill(); }
+      }
+      if (p > .9 && p < 2.3) { const u = ease(clamp((p - .9) / 1.4, 0, 1)), xx = lerp(chK, cK, u), yy = lerp(chY[e.k], e.y2, u); atomBall(ctx, xx, yy, s * 1.15, 'O'); }
+      if (p >= 2.3) { const u = clamp((p - 2.3) / 1.1, 0, 1), xx = lerp(cK, chK, u), yy = lerp(e.y2, chY[e.k] + (bot - top) * .05, u); ctx.globalAlpha = 1 - Math.max(0, u - .8) * 5; drawFormula(ctx, xx, yy, s * .9, 'H2O'); ctx.globalAlpha = 1; }
+    });
+    label(ctx, 'H₂', x(0) + fs * .2, top + fs * .2, {size: fs, color: C.water, align: 'left', base: 'top'}); label(ctx, 'O₂', x(7) - fs * .2, top + fs * .2, {size: fs, color: C.bad, align: 'right', base: 'top'});
+    // Kennlinie rechts
+    const gx = w * .64, gw = w * .33, gy = h * .2, gh = h * .5;
+    const A = {X: v => gx + v * gw, Y: v => gy + gh - v / 1.35 * gh};
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gh); ctx.lineTo(gx + gw, gy + gh); ctx.stroke();
+    label(ctx, 'U in V', gx - 4, gy - fs * .6, {size: fs * .75, color: C.ink2, align: 'left'}); label(ctx, 'Last (Strom)', gx + gw / 2, gy + gh + fs * .9, {size: fs * .75, color: C.ink2});
+    for (const v of [.5, 1]) { ctx.strokeStyle = alpha(C.ink2, .2); ctx.beginPath(); ctx.moveTo(gx, A.Y(v)); ctx.lineTo(gx + gw, A.Y(v)); ctx.stroke(); label(ctx, numDE(v, 1), gx - 6, A.Y(v), {size: fs * .7, color: C.ink2, align: 'right', weight: 400}); }
+    polyline(ctx, [...Array(21)].map((_, i) => [A.X(i / 20), A.Y(Uc(i / 20))]), C.accent, 2.5);
+    ctx.setLineDash([4, 4]); polyline(ctx, [[gx, A.Y(1.23)], [gx + gw, A.Y(1.23)]], C.ink2, 1); ctx.setLineDash([]); label(ctx, '1,23 V theoretisch', gx + gw, A.Y(1.23) - fs * .6, {size: fs * .7, color: C.ink2, align: 'right'});
+    dotAt(ctx, A.X(l), A.Y(Uc(l)), C.bad, 6);
+    const P = Uc(l) * l; label(ctx, `Leistung ∝ U · I`, gx, gy + gh + fs * 2.4, {size: fs * .8, color: C.ink2, align: 'left'}); ctx.fillStyle = alpha(C.ink2, .15); roundRect(ctx, gx, gy + gh + fs * 3.1, gw, fs * .9, 4); ctx.fill(); ctx.fillStyle = C.good; roundRect(ctx, gx, gy + gh + fs * 3.1, gw * P / .62, fs * .9, 4); ctx.fill();
   });
 })();
 
@@ -2467,15 +2501,57 @@ flipCards($('#fa'), [
 (() => {
   /* Punkte 0–3: [Effizienz, Reichweite/Tankzeit, Infrastruktur/Kosten] */
   const U = {pkw: ['Pkw', {Akku: [3, 2, 3], Brennstoffzelle: [1, 3, 1], 'E-Fuel': [0, 3, 1]}], lkw: ['Langstrecken-Lkw', {Akku: [3, 1, 2], Brennstoffzelle: [1, 3, 1], 'E-Fuel': [0, 3, 1]}], flug: ['Flugzeug', {Akku: [3, 0, 0], Brennstoffzelle: [1, 1, 0], 'E-Fuel': [0, 3, 2]}]};
+  const ETA = {Akku: 70, Brennstoffzelle: 30, 'E-Fuel': 15}, CC = ['#2E8B57', '#3B78C2', '#B8860B'], CN = ['Effizienz', 'Reichweite/Tankzeit', 'Infrastruktur/Kosten'];
   let k = 'pkw';
+  const bars = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
   const W = () => [1, 2, 3].map(i => +$('#bw-' + i).value);
   const upd = () => { const L = ['gar nicht', 'wenig', 'mittel', 'stark']; W().forEach((v, i) => $('#bw-' + (i + 1) + 'o').textContent = L[v]); };
   seg($('#bw-seg'), Object.keys(U).map(x => [x, U[x][0]]), v => { k = v; });
   [1, 2, 3].forEach(i => $('#bw-' + i).oninput = upd); upd();
-  canvasLoop($('#cv-bw'), 'bewertung', (ctx, w, h) => {
-    const wt = W(), opt = U[k][1], names = Object.keys(opt), ko = names.map(n => opt[n][1] === 0), sc = names.map(n => opt[n].reduce((s, v, i) => s + v * wt[i], 0)), mx = 3 * (wt[0] + wt[1] + wt[2]) || 1, best = Math.max(...sc.filter((v, i) => !ko[i]));
-    const A = axes(ctx, w, h, {x: [0, mx], y: [0, names.length], xt: [0, mx], xl: 'gewichtete Punkte', pad: {l: 120, b: 40, t: 12, r: 30}});
-    names.forEach((n, i) => { const y = A.Y(names.length - i - .5), bh = (A.Y(0) - A.Y(1)) * .55; label(ctx, n, A.X(0) - 8, y, {size: 13, align: 'right'}); ctx.fillStyle = ko[i] ? alpha(C.bad, .25) : sc[i] === best ? C.good : alpha(C.ink2, .5); ctx.fillRect(A.X(0), y - bh / 2, Math.max(2, A.X(sc[i]) - A.X(0)), bh); label(ctx, ko[i] ? `${sc[i]} – K.-o.: Reichweite reicht nicht` : String(sc[i]), A.X(sc[i]) + 6, y, {size: 12, align: 'left', font: ko[i] ? SANS : MONO, color: ko[i] ? C.bad : C.ink}); });
+  // Fahrzeuge
+  const vehicle = (ctx, key, x, y, s, t) => {
+    ctx.save(); ctx.translate(x, y); const body = C.accent, glass = alpha(C.water, .5);
+    const wheel = (wx, wy, r) => { ctx.fillStyle = '#2b2b2b'; ctx.beginPath(); ctx.arc(wx, wy, r, 0, 7); ctx.fill(); ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.5; for (let q = 0; q < 3; q++) { const a = t * 6 + q * 2.094; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * r * .7, wy + Math.sin(a) * r * .7); ctx.stroke(); } };
+    if (key === 'pkw') { ctx.fillStyle = body; ctx.beginPath(); ctx.moveTo(-s * .5, s * .1); ctx.lineTo(-s * .45, -s * .05); ctx.lineTo(-s * .25, -s * .08); ctx.lineTo(-s * .12, -s * .25); ctx.lineTo(s * .18, -s * .25); ctx.lineTo(s * .32, -s * .08); ctx.lineTo(s * .5, -s * .04); ctx.lineTo(s * .5, s * .1); ctx.closePath(); ctx.fill(); ctx.fillStyle = glass; ctx.beginPath(); ctx.moveTo(-s * .1, -s * .21); ctx.lineTo(s * .02, -s * .21); ctx.lineTo(s * .02, -s * .09); ctx.lineTo(-s * .2, -s * .09); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(s * .06, -s * .21); ctx.lineTo(s * .16, -s * .21); ctx.lineTo(s * .26, -s * .09); ctx.lineTo(s * .06, -s * .09); ctx.closePath(); ctx.fill(); wheel(-s * .28, s * .1, s * .1); wheel(s * .3, s * .1, s * .1); }
+    else if (key === 'lkw') { ctx.fillStyle = mix(C.ink2, C.surface, .3); ctx.fillRect(-s * .55, -s * .32, s * .72, s * .38); ctx.fillStyle = body; ctx.beginPath(); ctx.moveTo(s * .2, s * .06); ctx.lineTo(s * .2, -s * .3); ctx.lineTo(s * .42, -s * .3); ctx.lineTo(s * .52, -s * .1); ctx.lineTo(s * .52, s * .06); ctx.closePath(); ctx.fill(); ctx.fillStyle = glass; ctx.fillRect(s * .3, -s * .26, s * .12, s * .12); wheel(-s * .42, s * .1, s * .09); wheel(-s * .2, s * .1, s * .09); wheel(s * .38, s * .1, s * .09); }
+    else { ctx.rotate(-.08 + Math.sin(t) * .03); ctx.fillStyle = mix(C.ink2, C.surface, .7); ctx.beginPath(); ctx.ellipse(0, 0, s * .55, s * .09, 0, 0, 7); ctx.fill(); ctx.fillStyle = body; ctx.beginPath(); ctx.moveTo(-s * .05, 0); ctx.lineTo(-s * .25, s * .32); ctx.lineTo(-s * .12, s * .32); ctx.lineTo(s * .15, 0); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(-s * .4, 0); ctx.lineTo(-s * .52, -s * .22); ctx.lineTo(-s * .44, -s * .22); ctx.lineTo(-s * .3, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = glass; for (let q = 0; q < 6; q++) { ctx.beginPath(); ctx.arc(-s * .2 + q * s * .08, -s * .02, s * .018, 0, 7); ctx.fill(); } }
+    ctx.restore();
+  };
+  // Antriebssymbole
+  const drive = (ctx, i, x, y, s, t) => {
+    ctx.save(); ctx.translate(x, y);
+    if (i === 0) { ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; roundRect(ctx, -s * .35, -s * .2, s * .65, s * .4, 4); ctx.stroke(); ctx.fillStyle = C.ink2; ctx.fillRect(s * .3, -s * .08, s * .07, s * .16); const f = .5 + .5 * Math.sin(t); ctx.fillStyle = C.good; ctx.fillRect(-s * .3, -s * .15, s * .55 * (.4 + .6 * f), s * .3); }
+    else if (i === 1) { for (let q = 0; q < 5; q++) { ctx.fillStyle = q % 2 ? '#e8d080' : '#59616b'; ctx.fillRect(-s * .32 + q * s * .13, -s * .25, s * .12, s * .5); } label(ctx, 'H₂', 0, s * .4, {size: s * .22, color: C.water}); }
+    else { ctx.fillStyle = '#c0392b'; roundRect(ctx, -s * .25, -s * .3, s * .5, s * .6, 5); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(-s * .12, -s * .4, s * .12, s * .12); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-s * .15, -s * .15); ctx.lineTo(s * .15, s * .15); ctx.moveTo(s * .15, -s * .15); ctx.lineTo(-s * .15, s * .15); ctx.stroke(); }
+    ctx.restore();
+  };
+  canvasLoop($('#cv-bw'), 'bewertung', (ctx, w, h, t, dt) => {
+    const fs = Math.max(11, w * .018), wt = W(), opt = U[k][1], names = Object.keys(opt), ko = names.map(n => opt[n][1] === 0), sc = names.map(n => opt[n].reduce((s, v, i) => s + v * wt[i], 0)), mx = 3 * (wt[0] + wt[1] + wt[2]) || 1, best = Math.max(...sc.filter((v, i) => !ko[i])), bi = sc.findIndex((v, i) => v === best && !ko[i]);
+    // Fahrzeug links mit Straße / Himmel
+    const vx = w * .13, vy = h * .45, vs = Math.min(w * .2, h * .4);
+    ctx.fillStyle = alpha(C.ink2, .08); ctx.beginPath(); ctx.arc(vx, vy, vs * .62, 0, 7); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(vx, vy, vs * .62, 0, 7); ctx.clip();
+    if (k !== 'flug') { ctx.fillStyle = alpha(C.ink2, .25); ctx.fillRect(vx - vs, vy + vs * .2, vs * 2, vs); ctx.strokeStyle = alpha('#ffffff', .8); ctx.lineWidth = 2; ctx.setLineDash([10, 10]); ctx.lineDashOffset = t * 60; ctx.beginPath(); ctx.moveTo(vx - vs, vy + vs * .32); ctx.lineTo(vx + vs, vy + vs * .32); ctx.stroke(); ctx.setLineDash([]); }
+    else for (let q = 0; q < 3; q++) { const cx = vx + vs * .7 - ((t * 30 + q * vs * .5) % (vs * 1.4)); ctx.fillStyle = alpha('#ffffff', .8); ctx.beginPath(); ctx.arc(cx, vy + (q - 1) * vs * .3, vs * .07, 0, 7); ctx.arc(cx + vs * .07, vy + (q - 1) * vs * .3, vs * .05, 0, 7); ctx.fill(); }
+    ctx.restore();
+    vehicle(ctx, k, vx, vy + Math.sin(t * 8) * .8, vs * .9, t);
+    label(ctx, U[k][0], vx, vy + vs * .62 + fs, {size: fs, color: C.ink});
+    // Optionen
+    const x0 = w * .29, lh = h * .27, y0 = h * .06, icS = Math.min(lh * .6, w * .06), bx = x0 + icS + w * .15, bw = w * .9 - bx;
+    names.forEach((n, i) => {
+      const y = y0 + i * lh + lh * .45, tg = opt[n].map((v, j) => v * wt[j]); bars[i] = bars[i].map((v, j) => v + (tg[j] - v) * Math.min(1, dt * 6));
+      if (i === bi) { ctx.fillStyle = alpha(C.good, .1); roundRect(ctx, x0 - 8, y - lh * .45, w * .98 - x0 + 8, lh * .9, 10); ctx.fill(); ctx.strokeStyle = alpha(C.good, .7); ctx.lineWidth = 2; ctx.stroke(); label(ctx, '★ beste Wahl', w * .97, y - lh * .33, {size: fs * .75, align: 'right', color: C.good}); }
+      drive(ctx, i, x0 + icS / 2, y - lh * .08, icS, t);
+      label(ctx, n, x0 + icS + 8, y - lh * .12, {size: fs * .95, align: 'left', color: ko[i] ? C.ink2 : C.ink});
+      // Wirkungsgrad Strom → Rad als schmaler werdendes Band
+      const ex = x0 + icS + 8, ew = w * .13, ey = y + lh * .12, e = ETA[n] / 100; ctx.fillStyle = alpha(C.electron, .25); ctx.beginPath(); ctx.moveTo(ex, ey - 7); ctx.lineTo(ex + ew, ey - 7 * e); ctx.lineTo(ex + ew, ey + 7 * e); ctx.lineTo(ex, ey + 7); ctx.closePath(); ctx.fill();
+      label(ctx, `Strom → Rad: ${ETA[n]} %`, ex, ey + fs * .95, {size: fs * .7, align: 'left', color: C.ink2, weight: 400});
+      ctx.fillStyle = alpha(C.ink2, .1); roundRect(ctx, bx, y - lh * .17, bw, lh * .34, 5); ctx.fill();
+      let xx = bx; bars[i].forEach((v, j) => { const ww = bw * v / mx; if (ww > .5) { ctx.fillStyle = ko[i] ? alpha(CC[j], .3) : CC[j]; ctx.fillRect(xx, y - lh * .17, ww, lh * .34); } xx += ww; });
+      label(ctx, String(Math.round(bars[i].reduce((a, b) => a + b, 0))), xx + 6, y, {size: fs * .9, align: 'left', font: MONO});
+      if (ko[i]) { ctx.fillStyle = alpha(C.bad, .9); roundRect(ctx, bx + bw * .45, y - lh * .14, bw * .53, lh * .28, 6); ctx.fill(); label(ctx, 'K.-o.: Reichweite reicht nicht', bx + bw * .715, y, {size: fs * .75, color: '#fff'}); }
+    });
+    let lx = bx; CN.forEach((n, j) => { ctx.fillStyle = CC[j]; ctx.fillRect(lx, h * .95 - 6, 12, 12); label(ctx, n, lx + 16, h * .95, {size: fs * .72, align: 'left', color: C.ink2}); ctx.font = `700 ${fs * .72}px ${SANS}`; lx += 28 + ctx.measureText(n).width; });
   });
 })();
 

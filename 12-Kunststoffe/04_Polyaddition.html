@@ -2397,36 +2397,84 @@ function seenColor(nm, wd = 40, absMax = .95) {
 /* ================= SCHAUM ================= */
 (() => {
   let tt = -1, kind = 'weich';
-  const B = [...Array(70)].map((_, i) => { const r = rng(i * 7919 + 13); r(); r(); return [r(), r(), .5 + r() * .8]; });
+  // Schaumzellen als Voronoi-Polygone (Einheitskoordinaten −1,3 … 1,3)
+  const voro = (sp, seed) => {
+    const r = rng(seed), P = [];
+    for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) { const x = (i + (j % 2 ? .5 : 0)) * sp + (r() - .5) * sp * .5, y = j * sp * .87 + (r() - .5) * sp * .5; if (Math.abs(x) < 1.5 && Math.abs(y) < 1.5) P.push([x, y]); }
+    return P.map(([px, py], a) => {
+      let poly = [[-2, -2], [2, -2], [2, 2], [-2, 2]];
+      P.forEach(([qx, qy], b) => { if (a === b || Math.hypot(qx - px, qy - py) > sp * 2.6) return;
+        const nx = qx - px, ny = qy - py, c = (qx * qx + qy * qy - px * px - py * py) / 2, inside = ([x, y]) => x * nx + y * ny <= c, out = [];
+        poly.forEach((p, k) => { const q = poly[(k + 1) % poly.length], ip = inside(p), iq = inside(q); if (ip) out.push(p); if (ip !== iq) { const dp = p[0] * nx + p[1] * ny - c, dq = q[0] * nx + q[1] * ny - c, f = dp / (dp - dq); out.push([lerp(p[0], q[0], f), lerp(p[1], q[1], f)]); } });
+        poly = out; });
+      const rin = Math.min(...poly.map(([x, y]) => Math.hypot(x - px, y - py)));
+      return {c: [px, py], poly, rin, ph: r() * 7, open: [...Array(poly.length)].map(() => r() < .55)};
+    });
+  };
+  const CELLS = {weich: voro(.42, 11), hart: voro(.27, 5)};
+  const B = [...Array(60)].map((_, i) => { const r = rng(i * 7919 + 13); r(); r(); return [r(), r(), .5 + r() * .8]; });
   seg($('#sc-seg'), [['weich', 'Weichschaum'], ['hart', 'Hartschaum']], v => { kind = v; });
   $('#sc-go').onclick = () => { tt = 0; };
   $('#sc-re').onclick = () => { tt = -1; $('#sc-status').textContent = 'Zwei Komponenten im Becher. Klicke auf „Mischen“.'; };
   $('#sc-re').onclick();
+  const PU = '#e9d38f', A = '#f1e2b3', BB = '#8a5a2b';
   canvasLoop($('#cv-sc'), 'schaum', (ctx, w, h, t, dt) => {
     if (tt >= 0) tt += dt;
-    const grow = tt < 0 ? 0 : ease(clamp((tt - .8) / 5, 0, 1)), bx = w * .1, bw = w * .26, by = h * .45, bh = h * .45;
-    // Becher
-    const lvl = .25 + grow * (kind === 'hart' ? 1.05 : 1.25);
-    const foamTop = by + bh - bh * lvl;
-    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w * .48, h); ctx.clip();
-    ctx.fillStyle = tt < 0 ? alpha('#d8b45a', .5) : mix('#d8b45a', '#f1e6c4', grow);
-    ctx.beginPath(); ctx.moveTo(bx + 2, by + bh - 2); ctx.lineTo(bx + 2, Math.max(foamTop, by)); if (foamTop < by) { ctx.bezierCurveTo(bx - 6, foamTop + 10, bx + bw * .2, foamTop - 30 * grow, bx + bw / 2, foamTop - 30 * grow); ctx.bezierCurveTo(bx + bw * .8, foamTop - 30 * grow, bx + bw + 6, foamTop + 10, bx + bw - 2, by); } else ctx.lineTo(bx + bw - 2, foamTop); ctx.lineTo(bx + bw - 2, by + bh - 2); ctx.closePath(); ctx.fill();
-    if (grow > 0) { ctx.strokeStyle = alpha('#a08040', .5); ctx.lineWidth = 1; for (const [x, y, s] of B) { const yy = by + bh - (by + bh - foamTop + 25 * grow) * y; if (yy < foamTop - 25 * grow) continue; ctx.beginPath(); ctx.arc(bx + 6 + x * (bw - 12), yy, s * 3 * grow + 1, 0, 7); ctx.stroke(); } }
+    const fs = Math.max(11, w * .018), stir = tt < 0 ? 0 : clamp(tt / 1.5, 0, 1), grow = tt < 0 ? 0 : ease(clamp((tt - 1.8) / 5, 0, 1)), hard = kind === 'hart';
+    // --- Pappbecher (Trapez)
+    const cx = w * .23, cb = h * .9, ch = h * .4, rt = w * .12, rb = w * .085, ct = cb - ch;
+    const xl = y => cx - lerp(rb, rt, (cb - y) / ch), xr = y => cx + lerp(rb, rt, (cb - y) / ch);
+    const lvl = .3 + grow * (hard ? .9 : 1.15), top = cb - ch * lvl, over = Math.max(0, ct - top);
+    const mass = tt < 0 ? null : grow > 0 ? mix(mix(A, BB, .45), PU, Math.min(1, grow * 1.6)) : mix(A, BB, .45);
+    ctx.save();
+    if (tt < 0 || stir < 1 && grow === 0) {
+      // zwei Schichten bzw. Schlieren beim Rühren
+      const ly = cb - ch * .3, my = cb - ch * .15;
+      ctx.beginPath(); ctx.moveTo(xl(ly), ly); ctx.lineTo(xr(ly), ly); ctx.lineTo(xr(cb), cb); ctx.lineTo(xl(cb), cb); ctx.closePath(); ctx.fillStyle = A; ctx.fill(); ctx.clip();
+      ctx.fillStyle = BB; if (tt < 0) ctx.fillRect(0, ly, w, my - ly);
+      else for (let k = 0; k < 7; k++) { ctx.globalAlpha = .55 * (1 - stir * .4); ctx.beginPath(); for (let x = xl(ly); x <= xr(ly); x += 3) ctx.lineTo(x, lerp(my, ly, .5) + Math.sin(x * .08 + t * 6 + k) * (ch * .1) + (k - 3) * 4); ctx.lineWidth = 3; ctx.strokeStyle = BB; ctx.stroke(); }
+      ctx.globalAlpha = stir; ctx.fillStyle = mix(A, BB, .45); ctx.fillRect(0, ly, w, cb - ly); ctx.globalAlpha = 1;
+    } else {
+      // aufsteigender Schaum, oben als Pilzkappe über den Rand
+      const cap = x => top - Math.exp(-(((x - cx) / (rt * .9)) ** 2)) * over * .35 - Math.sin(x * .09) * 2 * grow;
+      const capW = over > 0 ? rt + over * .25 : 0;
+      ctx.beginPath(); ctx.moveTo(xl(cb), cb);
+      if (over > 0) { ctx.lineTo(xl(ct), ct); ctx.quadraticCurveTo(cx - capW - 6, ct, cx - capW, (ct + top) / 2); for (let x = cx - capW; x <= cx + capW; x += 3) ctx.lineTo(x, cap(x) + Math.pow(Math.abs(x - cx) / capW, 4) * (ct - top) * .6); ctx.quadraticCurveTo(cx + capW + 6, ct, xr(ct), ct); }
+      else { ctx.lineTo(xl(top), top); for (let x = xl(top); x <= xr(top); x += 3) ctx.lineTo(x, top - Math.sin((x - xl(top)) / (xr(top) - xl(top)) * Math.PI) * 6 * grow); }
+      ctx.lineTo(xr(cb), cb); ctx.closePath();
+      ctx.fillStyle = mass; ctx.fill(); ctx.strokeStyle = alpha(BB, .35); ctx.lineWidth = 1; ctx.stroke(); ctx.clip();
+      ctx.strokeStyle = alpha(BB, .4); ctx.lineWidth = 1;
+      for (const [x, y, s] of B) { const yy = cb - (cb - top + over * .3) * y; ctx.beginPath(); ctx.arc(cx + (x - .5) * 2 * (rt + over * .25), yy, (s * (hard ? 2 : 3.5) * grow + .8) * (1 + .3 * Math.sin(t * 2 + x * 9) * (1 - grow)), 0, 7); ctx.stroke(); }
+    }
     ctx.restore();
-    beaker(ctx, bx, by, bw, bh, {marks: false});
-    label(ctx, tt < 0 ? 'A + B' : grow < 1 ? 'schäumt …' : 'fest', bx + bw / 2, h * .96, {size: 12, color: C.ink2});
-    // Teilchenzoom
-    const zx = w * .73, zy = h * .5, zr = Math.min(w * .24, h * .44);
-    ctx.save(); ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.clip(); ctx.fillStyle = alpha('#f1e6c4', .35); ctx.fillRect(zx - zr, zy - zr, 2 * zr, 2 * zr);
-    // Zellwände
-    ctx.strokeStyle = alpha('#a08040', .9); ctx.lineWidth = kind === 'hart' ? 4 : 2;
-    const cell = zr * .55;
-    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const cx = zx + i * cell + (j % 2) * cell / 2, cy = zy + j * cell * .86, rr = cell * .5 * (tt < 0 ? .2 : .2 + .8 * grow); ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + Math.PI / 6; k ? ctx.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a)) : ctx.moveTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a)); } ctx.closePath(); ctx.stroke();
-      if (kind === 'weich' && grow > .5) { ctx.fillStyle = alpha(C.surface, .9); ctx.beginPath(); ctx.arc(cx + rr * .85, cy, rr * .25, 0, 7); ctx.fill(); }
-      if (tt > 0 && grow < 1) { const ph = (t * .8 + i * .3 + j * .7) % 1; label(ctx, 'CO₂', cx, cy - rr * .3 + ph * rr * .5, {size: 10, color: C.ink2}); } }
-    ctx.restore(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.stroke();
-    label(ctx, kind === 'hart' ? 'geschlossene Zellen' : 'offene Zellen', zx, zy + zr + 14, {size: 11, color: C.ink2});
-    if (tt > 0) $('#sc-status').innerHTML = grow < 1 ? 'R–N=C=O + H₂O ⟶ R–NH₂ + <b>CO₂</b>: Gasblasen blähen die zähe Masse auf, gleichzeitig wächst das Polyurethan-Gerüst.' : (kind === 'hart' ? '<b>Hartschaum:</b> stark vernetzt, geschlossene Zellen mit eingeschlossenem Gas – gute Wärmedämmung.' : '<b>Weichschaum:</b> wenig vernetzt, die Zellwände reißen auf (offene Zellen) – Luft kann ein- und ausströmen: Matratze, Polster.');
+    // Becherwand
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(xl(ct) - 3, ct - 2); ctx.lineTo(xl(cb), cb); ctx.lineTo(xr(cb), cb); ctx.lineTo(xr(ct) + 3, ct - 2); ctx.stroke();
+    // Holzspatel beim Rühren
+    if (tt >= 0 && stir < 1) { const a = Math.sin(t * 9) * .35, sx = cx + Math.sin(t * 9) * rb * .5; ctx.save(); ctx.translate(sx, cb - ch * .1); ctx.rotate(a * .4); ctx.fillStyle = '#c9a26b'; roundRect(ctx, -5, -ch * 1.05, 10, ch * 1.05, 4); ctx.fill(); ctx.restore(); }
+    if (tt < 0) { label(ctx, 'B: Diisocyanat', xr(cb - ch * .22) + 10, cb - ch * .22, {size: fs * .8, align: 'left', color: C.ink2, weight: 600}); label(ctx, 'A: Polyol + Wasser', xr(cb - ch * .07) + 10, cb - ch * .07, {size: fs * .8, align: 'left', color: C.ink2, weight: 600}); }
+    label(ctx, tt < 0 ? 'Pappbecher mit A und B' : stir < 1 ? 'rühren …' : grow < 1 ? 'schäumt auf …' : 'ausgehärtet', cx, cb + fs * 1.1, {size: fs * .9, color: C.ink2});
+    if (tt >= 0 && grow > 0 && grow < 1) for (let k = 0; k < 4; k++) { const p = (t * .5 + k / 4) % 1, x = cx + (k - 1.5) * rt * .4; ctx.globalAlpha = (1 - p) * .8; label(ctx, 'CO₂', x + Math.sin(t + k) * 4, top - over * .4 - 14 - p * h * .1, {size: fs * .75, color: C.ink2}); ctx.globalAlpha = 1; }
+    // --- Lupe: Zellstruktur
+    const zx = w * .72, zy = h * .48, zr = Math.min(w * .25, h * .42), S = zr / 1.05;
+    ctx.strokeStyle = alpha(C.ink2, .4); ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx + rt * .3, Math.max(top, ct - over) + 10); ctx.lineTo(zx - zr * .9, zy - zr * .45); ctx.moveTo(cx + rt * .3, Math.max(top, ct - over) + 10); ctx.lineTo(zx - zr * .9, zy + zr * .45); ctx.stroke(); ctx.setLineDash([]);
+    ctx.save(); ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.clip();
+    ctx.fillStyle = tt < 0 ? mix(A, BB, .2) : mass; ctx.fillRect(zx - zr, zy - zr, 2 * zr, 2 * zr);
+    const gas = mix(C.surface, '#ffffff', .3), m = clamp((grow - .35) / .55, 0, 1), wall = hard ? .05 : .085;
+    if (grow > 0) for (const c of CELLS[kind]) {
+      const [px, py] = c.c, rc = c.rin * Math.min(1, grow * 1.6) * .8;
+      const pts = c.poly.map(([vx, vy]) => { const d = Math.hypot(vx - px, vy - py) || 1, sh = Math.max(0, 1 - wall / d); return [zx + lerp(px + (vx - px) / d * rc, px + (vx - px) * sh, m) * S, zy + lerp(py + (vy - py) / d * rc, py + (vy - py) * sh, m) * S]; });
+      ctx.fillStyle = gas; ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = alpha(BB, .35); ctx.lineWidth = 1; ctx.stroke();
+      // Weichschaum: Zellwände reißen auf (Fenster zur Nachbarzelle)
+      if (!hard && m > .6) c.poly.forEach((v, k) => { if (!c.open[k]) return; const q = c.poly[(k + 1) % c.poly.length], ex = (v[0] + q[0]) / 2, ey = (v[1] + q[1]) / 2, el = Math.hypot(q[0] - v[0], q[1] - v[1]); ctx.fillStyle = gas; ctx.beginPath(); ctx.arc(zx + ex * S, zy + ey * S, el * S * .3 * (m - .6) / .4, 0, 7); ctx.fill(); });
+      // CO₂-Moleküle in den Zellen
+      if (tt >= 0) for (let q = 0; q < (hard ? 1 : 2); q++) { const a = c.ph + t * (.7 + q * .3), rr = c.rin * .45 * Math.min(1, grow * 2), mx = zx + (px + Math.cos(a) * rr) * S, my = zy + (py + Math.sin(a * 1.3) * rr) * S, s = Math.max(2.2, S * .018), o = a * .7; sphere(ctx, mx - Math.cos(o) * s * 1.6, my - Math.sin(o) * s * 1.6, s * .85, C.atomo); sphere(ctx, mx + Math.cos(o) * s * 1.6, my + Math.sin(o) * s * 1.6, s * .85, C.atomo); sphere(ctx, mx, my, s, C.atomc); }
+    }
+    // Weichschaum: Luft strömt durch die offenen Zellen
+    if (!hard && m > .8) for (let k = 0; k < 6; k++) { const p = (t * .25 + k / 6) % 1, y = zy + (k - 2.5) * zr * .28 + Math.sin(p * 12 + k) * zr * .04; ctx.fillStyle = alpha(C.water, .8); ctx.beginPath(); ctx.arc(zx - zr + p * 2 * zr, y, 3, 0, 7); ctx.fill(); }
+    ctx.restore(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.stroke();
+    label(ctx, grow < 1 ? (tt < 0 ? 'flüssige Mischung' : 'CO₂-Bläschen wachsen') : hard ? 'geschlossene Zellen: Gas bleibt eingeschlossen' : 'offene Zellen: Luft strömt hindurch', zx, zy + zr + fs * 1.1, {size: fs * .85, color: C.ink2});
+    if (tt > 0) $('#sc-status').innerHTML = grow < 1 ? 'R–N=C=O + H₂O ⟶ R–NH₂ + <b>CO₂</b>: Gasblasen blähen die zähe Masse auf, gleichzeitig wächst das Polyurethan-Gerüst.' : (hard ? '<b>Hartschaum:</b> stark vernetzt, geschlossene Zellen mit eingeschlossenem Gas – gute Wärmedämmung.' : '<b>Weichschaum:</b> wenig vernetzt, die Zellwände reißen auf (offene Zellen) – Luft kann ein- und ausströmen: Matratze, Polster.');
   });
 })();
 

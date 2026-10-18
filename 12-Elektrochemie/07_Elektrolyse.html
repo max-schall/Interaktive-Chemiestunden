@@ -2420,31 +2420,67 @@ function seenColor(nm, wd = 40, absMax = .95) {
 (() => {
   let mode = 'el', prog = 0;
   const T = {el: '<b>Elektrolyse (U = 4 V):</b> Zn²⁺-Ionen wandern zur Kathode (−) und werden zu Zink reduziert. I⁻-Ionen wandern zur Anode (+) und werden zu Iod oxidiert.', gal: '<b>Danach als galvanische Zelle:</b> Zink wird oxidiert (jetzt Minuspol, Anode), Iod reduziert (Pluspol, Kathode). Gemessen: etwa 1,3 V. Die Zelle hat Energie gespeichert.'};
-  seg($('#zi-seg'), [['el', 'Elektrolyse'], ['gal', 'danach: galvanisch']], v => { mode = v; $('#zi-status').innerHTML = T[v]; });
+  seg($('#zi-seg'), [['el', 'Elektrolyse'], ['gal', 'danach: galvanisch']], v => { mode = v; if (v === 'gal') prog = Math.max(prog, .7); $('#zi-status').innerHTML = T[v]; });
+  // Ionen mit eigener Position (0–1 im Becher)
+  const ions = [...Array(16)].map((_, i) => { const r = rng(i * 7919 + 11); r(); r(); return {zn: i % 3 === 0, x: r(), y: r(), ph: r() * 6}; });
+  // Zink-Dendriten: Äste an der Kathode
+  const DEN = [...Array(7)].map((_, i) => { const r = rng(i * 131 + 7); r(); return {y: .15 + i * .11 + r() * .04, a: (r() - .5) * .8, L: .5 + r() * .5, b: [r(), r(), r()]}; });
+  const IOD = '#9a5a1a';
   canvasLoop($('#cv-zi'), 'zinkiodid', (ctx, w, h, t, dt) => {
-    if (mode === 'el') prog = Math.min(1, prog + dt * .12); else prog = Math.max(.15, prog - dt * .03);
-    const bx = w * .2, bw = w * .6, by = h * .35, bh = h * .58, xL = bx + bw * .2, xR = bx + bw * .8, top = h * .12;
-    ctx.fillStyle = alpha('#eef2f4', .7); ctx.fillRect(bx + 2, by + bh * .12, bw - 4, bh * .86);
-    // Iod-Schlieren an der Anode
-    for (let i = 0; i < 6; i++) { const yy = by + bh * (.2 + i * .12) + Math.sin(t + i) * 3; ctx.fillStyle = alpha('#9a5a1a', .5 * prog); ctx.beginPath(); ctx.ellipse(xR - 12 - i % 2 * 8, yy + prog * 20, 10 + prog * 10, 6, 0, 0, 7); ctx.fill(); }
-    beaker(ctx, bx, by, bw, bh, {marks: false});
-    // Elektroden (Graphit)
-    for (const x of [xL, xR]) { ctx.fillStyle = '#3c454d'; ctx.fillRect(x - 7, by - h * .05, 14, bh * .82); }
-    ctx.fillStyle = '#9aa4ae'; ctx.fillRect(xL + 7, by + bh * .1, 3 + prog * 5, bh * .66);
-    // Leitungen
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(xL, by - h * .05); ctx.lineTo(xL, top); ctx.lineTo(xR, top); ctx.lineTo(xR, by - h * .05); ctx.stroke();
-    ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(w / 2, top, 22, 0, 7); ctx.fill(); ctx.stroke();
-    if (mode === 'el') { ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(w / 2 - 5, top - 12); ctx.lineTo(w / 2 - 5, top + 12); ctx.moveTo(w / 2 + 5, top - 7); ctx.lineTo(w / 2 + 5, top + 7); ctx.stroke(); label(ctx, '−', w / 2 - 16, top - 16, {size: 13}); label(ctx, '+', w / 2 + 16, top - 16, {size: 13}); }
-    else { label(ctx, 'V', w / 2, top, {size: 15}); ctx.fillStyle = '#0f2a1c'; roundRect(ctx, w / 2 - 40, top + 26, 80, 24, 5); ctx.fill(); label(ctx, numDE(1.3 * Math.min(1, prog * 2), 2) + ' V', w / 2, top + 38, {size: 14, font: MONO, color: '#7CFFB2'}); }
     const el = mode === 'el';
-    label(ctx, el ? 'Kathode (−)' : 'Anode (−)', xL, by - h * .09, {size: 12, color: C.electron}); label(ctx, el ? 'Anode (+)' : 'Kathode (+)', xR, by - h * .09, {size: 12, color: C.bad});
-    // Ionen
-    for (let i = 0; i < 5; i++) { const p = (t * .15 + i / 5) % 1, x = el ? lerp(w / 2, xL + 22, p) : lerp(xL + 22, w / 2, p); ionBall(ctx, x, by + bh * (.25 + i * .13), 9, 'Zn', '2+'); }
-    for (let i = 0; i < 5; i++) { const p = (t * .15 + i / 5 + .1) % 1, x = el ? lerp(w / 2, xR - 22, p) : lerp(xR - 22, w / 2, p); ionBall(ctx, x, by + bh * (.3 + i * .13), 8, 'I', '−'); }
-    // Elektronen im Draht
-    for (let k = 0; k < 8; k++) { const p = (t * .3 + k / 8) % 1, tot = 2 * (by - h * .05 - top) + (xR - xL); let s = p * tot; if (el) s = tot - s; let x, y; if (s < by - h * .05 - top) { x = xL; y = by - h * .05 - s; } else if (s < by - h * .05 - top + xR - xL) { x = xL + s - (by - h * .05 - top); y = top; } else { x = xR; y = top + s - (by - h * .05 - top) - (xR - xL); } ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
-    label(ctx, el ? 'Zn²⁺ + 2 e⁻ ⟶ Zn' : 'Zn ⟶ Zn²⁺ + 2 e⁻', xL, h * .97, {size: 12, color: C.ink2, base: 'bottom'}); label(ctx, el ? '2 I⁻ ⟶ I₂ + 2 e⁻' : 'I₂ + 2 e⁻ ⟶ 2 I⁻', xR, h * .97, {size: 12, color: C.ink2, base: 'bottom'});
+    prog = el ? Math.min(1, prog + dt * .1) : Math.max(.05, prog - dt * .025);
+    const fs = Math.max(11, w * .018), bx = w * .27, bw = w * .46, by = h * .38, bh = h * .52, xL = bx + bw * .18, xR = bx + bw * .82, top = h * .13, lvl = by + bh * .1, ew = Math.max(10, w * .018);
+    // Lösung + Iodwolke, die von der Anode absinkt
+    ctx.fillStyle = alpha('#eef2f4', .8); ctx.fillRect(bx + 2, lvl, bw - 4, by + bh - lvl - 2);
+    ctx.save(); ctx.beginPath(); ctx.rect(bx + 2, lvl, bw - 4, by + bh - lvl - 2); ctx.clip();
+    for (let i = 0; i < 9; i++) { const r = rng(i * 17 + 5); r(); const p = (t * .06 + r()) % 1, x = xR - ew - bw * .05 - p * bw * .25 * r() + Math.sin(t + i) * 6, y = lvl + bh * .1 + p * (by + bh - lvl) * .85; ctx.fillStyle = alpha(IOD, .35 * prog * (1 - p * .6)); ctx.beginPath(); ctx.ellipse(x, y, bw * (.03 + p * .05), bh * (.04 + p * .03), 0, 0, 7); ctx.fill(); }
+    const g = ctx.createLinearGradient(xR - bw * .3, 0, xR, 0); g.addColorStop(0, alpha(IOD, 0)); g.addColorStop(1, alpha(IOD, .35 * prog)); ctx.fillStyle = g; ctx.fillRect(xR - bw * .3, lvl, bw * .3, by + bh - lvl);
+    ctx.restore();
+    // Ionen: Wanderung im elektrischen Feld (Elektrolyse) bzw. Rückreaktion (galvanisch)
+    ions.forEach(o => { const dir = el ? (o.zn ? -1 : 1) : 0; o.x += dir * dt * .05 + Math.sin(t * 2 + o.ph) * dt * .02; o.y += Math.cos(t * 1.7 + o.ph) * dt * .03; if (o.x < .12 || o.x > .88) { o.x = .3 + Math.random() * .4; } o.y = clamp(o.y, .05, .95);
+      const x = bx + bw * o.x, y = lvl + (by + bh - lvl) * o.y; if (o.zn) ionBall(ctx, x, y, U9(w, h), 'Zn', '2+'); else ionBall(ctx, x, y, U9(w, h) * .9, 'I', '−'); });
+    beaker(ctx, bx, by, bw, bh, {marks: false});
+    // Graphitelektroden; Zink-Dendriten an der linken
+    for (const x of [xL, xR]) { ctx.fillStyle = '#3c454d'; roundRect(ctx, x - ew / 2, by - h * .08, ew, bh * .85, 3); ctx.fill(); }
+    ctx.strokeStyle = '#9aa4ae'; ctx.lineCap = 'round';
+    DEN.forEach(d => { const L = d.L * bw * .12 * prog, y = lvl + (by + bh * .75 - lvl) * d.y; if (L < 1) return; const ex = xL + ew / 2 + Math.cos(d.a) * L, ey = y + Math.sin(d.a) * L; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(xL + ew / 2, y); ctx.lineTo(ex, ey); ctx.stroke(); ctx.lineWidth = 2; d.b.forEach((b, q) => { const f = .35 + q * .25, sx = lerp(xL + ew / 2, ex, f), sy = lerp(y, ey, f), a = d.a + (q % 2 ? .9 : -.9); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(a) * L * .35 * b, sy + Math.sin(a) * L * .35 * b); ctx.stroke(); }); });
+    // Netzgerät bzw. Voltmeter
+    const mx = w / 2; ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(xL, by - h * .08); ctx.lineTo(xL, top); ctx.lineTo(xR, top); ctx.lineTo(xR, by - h * .08); ctx.stroke();
+    const dw = w * .16, dh = h * .14; ctx.fillStyle = mix(C.ink2, C.surface, .15); roundRect(ctx, mx - dw / 2, top - dh / 2, dw, dh, 6); ctx.fill();
+    ctx.fillStyle = '#0f2a1c'; roundRect(ctx, mx - dw * .4, top - dh * .32, dw * .8, dh * .4, 4); ctx.fill();
+    label(ctx, el ? '4,00 V' : numDE(1.3 * clamp(prog / .3, 0, 1), 2) + ' V', mx, top - dh * .12, {size: fs, font: MONO, color: '#7CFFB2'});
+    label(ctx, el ? 'Netzgerät' : 'Voltmeter', mx, top + dh * .3, {size: fs * .75, color: C.surface});
+    label(ctx, el ? '−' : '−', mx - dw * .62, top - fs * .8, {size: fs * 1.2, color: C.electron}); label(ctx, '+', mx + dw * .62, top - fs * .8, {size: fs * 1.2, color: C.bad});
+    // Elektronen im Draht: Elektrolyse links hinein, galvanisch links heraus
+    const P = [[xL, by - h * .08], [xL, top], [xR, top], [xR, by - h * .08]], sl = [0, 1, 2].map(q => Math.hypot(P[q + 1][0] - P[q][0], P[q + 1][1] - P[q][1])), tot = sl[0] + sl[1] + sl[2];
+    if (prog > .06) for (let q = 0; q < 10; q++) { let s = ((t * .25 + q / 10) % 1) * tot; if (el) s = tot - s; let j = 0; while (j < 2 && s > sl[j]) { s -= sl[j]; j++; } const f = s / sl[j], x = lerp(P[j][0], P[j + 1][0], f), y = lerp(P[j][1], P[j + 1][1], f); if (Math.abs(x - mx) < dw / 2 && Math.abs(y - top) < dh / 2) continue; ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
+    label(ctx, el ? 'Kathode (−)' : 'Anode (−)', xL - ew, by - h * .12, {size: fs * .85, color: C.electron, align: 'right'}); label(ctx, el ? 'Anode (+)' : 'Kathode (+)', xR + ew, by - h * .12, {size: fs * .85, color: C.bad, align: 'left'});
+    // Lupen an beiden Elektroden
+    const lens = (cx, cy, r, left) => {
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fillStyle = mix(C.surface, C.water, .1); ctx.fill(); ctx.clip();
+      const s = r * .16, ex0 = left ? cx - r * .55 : cx + r * .55; ctx.fillStyle = '#3c454d'; ctx.fillRect(left ? cx - r : ex0, cy - r, r * .45, 2 * r);
+      const p = (t * .5) % 1, e = ease(clamp(p * 1.6, 0, 1));
+      if (left) { // Zn²⁺ + 2 e⁻ → Zn
+        for (let q = 0; q < 3; q++) atomBall(ctx, ex0 + s, cy - r * .5 + q * s * 2.1, s, 'Zn');
+        const fwd = el, a = fwd ? e : 1 - e, ix = lerp(cx + r * .6, ex0 + s * 3.1, a), iy = cy + r * .2;
+        if ((fwd && a > .9) || (!fwd && a > .9)) atomBall(ctx, ix, iy, s, 'Zn'); else ionBall(ctx, ix, iy, s, 'Zn', '2+');
+        for (const sg of [-1, 1]) { const q = fwd ? clamp((p - .3) / .4, 0, 1) : clamp((p - .1) / .4, 0, 1), x = fwd ? lerp(ex0 - s, ix - s * .5, q) : lerp(ix - s * .5, ex0 - s * 2, q); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, iy + sg * s * .6, 3.5, 0, 7); ctx.fill(); }
+        label(ctx, fwd ? 'Zn²⁺ + 2 e⁻ ⟶ Zn' : 'Zn ⟶ Zn²⁺ + 2 e⁻', cx + r * .1, cy + r * .72, {size: fs * .72, color: fwd ? C.electron : C.bad});
+      } else { // 2 I⁻ → I₂ + 2 e⁻
+        const fwd = el, a = fwd ? e : 1 - e;
+        if (a < .85) for (const sg of [-1, 1]) ionBall(ctx, lerp(cx - r * .6, ex0 - s * 1.4, a), cy + sg * s * 1.3 * (1 - a * .4), s * .9, 'I', '−');
+        else { const x = ex0 - s * 1.6 - (a - .85) * r; sphere(ctx, x, cy - s * .5, s * .9, C.atomi); sphere(ctx, x, cy + s * .5, s * .9, C.atomi); }
+        for (const sg of [-1, 1]) { const q = fwd ? clamp((p - .45) / .4, 0, 1) : clamp(p / .4, 0, 1), x = fwd ? lerp(ex0 - s, ex0 + r * .3, q) : lerp(ex0 + r * .3, ex0 - s, q); ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(x, cy + sg * s * .5, 3.5, 0, 7); ctx.fill(); }
+        label(ctx, fwd ? '2 I⁻ ⟶ I₂ + 2 e⁻' : 'I₂ + 2 e⁻ ⟶ 2 I⁻', cx - r * .1, cy + r * .72, {size: fs * .72, color: fwd ? C.bad : C.electron});
+      }
+      ctx.restore(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+    };
+    const lr = Math.min(w * .12, h * .2), ly = by + bh * .5;
+    ctx.strokeStyle = alpha(C.ink2, .4); ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xL - ew / 2, ly); ctx.lineTo(w * .13 + lr, ly); ctx.moveTo(xR + ew / 2, ly); ctx.lineTo(w * .87 - lr, ly); ctx.stroke(); ctx.setLineDash([]);
+    lens(w * .13, ly, lr, true); lens(w * .87, ly, lr, false);
+    label(ctx, el ? 'Zink scheidet sich ab' : 'Zink löst sich auf', w * .13, ly - lr - fs * .8, {size: fs * .8, color: C.ink2}); label(ctx, el ? 'Iod entsteht (braun)' : 'Iod wird verbraucht', w * .87, ly - lr - fs * .8, {size: fs * .8, color: C.ink2});
   });
+  function U9(w, h) { return Math.max(6, Math.min(w, h) * .022); }
 })();
 
 /* ================= ZERSETZUNGSSPANNUNG ================= */
@@ -2496,31 +2532,85 @@ quizTable($('#tab'), $('#tab-q'), $('#tab-a'));
     cl: ['Chlor-Alkali-Elektrolyse', ['Natriumchlorid-Lösung wird elektrolysiert: Anode 2 Cl⁻ ⟶ Cl₂ + 2 e⁻, Kathode 2 H₂O + 2 e⁻ ⟶ H₂ + 2 OH⁻.', 'Eine <b>Ionenaustauscher-Membran</b> lässt nur Na⁺ durch und trennt Chlor von Natronlauge.', 'Produkte: Chlor (PVC, Desinfektion), Natronlauge, Wasserstoff. Warum Chlor und nicht Sauerstoff? Die Überspannung von O₂ ist größer.', 'Etwa 2 % des deutschen Stroms fließt in diese Elektrolyse.']],
     al: ['Aluminium: Schmelzflusselektrolyse', ['Aluminiumoxid wird in geschmolzenem Kryolith gelöst (ca. 960 °C statt 2050 °C).', 'Kathode: Al³⁺ + 3 e⁻ ⟶ Al (flüssig, sammelt sich am Boden).', 'Anode (Kohle): 2 O²⁻ ⟶ O₂ + 4 e⁻; der Sauerstoff verbrennt die Anode zu CO₂.', 'Energiebedarf rund 13–15 kWh pro kg Aluminium – Recycling spart etwa 95 % davon.']],
     cu: ['Kupferraffination', ['Rohkupfer (98–99 %) ist Anode, ein dünnes Reinkupferblech die Kathode, Elektrolyt CuSO₄-Lösung.', 'Anode: Cu ⟶ Cu²⁺ + 2 e⁻ (auch unedlere Metalle wie Fe, Zn gehen in Lösung).', 'Kathode: Cu²⁺ + 2 e⁻ ⟶ Cu (99,99 %). Unedlere Ionen bleiben bei kleiner Spannung in Lösung.', 'Edlere Metalle (Ag, Au) lösen sich nicht und fallen als <b>Anodenschlamm</b> zu Boden – eine wertvolle Rohstoffquelle.']]};
-  let k = 'cl';
-  seg($('#te-seg'), [['cl', 'Chlor-Alkali'], ['al', 'Aluminium'], ['cu', 'Kupfer']], v => { k = v; $('#te-h').textContent = T[v][0]; $('#te-f').innerHTML = T[v][1].map(s => `<li>${s}</li>`).join(''); });
-  canvasLoop($('#cv-te'), 'technik', (ctx, w, h, t) => {
-    const bx = w * .1, bw = w * .8, by = h * .25, bh = h * .68;
+  let k = 'cl', t0 = 0;
+  seg($('#te-seg'), [['cl', 'Chlor-Alkali'], ['al', 'Aluminium'], ['cu', 'Kupfer']], v => { k = v; t0 = 0; $('#te-h').textContent = T[v][0]; $('#te-f').innerHTML = T[v][1].map(s => `<li>${s}</li>`).join(''); });
+  const R = (i, s = 1) => { const r = rng(i * 7919 + s); r(); r(); return r; };
+  // Gasblasen, die an einer Elektrode entstehen und aufsteigen
+  const gas = (ctx, x0, x1, y0, y1, t, n, c, seed, sz = 4) => { for (let i = 0; i < n; i++) { const r = R(i, seed), sp = .25 + r() * .3, p = (t * sp + r()) % 1, x = lerp(x0, x1, r()) + Math.sin(t * 3 + i) * 2, y = lerp(y0, y1, p); ctx.fillStyle = alpha(c, .55); ctx.strokeStyle = alpha(c, .95); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, sz * (.6 + r() * .6) * (.6 + .4 * (1 - p)), 0, 7); ctx.fill(); ctx.stroke(); } };
+  const pipe = (ctx, pts, c, t, dir = 1, lw = 8) => { ctx.strokeStyle = alpha(C.ink2, .6); ctx.lineWidth = lw + 4; ctx.lineJoin = 'round'; ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(...p) : ctx.moveTo(...p)); ctx.stroke(); ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.stroke(); ctx.strokeStyle = alpha('#ffffff', .7); ctx.lineWidth = 2; ctx.setLineDash([4, 10]); ctx.lineDashOffset = -t * 30 * dir; ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0; };
+  const mesh = (ctx, x, y0, y1, ww, c) => { ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.strokeRect(x - ww / 2, y0, ww, y1 - y0); ctx.lineWidth = 1; for (let y = y0; y < y1; y += 8) { ctx.beginPath(); ctx.moveTo(x - ww / 2, y); ctx.lineTo(x + ww / 2, y + 8); ctx.stroke(); } };
+  canvasLoop($('#cv-te'), 'technik', (ctx, w, h, t, dt) => {
+    t0 += dt;
+    const fs = Math.max(11, w * .018), ion = Math.max(7, Math.min(w, h) * .024);
     if (k === 'cl') {
-      ctx.fillStyle = alpha('#f2f6e4', .8); ctx.fillRect(bx, by, bw / 2, bh); ctx.fillStyle = alpha('#e8eef4', .8); ctx.fillRect(bx + bw / 2, by, bw / 2, bh);
-      ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.strokeRect(bx, by, bw, bh);
-      ctx.setLineDash([6, 4]); ctx.strokeStyle = C.accent; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(bx + bw / 2, by); ctx.lineTo(bx + bw / 2, by + bh); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = '#3c454d'; ctx.fillRect(bx + bw * .15, by - 20, 12, bh * .8); ctx.fillStyle = '#8E9AA6'; ctx.fillRect(bx + bw * .85 - 12, by - 20, 12, bh * .8);
-      bubbles(ctx, bx + bw * .1, by + 10, bw * .15, bh * .6, t, 10, '#b8d040', 3); bubbles(ctx, bx + bw * .75, by + 10, bw * .15, bh * .6, t, 10, '#ffffff', 4);
-      label(ctx, 'Anode (+): Cl₂', bx + bw * .15, by - 30, {size: 12, color: C.bad}); label(ctx, 'Kathode (−): H₂', bx + bw * .85, by - 30, {size: 12, color: C.electron});
-      for (let i = 0; i < 4; i++) { const p = (t * .25 + i / 4) % 1; ionBall(ctx, lerp(bx + bw * .3, bx + bw * .7, p), by + bh * (.3 + i * .15), 9, 'Na', '+'); }
-      label(ctx, 'NaCl-Lösung', bx + bw * .25, by + bh - 14, {size: 11, color: C.ink2}); label(ctx, 'Natronlauge', bx + bw * .75, by + bh - 14, {size: 11, color: C.ink2}); label(ctx, 'Membran', bx + bw / 2, by + bh + 12, {size: 11, color: C.accent});
+      const bx = w * .14, bw = w * .72, by = h * .26, bh = h * .58, mx = bx + bw / 2, xa = bx + bw * .3, xk = bx + bw * .7, ly = by + bh * .1;
+      // Zellkörper, zwei Kammern
+      ctx.fillStyle = alpha('#e9f0c8', .8); ctx.fillRect(bx, ly, bw / 2, by + bh - ly); ctx.fillStyle = alpha('#dbe7f2', .85); ctx.fillRect(mx, ly, bw / 2, by + bh - ly);
+      gas(ctx, xa - 6, xa + 6, ly, by + bh * .9, t, 16, '#9cb52a', 3, 4); gas(ctx, xk - 6, xk + 6, ly, by + bh * .9, t, 16, '#ffffff', 4, 3.5);
+      ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; roundRect(ctx, bx, by, bw, bh, 6); ctx.stroke();
+      // Membran
+      ctx.strokeStyle = C.accent; ctx.lineWidth = 5; ctx.setLineDash([10, 5]); ctx.beginPath(); ctx.moveTo(mx, by); ctx.lineTo(mx, by + bh); ctx.stroke(); ctx.setLineDash([]);
+      mesh(ctx, xa, by + bh * .12, by + bh * .92, w * .02, '#7d8790'); mesh(ctx, xk, by + bh * .12, by + bh * .92, w * .02, '#9aa4ae');
+      // Ionen: Na⁺ durch die Membran, Cl⁻ zur Anode, OH⁻ wird abgewiesen
+      for (let i = 0; i < 5; i++) { const p = (t * .18 + i / 5) % 1; ionBall(ctx, lerp(xa + w * .04, xk - w * .04, p), by + bh * (.3 + i * .13), ion, 'Na', '+'); }
+      for (let i = 0; i < 4; i++) { const p = (t * .22 + i / 4) % 1; ionBall(ctx, lerp(mx - w * .03, xa + w * .02, p), by + bh * (.25 + i * .17) + 6, ion * .95, 'Cl', '−'); }
+      for (let i = 0; i < 3; i++) { const p = (t * .3 + i / 3) % 1, x = xk - w * .03 - Math.sin(p * Math.PI) * (xk - mx - w * .05); ctx.fillStyle = C.atomo; ctx.beginPath(); ctx.arc(x, by + bh * (.35 + i * .2), ion * .8, 0, 7); ctx.fill(); label(ctx, 'OH⁻', x, by + bh * (.35 + i * .2), {size: ion * .6, color: '#fff'}); }
+      label(ctx, '✕', mx, by + bh * .55, {size: fs * 1.2, color: C.bad});
+      // Zu- und Abläufe
+      pipe(ctx, [[bx - w * .1, by + bh * .2], [bx, by + bh * .2]], '#e9f0c8', t); label(ctx, 'NaCl-Sole', bx - w * .05, by + bh * .2 - fs, {size: fs * .75, color: C.ink2});
+      pipe(ctx, [[bx, by + bh * .85], [bx - w * .1, by + bh * .85]], '#f2f5e6', t); label(ctx, 'Dünnsole', bx - w * .05, by + bh * .85 + fs, {size: fs * .75, color: C.ink2});
+      pipe(ctx, [[bx + bw + w * .1, by + bh * .2], [bx + bw, by + bh * .2]], '#dbe7f2', t); label(ctx, 'Wasser', bx + bw + w * .05, by + bh * .2 - fs, {size: fs * .75, color: C.ink2});
+      pipe(ctx, [[bx + bw, by + bh * .85], [bx + bw + w * .1, by + bh * .85]], '#c4d6ea', t); label(ctx, 'Natronlauge', bx + bw + w * .05, by + bh * .85 + fs, {size: fs * .75, color: C.ink2});
+      pipe(ctx, [[xa, by], [xa, by - h * .1]], '#c9d86a', t); pipe(ctx, [[xk, by], [xk, by - h * .1]], '#eef3f8', t);
+      label(ctx, 'Cl₂', xa, by - h * .13, {size: fs * 1.1, color: '#7a8a10'}); label(ctx, 'H₂', xk, by - h * .13, {size: fs * 1.1, color: C.ink2});
+      label(ctx, 'Anode (+)', xa - w * .04, by + bh * .06 + 2, {size: fs * .75, color: C.bad, align: 'right'}); label(ctx, 'Kathode (−)', xk + w * .04, by + bh * .06 + 2, {size: fs * .75, color: C.electron, align: 'left'});
+      label(ctx, 'Membran: nur Na⁺', mx, by + bh + fs * 1.1, {size: fs * .8, color: C.accent});
+      label(ctx, '2 Cl⁻ ⟶ Cl₂ + 2 e⁻', xa, h * .03 + fs * .5, {size: fs * .8, color: C.ink2}); label(ctx, '2 H₂O + 2 e⁻ ⟶ H₂ + 2 OH⁻', xk, h * .03 + fs * .5, {size: fs * .8, color: C.ink2});
     } else if (k === 'al') {
-      ctx.fillStyle = '#4a3a2a'; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = alpha('#ffb040', .8); ctx.fillRect(bx + 10, by + 10, bw - 20, bh * .6);
-      ctx.fillStyle = '#c8d0d8'; ctx.fillRect(bx + 10, by + bh * .65, bw - 20, bh * .25 - 10);
-      for (let i = 0; i < 3; i++) { ctx.fillStyle = '#222'; ctx.fillRect(bx + bw * (.18 + i * .25), by - 30, bw * .15, bh * .45); }
-      bubbles(ctx, bx + bw * .15, by, bw * .7, bh * .4, t, 14, '#888', 6);
-      label(ctx, 'Kohle-Anoden (+)', bx + bw / 2, by - 40, {size: 12, color: C.bad}); label(ctx, 'Kryolith-Schmelze mit Al₂O₃ (960 °C)', bx + bw / 2, by + bh * .55, {size: 12, color: '#3a2000'}); label(ctx, 'flüssiges Aluminium = Kathode (−)', bx + bw / 2, by + bh * .78, {size: 12, color: C.ink});
+      const bx = w * .1, bw = w * .8, by = h * .3, bh = h * .58, lin = h * .035;
+      // Stahlwanne mit Auskleidung
+      ctx.fillStyle = '#5a5f66'; roundRect(ctx, bx, by, bw, bh, 6); ctx.fill(); ctx.fillStyle = '#8a7a66'; ctx.fillRect(bx + lin, by + lin, bw - 2 * lin, bh - 2 * lin);
+      const iy = by + lin, cb = by + bh - lin - h * .1, alT = cb - h * .07, crust = iy + h * .04;
+      ctx.fillStyle = '#2c2f33'; ctx.fillRect(bx + lin, cb, bw - 2 * lin, h * .1); for (let i = 0; i < 4; i++) { ctx.fillStyle = '#9aa4ae'; ctx.fillRect(bx - w * .03, cb + h * .03 + i * 0, w * .06, h * .025); ctx.fillRect(bx + bw - w * .03, cb + h * .03, w * .06, h * .025); }
+      label(ctx, 'Kohle-Kathode', bx + bw / 2, cb + h * .05, {size: fs * .8, color: '#ddd'});
+      // flüssiges Aluminium
+      const ag = ctx.createLinearGradient(0, alT, 0, cb); ag.addColorStop(0, '#f2f5f8'); ag.addColorStop(1, '#a7b0ba'); ctx.fillStyle = ag; ctx.beginPath(); ctx.moveTo(bx + lin, alT); for (let x = bx + lin; x <= bx + bw - lin; x += 6) ctx.lineTo(x, alT + Math.sin(x * .05 + t * 2) * 1.5); ctx.lineTo(bx + bw - lin, cb); ctx.lineTo(bx + lin, cb); ctx.closePath(); ctx.fill();
+      label(ctx, 'flüssiges Aluminium (Kathode −)', bx + bw / 2, (alT + cb) / 2, {size: fs * .8, color: '#333'});
+      // Kryolith-Schmelze (glühend)
+      const mg = ctx.createLinearGradient(0, crust, 0, alT); mg.addColorStop(0, '#ff9a2a'); mg.addColorStop(1, '#ffc35a'); ctx.fillStyle = mg; ctx.fillRect(bx + lin, crust, bw - 2 * lin, alT - crust);
+      ctx.fillStyle = alpha('#ffffff', .12 + .06 * Math.sin(t * 3)); ctx.fillRect(bx + lin, crust, bw - 2 * lin, alT - crust);
+      ctx.fillStyle = '#b8b2a6'; ctx.fillRect(bx + lin, iy, bw - 2 * lin, crust - iy); for (let i = 0; i < 30; i++) { const r = R(i, 9); ctx.fillStyle = alpha('#7a746a', .6); ctx.beginPath(); ctx.arc(bx + lin + r() * (bw - 2 * lin), iy + r() * (crust - iy), 2, 0, 7); ctx.fill(); }
+      // Anoden an der Anodenschiene
+      const ah = (alT - crust) * .55 + h * .1, aw = bw * .17, ay = crust - h * .1;
+      ctx.fillStyle = '#9aa4ae'; ctx.fillRect(bx + bw * .05, h * .08, bw * .9, h * .035); label(ctx, 'Anodenschiene (+)', bx + bw / 2, h * .06, {size: fs * .8, color: C.bad});
+      for (let i = 0; i < 3; i++) { const x = bx + bw * (.16 + i * .29); ctx.fillStyle = '#9aa4ae'; ctx.fillRect(x + aw / 2 - 3, h * .115, 6, ay - h * .115); gas(ctx, x - 10, x + aw + 10, crust + 6, ay + ah + 8, t, 14, '#6b6b6b', 20 + i, 4); ctx.fillStyle = '#1e1e1e'; roundRect(ctx, x, ay, aw, ah - (t0 * .3 % 6), 3); ctx.fill(); }
+      for (let i = 0; i < 4; i++) { const p = (t * .25 + i / 4) % 1; ionBall(ctx, bx + bw * (.25 + i * .17), lerp(ay + ah + 8, alT - ion, p), ion * .9, 'Al', '3+'); }
+      for (let i = 0; i < 3; i++) { const p = (t * .3 + i / 3) % 1, x = bx + bw * (.22 + i * .29), y = lerp(alT - ion * 2, ay + ah + ion, p); ctx.fillStyle = C.atomo; ctx.beginPath(); ctx.arc(x, y, ion * .8, 0, 7); ctx.fill(); label(ctx, 'O²⁻', x, y, {size: ion * .55, color: '#fff'}); }
+      // Krustenbrecher dosiert Al₂O₃
+      const fx = bx + bw * .44, fp = (t0 % 4) / 4; ctx.fillStyle = '#7d8790'; ctx.fillRect(fx - 4, h * .12, 8, crust - h * .12 - (fp < .15 ? 0 : h * .03)); if (fp > .1 && fp < .5) for (let i = 0; i < 8; i++) { ctx.fillStyle = '#f4f4f0'; ctx.beginPath(); ctx.arc(fx + (i % 3 - 1) * 5, crust + (fp - .1) * h * .3 + i * 3, 2, 0, 7); ctx.fill(); }
+      label(ctx, 'Al₂O₃-Zugabe', fx + w * .015, h * .17, {size: fs * .75, color: C.ink2, align: 'left'});
+      label(ctx, 'Kryolith-Schmelze mit Al₂O₃, 960 °C', bx + bw / 2, alT - h * .03, {size: fs * .8, color: '#5a2a00'});
+      label(ctx, 'CO₂', bx + bw * .95, crust - h * .06, {size: fs, color: C.ink2}); for (let i = 0; i < 4; i++) { const p = (t * .3 + i / 4) % 1; ctx.fillStyle = alpha('#888', (1 - p) * .4); ctx.beginPath(); ctx.arc(bx + bw * (.3 + i * .15) + Math.sin(t + i) * 8, crust - p * h * .15, 6 + p * 8, 0, 7); ctx.fill(); }
     } else {
-      ctx.fillStyle = alpha('#4f97d8', .45); ctx.fillRect(bx, by, bw, bh); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.strokeRect(bx, by, bw, bh);
-      ctx.fillStyle = '#9a5a30'; ctx.fillRect(bx + bw * .2 - 15, by - 20, 30, bh * .8); ctx.fillStyle = '#d07040'; ctx.fillRect(bx + bw * .8 - 4, by - 20, 8 + (t % 20) * .3, bh * .8);
-      for (let i = 0; i < 4; i++) { const p = (t * .25 + i / 4) % 1; ionBall(ctx, lerp(bx + bw * .25, bx + bw * .75, p), by + bh * (.25 + i * .15), 9, 'Cu', '2+'); }
-      for (let i = 0; i < 10; i++) { ctx.fillStyle = i % 2 ? '#d8b440' : '#c8ced4'; ctx.beginPath(); ctx.arc(bx + bw * .2 + (i - 5) * 6, by + bh - 8 - (i % 3) * 4, 4, 0, 7); ctx.fill(); }
-      label(ctx, 'Rohkupfer = Anode (+)', bx + bw * .2, by - 30, {size: 12, color: C.bad}); label(ctx, 'Reinkupfer = Kathode (−)', bx + bw * .8, by - 30, {size: 12, color: C.electron}); label(ctx, 'Anodenschlamm (Ag, Au)', bx + bw * .2, by + bh + 12, {size: 11, color: C.ink2});
+      const bx = w * .1, bw = w * .8, by = h * .2, bh = h * .7, ly = by + bh * .08, P = (t0 % 24) / 24, xa = bx + bw * .25, xk = bx + bw * .75, top = by + bh * .03, bot = by + bh * .82;
+      ctx.fillStyle = alpha('#4f97d8', .4); ctx.fillRect(bx, ly, bw, by + bh - ly); ctx.strokeStyle = C.ink2; ctx.lineWidth = 3; roundRect(ctx, bx, by, bw, bh, 6); ctx.stroke();
+      // Stromschienen
+      ctx.fillStyle = mix('#c87533', '#ffffff', .2); ctx.fillRect(bx - w * .02, by - h * .07, bw * .45, h * .03); ctx.fillRect(bx + bw * .57, by - h * .07, bw * .45, h * .03);
+      label(ctx, '+', bx - w * .035, by - h * .055, {size: fs * 1.3, color: C.bad}); label(ctx, '−', bx + bw + w * .035, by - h * .055, {size: fs * 1.3, color: C.electron});
+      // Rohkupfer-Anode wird dünner, Kathode wächst
+      const aw = w * .07 * (1 - .6 * P), kw = w * .006 + w * .045 * P;
+      ctx.fillStyle = '#8a5530'; ctx.beginPath(); ctx.moveTo(xa - aw / 2, top); for (let y = top; y <= bot; y += 6) ctx.lineTo(xa - aw / 2 + Math.sin(y * .3) * 2, y); for (let y = bot; y >= top; y -= 6) ctx.lineTo(xa + aw / 2 + Math.sin(y * .4 + 1) * 2.5 * (.5 + P), y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#8a5530'; ctx.fillRect(xa - 3, by - h * .05, 6, top - by + h * .05);
+      const kg = ctx.createLinearGradient(xk - kw / 2, 0, xk + kw / 2, 0); kg.addColorStop(0, '#d9824a'); kg.addColorStop(.5, '#f6b07a'); kg.addColorStop(1, '#c86f38'); ctx.fillStyle = kg; ctx.fillRect(xk - kw / 2, top, kw, bot - top); ctx.fillStyle = '#c87533'; ctx.fillRect(xk - 3, by - h * .05, 6, top - by + h * .05);
+      // Cu²⁺ wandert zur Kathode, Fe²⁺/Zn²⁺ bleiben in Lösung
+      for (let i = 0; i < 5; i++) { const p = (t * .2 + i / 5) % 1; ionBall(ctx, lerp(xa + aw / 2 + ion, xk - kw / 2 - ion, p), by + bh * (.22 + i * .12), ion, 'Cu', '2+'); }
+      [['Fe', '2+'], ['Zn', '2+'], ['Fe', '2+']].forEach(([e, q], i) => { const x = bx + bw * (.42 + i * .08) + Math.sin(t * .7 + i * 2) * w * .03, y = by + bh * (.3 + i * .2) + Math.cos(t * .5 + i) * h * .03; ionBall(ctx, x, y, ion * .9, e, q); });
+      // Anodenschlamm: edle Metalle rieseln herab
+      for (let i = 0; i < 8; i++) { const r = R(i, 31), p = (t * .15 + r()) % 1; ctx.fillStyle = i % 2 ? '#e3b830' : '#d8dde2'; ctx.beginPath(); ctx.arc(xa + (r() - .5) * aw * 1.4, lerp(bot - h * .1, by + bh - h * .04, p), 2.5, 0, 7); ctx.fill(); }
+      const sh = h * (.015 + .03 * P); ctx.fillStyle = '#7a6a4a'; ctx.beginPath(); ctx.ellipse(xa, by + bh - 3, w * .09, sh, 0, Math.PI, 0); ctx.fill(); for (let i = 0; i < 14; i++) { const r = R(i, 41); ctx.fillStyle = i % 2 ? '#e3b830' : '#d8dde2'; ctx.beginPath(); ctx.arc(xa + (r() - .5) * w * .14, by + bh - 4 - r() * sh * .8, 2, 0, 7); ctx.fill(); }
+      label(ctx, 'Rohkupfer (Anode +)', xa, by - h * .1, {size: fs * .8, color: C.bad}); label(ctx, 'Reinkupfer (Kathode −)', xk, by - h * .1, {size: fs * .8, color: C.electron});
+      label(ctx, 'Fe²⁺, Zn²⁺ bleiben gelöst', bx + bw * .5, by + bh * .95, {size: fs * .75, color: C.ink2}); label(ctx, 'Anodenschlamm (Ag, Au)', xa, by + bh + fs, {size: fs * .75, color: C.ink2});
+      label(ctx, 'CuSO₄-Lösung', bx + bw * .88, by + bh * .95, {size: fs * .75, color: C.ink2});
     }
   });
 })();

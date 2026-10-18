@@ -2500,33 +2500,77 @@ function seenColor(nm, wd = 40, absMax = .95) {
 
 /* ================= NYLONSEIL ================= */
 (() => {
-  let L = 0, pull = false;
+  let L = 0, pull = false, S = 3, rot = 0;
   $('#ny-go').onclick = () => { pull = !pull; $('#ny-go').textContent = pull ? 'Anhalten' : 'Faden ziehen'; };
-  $('#ny-re').onclick = () => { L = 0; pull = false; $('#ny-go').textContent = 'Faden ziehen'; };
+  $('#ny-re').onclick = () => { L = 0; S = 3; pull = false; $('#ny-go').textContent = 'Faden ziehen'; };
+  const OIL = '#f3e2a0', LYE = '#a9cdf0', NYL = '#f4f1e8';
+  // Monomer als Stäbchen: acid = Säuredichlorid (Cl-Enden grün, C=O rot), sonst Diamin (N-Enden blau)
+  const unit = (ctx, x, y, a, len, acid, o = {}) => {
+    const ux = Math.cos(a) * len / 2, uy = Math.sin(a) * len / 2, r = Math.max(2.5, len * .09);
+    ctx.globalAlpha = o.alpha ?? 1;
+    ctx.strokeStyle = acid ? mix(C.ink2, C.accent, .4) : C.ink2; ctx.lineWidth = r * 1.1; ctx.lineCap = 'round';
+    ctx.beginPath(); const n = 6; for (let i = 0; i <= n; i++) { const f = i / n - .5, zz = (i % 2 ? 1 : -1) * r * .7; const px = x + ux * 2 * f - Math.sin(a) * zz, py = y + uy * 2 * f + Math.cos(a) * zz; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke();
+    for (const sg of [-1, 1]) {
+      const ex = x + ux * sg, ey = y + uy * sg, link = sg < 0 ? o.l0 : o.l1;
+      if (acid) { sphere(ctx, ex, ey, r * 1.15, C.atomc); sphere(ctx, ex - Math.sin(a) * r * 2, ey + Math.cos(a) * r * 2, r * .95, C.atomo); if (!link) sphere(ctx, ex + ux / len * 2 * r * 2.1 * sg, ey + uy / len * 2 * r * 2.1 * sg, r * 1.05, C.atomcl); }
+      else { sphere(ctx, ex, ey, r * 1.1, C.atomn); }
+    }
+    ctx.globalAlpha = 1;
+  };
+  const bg = [...Array(12)].map((_, i) => { const r = rng(i * 7919 + 2); r(); r(); return {x: r(), y: r(), a: r() * 7, v: .3 + r() * .5, acid: i % 2 === 0}; });
   canvasLoop($('#cv-ny'), 'nylon', (ctx, w, h, t, dt) => {
-    if (pull) L = Math.min(L + dt * .25, 1);
-    const bx = w * .14, bw = w * .3, by = h * .3, bh = h * .62, iy = by + bh * .5;
-    ctx.fillStyle = alpha('#9ec8f0', .35); ctx.fillRect(bx + 2, iy, bw - 4, by + bh - iy - 2);
-    ctx.fillStyle = alpha('#f3e7b0', .45); ctx.fillRect(bx + 2, by + bh * .18, bw - 4, iy - by - bh * .18);
+    if (pull) { L = Math.min(L + dt * .06, 1); S += dt * 1.1; rot += dt * 3; if (L >= 1) { pull = false; $('#ny-go').textContent = 'Faden ziehen'; } }
+    const fs = Math.max(11, w * .018);
+    // --- Becherglas mit zwei Phasen
+    const bx = w * .07, bw = w * .3, by = h * .4, bh = h * .5, iy = by + bh * (.55 + L * .04), top = by + bh * (.2 + L * .1), cx = bx + bw / 2;
+    ctx.fillStyle = alpha(LYE, .55); ctx.fillRect(bx + 2, iy, bw - 4, by + bh - iy - 2);
+    ctx.fillStyle = alpha(OIL, .6); ctx.fillRect(bx + 2, top, bw - 4, iy - top);
+    // Film an der Grenzfläche, beim Ziehen zu einem Zelt hochgezogen
+    const tent = pull || L > 0 ? (iy - top) * .75 : 0, fx = x => iy - tent * Math.exp(-(((x - cx) / (bw * .1)) ** 2));
+    ctx.strokeStyle = NYL; ctx.lineWidth = 5; ctx.beginPath(); for (let x = bx + 3; x <= bx + bw - 3; x += 2) ctx.lineTo(x, fx(x)); ctx.stroke();
+    ctx.strokeStyle = alpha(C.ink2, .7); ctx.lineWidth = 1; ctx.stroke();
     beaker(ctx, bx, by, bw, bh, {marks: false});
-    ctx.strokeStyle = '#f2f2ee'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(bx + 3, iy); ctx.lineTo(bx + bw - 3, iy); ctx.stroke();
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(bx + 3, iy); ctx.lineTo(bx + bw - 3, iy); ctx.stroke();
-    label(ctx, 'Säuredichlorid', bx + bw + 8, by + bh * .3, {size: 11, align: 'left', color: C.ink2, weight: 400}); label(ctx, 'in Heptan', bx + bw + 8, by + bh * .3 + 14, {size: 11, align: 'left', color: C.ink2, weight: 400});
-    label(ctx, 'Diamin in', bx + bw + 8, by + bh * .76, {size: 11, align: 'left', color: C.ink2, weight: 400}); label(ctx, 'Natronlauge', bx + bw + 8, by + bh * .76 + 14, {size: 11, align: 'left', color: C.ink2, weight: 400});
-    // Glasstab mit aufgewickeltem Faden
-    const rx = w * .62, ry = h * .14, rot = t * (pull ? 4 : 0);
-    ctx.fillStyle = alpha(C.ink2, .25); roundRect(ctx, rx - w * .16, ry - 5, w * .32, 10, 5); ctx.fill();
-    const coil = L * 24; ctx.fillStyle = '#f5f2ea'; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(rx, ry, 8 + coil * .4, 6 + coil * .3, 0, 0, 7); ctx.fill(); ctx.stroke();
-    for (let i = 0; i < 4; i++) { const a = rot + i * Math.PI / 2; ctx.strokeStyle = alpha(C.ink2, .5); ctx.beginPath(); ctx.moveTo(rx + Math.cos(a) * 4, ry + Math.sin(a) * 3); ctx.lineTo(rx + Math.cos(a) * (8 + coil * .4), ry + Math.sin(a) * (6 + coil * .3)); ctx.stroke(); }
-    if (L > 0 || pull) { const sx = bx + bw / 2, sy = iy; ctx.strokeStyle = '#efe9d8'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + 10, (sy + ry) / 2, rx - 8, ry + 4); ctx.stroke(); ctx.strokeStyle = alpha(C.ink2, .6); ctx.lineWidth = 1; ctx.stroke(); }
-    // Zoom auf die Grenzfläche
-    const zx = w * .79, zy = h * .56, zr = Math.min(w, h) * .2;
-    ctx.save(); ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.clip(); ctx.fillStyle = alpha('#f3e7b0', .5); ctx.fillRect(zx - zr, zy - zr, 2 * zr, zr); ctx.fillStyle = alpha('#9ec8f0', .45); ctx.fillRect(zx - zr, zy, 2 * zr, zr);
-    for (let i = 0; i < 6; i++) { const x = zx - zr + (i + .5) * zr / 3, ph = (t * .6 + i * .37) % 1; label(ctx, 'ClOC–', x, zy - zr * .7 + ph * zr * .5, {size: 10, color: C.atomcl}); label(ctx, 'H₂N–', x + 10, zy + zr * .7 - ph * zr * .5, {size: 10, color: C.atomn}); }
-    ctx.fillStyle = '#f2f2ee'; ctx.fillRect(zx - zr, zy - 6, 2 * zr, 12); label(ctx, '–CO–NH–CO–NH–', zx, zy, {size: 11, color: C.ink});
-    ctx.restore(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.stroke();
-    label(ctx, 'Grenzfläche vergrößert', zx, zy + zr + 14, {size: 11, color: C.ink2, weight: 400});
-    $('#ny-status').innerHTML = L > 0 ? `Gezogene Fadenlänge: <b>${numDE(L * 120, 0)} cm</b>. An der Grenzfläche bildet sich ständig neues Polyamid; pro Verknüpfung wird ein HCl abgespalten und von der Lauge neutralisiert.` : 'An der Grenzfläche hat sich ein dünner, weißer Film gebildet.';
+    label(ctx, 'Decandisäuredichlorid', bx + bw + 10, (top + iy) / 2 - fs * .55, {size: fs * .8, align: 'left', color: C.ink2, weight: 600}); label(ctx, 'in Heptan', bx + bw + 10, (top + iy) / 2 + fs * .55, {size: fs * .8, align: 'left', color: C.ink2, weight: 400});
+    label(ctx, 'Hexandiamin', bx + bw + 10, (iy + by + bh) / 2 - fs * .55, {size: fs * .8, align: 'left', color: C.ink2, weight: 600}); label(ctx, 'in Natronlauge', bx + bw + 10, (iy + by + bh) / 2 + fs * .55, {size: fs * .8, align: 'left', color: C.ink2, weight: 400});
+    // --- Stativ mit Wickelrolle (Kurbel)
+    const rx = cx + bw * .08, ry = h * .13, rr = h * .045 + L * h * .03, rl = w * .13;
+    ctx.fillStyle = C.ink2; ctx.fillRect(bx - w * .045, h * .06, 5, by + bh - h * .06); roundRect(ctx, bx - w * .065, by + bh - 2, w * .1, 8, 3); ctx.fill();
+    ctx.fillRect(bx - w * .045, ry - 3, rx - rl / 2 - bx + w * .045, 6);
+    ctx.fillStyle = alpha(C.ink2, .25); roundRect(ctx, rx - rl / 2 - 6, ry - h * .02, rl + 12, h * .04, h * .02); ctx.fill();
+    if (L > 0) { // aufgewickelter Faden
+      ctx.fillStyle = NYL; roundRect(ctx, rx - rl * .35, ry - rr, rl * .7, rr * 2, rr * .6); ctx.fill(); ctx.strokeStyle = alpha(C.ink2, .6); ctx.lineWidth = 1; ctx.stroke();
+      ctx.save(); roundRect(ctx, rx - rl * .35, ry - rr, rl * .7, rr * 2, rr * .6); ctx.clip(); ctx.strokeStyle = alpha(C.ink2, .25);
+      for (let k = -12; k < 12; k++) { const x = rx + k * 6 + (rot * 8) % 6; ctx.beginPath(); ctx.moveTo(x, ry - rr); ctx.lineTo(x + 5, ry + rr); ctx.stroke(); } ctx.restore();
+    }
+    // Kurbel
+    const kx = rx + rl / 2 + 8, ka = rot; ctx.strokeStyle = C.ink2; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(kx, ry); ctx.lineTo(kx + Math.cos(ka) * 16, ry + Math.sin(ka) * 16); ctx.stroke(); ctx.fillStyle = C.accent; ctx.beginPath(); ctx.arc(kx + Math.cos(ka) * 16, ry + Math.sin(ka) * 16, 5, 0, 7); ctx.fill();
+    // Faden von der Zeltspitze zur Rolle
+    if (tent) { const sy = fx(cx); ctx.strokeStyle = NYL; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx, sy); ctx.bezierCurveTo(cx, sy - (sy - ry) * .5, rx, ry + rr * 2, rx, ry + (L > 0 ? rr : h * .02)); ctx.stroke(); ctx.strokeStyle = alpha(C.ink2, .55); ctx.lineWidth = 1; ctx.stroke();
+      if (pull) for (let k = 0; k < 3; k++) { const p = (t * .8 + k / 3) % 1, yy = lerp(sy, ry + rr * 2, p); ctx.fillStyle = alpha(C.accent, .8); ctx.beginPath(); ctx.moveTo(cx + 7, yy); ctx.lineTo(cx + 12, yy + 7); ctx.lineTo(cx + 2, yy + 7); ctx.closePath(); ctx.fill(); }
+      label(ctx, 'Nylonfaden', cx - 10, (sy + ry) / 2 + 6, {size: fs * .8, align: 'right', color: C.ink2, weight: 600}); }
+    // --- Lupe auf die Grenzfläche
+    const zx = w * .76, zy = h * .53, zr = Math.min(w * .21, h * .41);
+    ctx.strokeStyle = alpha(C.ink2, .45); ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(bx + bw - 4, iy); ctx.lineTo(zx - zr * .97, zy - zr * .25); ctx.moveTo(bx + bw - 4, iy); ctx.lineTo(zx - zr * .97, zy + zr * .25); ctx.stroke(); ctx.setLineDash([]);
+    ctx.save(); ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.clip();
+    ctx.fillStyle = alpha(OIL, .45); ctx.fillRect(zx - zr, zy - zr, 2 * zr, zr); ctx.fillStyle = alpha(LYE, .45); ctx.fillRect(zx - zr, zy, 2 * zr, zr);
+    const ul = zr * .3, x0 = zx - zr;
+    bg.forEach((m, i) => { const yy = m.acid ? zy - zr * (.25 + .65 * m.y) : zy + zr * (.25 + .65 * m.y), xx = zx - zr + 2 * zr * ((m.x + t * .01 * m.v) % 1); unit(ctx, xx, yy + Math.sin(t * m.v + i) * 4, m.a + Math.sin(t * .5 * m.v + i) * .4, ul * .9, m.acid); });
+    // Kette an der Grenzfläche wandert nach rechts (zum Faden), links kommen neue Monomere an
+    ctx.fillStyle = alpha(NYL, .7); ctx.fillRect(zx - zr, zy - ul * .35, 2 * zr, ul * .7);
+    const i1 = Math.floor(S) + 1, i0 = i1 - Math.ceil(2 * zr / ul) - 2;
+    for (let i = i0; i <= i1; i++) {
+      const p = S - i, acid = i % 2 === 0, x = x0 + p * ul + ul / 2;
+      if (p >= 0) { unit(ctx, x, zy, 0, ul * .92, acid, {l0: 1, l1: 1}); if (acid) for (const sg of [-1, 1]) { ctx.strokeStyle = C.accent; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x + sg * ul * .5, zy, ul * .2, 0, 7); ctx.stroke(); } }
+      else { const q = ease(clamp(p + 1, 0, 1)), sy = acid ? zy - zr * .6 : zy + zr * .6; unit(ctx, lerp(x0 + ul * 2.2, x0 + ul / 2, q), lerp(sy, zy, q), lerp(acid ? -.8 : .8, 0, q), ul * .92, acid); }
+      if (acid && p >= 0 && p < 2.2) for (const sg of [-1, 1]) { const q = p / 2.2, hx = x + sg * ul * .5 + q * 10, hy = zy + ul * .3 + q * zr * .5; ctx.globalAlpha = 1 - q; label(ctx, q < .55 ? 'HCl' : 'H₂O + Cl⁻', hx, hy + (sg > 0 ? 14 : 0), {size: fs * .8, color: C.atomcl}); ctx.globalAlpha = 1; }
+    }
+    ctx.restore(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.stroke();
+    label(ctx, 'Grenzfläche, vergrößert', zx, zy - zr - fs * .8, {size: fs * .85, color: C.ink2});
+    // Legende unter der Lupe
+    const ly = zy + zr + fs * 1.1; ctx.strokeStyle = C.accent; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(zx - zr * .95, ly, 6, 0, 7); ctx.stroke();
+    label(ctx, 'Amidgruppe –CO–NH–', zx - zr * .95 + 12, ly, {size: fs * .8, align: 'left', color: C.ink2, weight: 600});
+    sphere(ctx, zx + zr * .38, ly, 5, C.atomcl); label(ctx, 'Cl', zx + zr * .38 + 9, ly, {size: fs * .8, align: 'left', color: C.ink2}); sphere(ctx, zx + zr * .62, ly, 5, C.atomn); label(ctx, 'N', zx + zr * .62 + 9, ly, {size: fs * .8, align: 'left', color: C.ink2});
+    $('#ny-status').innerHTML = L > 0 ? `Gezogene Fadenlänge: <b>${numDE(L * 120, 0)} cm</b>. An der Grenzfläche bildet sich ständig neues Polyamid; pro Verknüpfung wird ein HCl abgespalten und von der Lauge neutralisiert.` : 'An der Grenzfläche hat sich ein dünner, weißer Film gebildet. Er trennt die Monomere – erst beim Herausziehen entsteht neue Grenzfläche.';
   });
 })();
 

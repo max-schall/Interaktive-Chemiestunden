@@ -2404,21 +2404,63 @@ function seenColor(nm, wd = 40, absMax = .95) {
     pla: ['PLA-Becher', [[3, 1], [2, 1], [1, 3], [1, 1]], 'Kompostierbar nur in Industrieanlagen; dabei entstehen nur CO₂ und Wasser, kein Kompostwert. Sortieranlagen erkennen PLA oft nicht.'],
     pmma: ['PMMA-Rücklicht', [[2, 1], [3, 2], [1, 3], null], 'PMMA depolymerisiert beim Erhitzen fast vollständig zum Monomer: ideal für rohstoffliches Recycling.'],
     duro: ['Steckdose (Duromer)', [null, [1, 1], [1, 3], null], 'Duromere schmelzen nicht. Sie werden zerkleinert als Füllstoff genutzt oder verbrannt.']};
-  let k = 'pet';
+  let k = 'pet', tk = 0;
+  const bars = W.map(() => [0, 0]);
   const wK = () => +$('#vw-k').value, wM = () => +$('#vw-m').value;
-  const upd = () => { const L = ['gar nicht', 'wenig', 'mittel', 'stark']; $('#vw-ko').textContent = L[wK()]; $('#vw-mo').textContent = L[wM()]; $('#vw-status').innerHTML = `<b>${I[k][0]}:</b> ${I[k][2]}`; };
+  const upd = () => { const L = ['gar nicht', 'wenig', 'mittel', 'stark']; $('#vw-ko').textContent = L[wK()]; $('#vw-mo').textContent = L[wM()]; $('#vw-status').innerHTML = `<b>${I[k][0]}:</b> ${I[k][2]}`; tk = 0; };
   seg($('#vw-seg'), Object.keys(I).map(x => [x, I[x][0].split(' (')[0]]), v => { k = v; upd(); });
   $('#vw-k').oninput = $('#vw-m').oninput = upd; upd();
-  canvasLoop($('#cv-vw'), 'wege', (ctx, w, h) => {
-    const sc = I[k][1].map(s => s ? s[0] * wK() + s[1] * wM() : null), mx = 3 * (wK() + wM()) || 1, best = Math.max(...sc.filter(s => s !== null));
-    const A = axes(ctx, w, h, {x: [0, mx], y: [0, 4], xt: [0, mx], xl: 'gewichtete Punkte', pad: {l: 110, b: 40, t: 10, r: 30}});
+  const KC = '#2E8B57', MC = '#3B78C2';
+  // Abfall-Gegenstände (Mittelpunkt x, y, Größe s)
+  const item = (ctx, key, x, y, s, t) => {
+    ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round'; ctx.lineWidth = 2;
+    if (key === 'pet') { ctx.fillStyle = alpha('#7cc3ee', .55); ctx.strokeStyle = '#3a88b8'; ctx.beginPath(); ctx.moveTo(-s * .12, -s * .5); ctx.lineTo(-s * .12, -s * .38); ctx.quadraticCurveTo(-s * .3, -s * .28, -s * .3, -s * .1); ctx.lineTo(-s * .3, s * .45); ctx.quadraticCurveTo(-s * .3, s * .52, -s * .22, s * .52); ctx.lineTo(s * .22, s * .52); ctx.quadraticCurveTo(s * .3, s * .52, s * .3, s * .45); ctx.lineTo(s * .3, -s * .1); ctx.quadraticCurveTo(s * .3, -s * .28, s * .12, -s * .38); ctx.lineTo(s * .12, -s * .5); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#2e7d32'; roundRect(ctx, -s * .14, -s * .6, s * .28, s * .12, 3); ctx.fill(); ctx.fillStyle = alpha('#ffffff', .8); ctx.fillRect(-s * .3, s * .02, s * .6, s * .18); label(ctx, 'PET', 0, s * .11, {size: s * .12, color: '#3a88b8'}); ctx.fillStyle = alpha('#ffffff', .6); ctx.fillRect(-s * .22, -s * .15, s * .05, s * .55); }
+    else if (key === 'folie') { ctx.fillStyle = alpha('#d8e3dc', .9); ctx.strokeStyle = C.ink2; ctx.beginPath(); for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283, r = s * (.36 + .1 * Math.sin(i * 2.7)); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r * .8); } ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.strokeStyle = alpha(C.ink2, .4); ctx.lineWidth = 1; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo((i - 2) * s * .12, -s * .2); ctx.lineTo((i - 2) * s * .1 + s * .05, s * .2); ctx.stroke(); } ctx.fillStyle = alpha('#a0522d', .6); for (const [dx, dy, r] of [[-.12, .05, .07], [.1, -.08, .05], [.15, .12, .04]]) { ctx.beginPath(); ctx.arc(dx * s, dy * s, r * s, 0, 7); ctx.fill(); } }
+    else if (key === 'chips') { const g = ctx.createLinearGradient(-s * .3, 0, s * .3, 0); g.addColorStop(0, '#c62828'); g.addColorStop(.5, '#ef5350'); g.addColorStop(1, '#b71c1c'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-s * .3, -s * .45); for (let i = 0; i <= 6; i++) ctx.lineTo(-s * .3 + i * s * .1, -s * .45 + (i % 2 ? -s * .03 : 0)); ctx.quadraticCurveTo(s * .38, 0, s * .3, s * .45); for (let i = 6; i >= 0; i--) ctx.lineTo(-s * .3 + i * s * .1, s * .45 + (i % 2 ? s * .03 : 0)); ctx.quadraticCurveTo(-s * .38, 0, -s * .3, -s * .45); ctx.fill(); ctx.fillStyle = '#ffd54f'; ctx.beginPath(); ctx.ellipse(0, 0, s * .17, s * .12, -.3, 0, 7); ctx.fill(); ctx.fillStyle = '#cfd8dc'; ctx.beginPath(); ctx.moveTo(s * .3, -s * .45); ctx.lineTo(s * .18, -s * .45); ctx.lineTo(s * .3, -s * .32); ctx.fill(); label(ctx, 'Alu', s * .42, -s * .45, {size: s * .1, color: C.ink2}); }
+    else if (key === 'pla') { ctx.fillStyle = alpha('#f4efe2', .95); ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.moveTo(-s * .32, -s * .4); ctx.lineTo(s * .32, -s * .4); ctx.lineTo(s * .22, s * .48); ctx.lineTo(-s * .22, s * .48); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#8bc34a'; ctx.beginPath(); ctx.ellipse(0, s * .05, s * .1, s * .16, .5, 0, 7); ctx.fill(); label(ctx, 'PLA', 0, s * .3, {size: s * .12, color: '#558b2f'}); ctx.strokeStyle = C.ink2; ctx.beginPath(); ctx.ellipse(0, -s * .4, s * .32, s * .05, 0, 0, 7); ctx.stroke(); }
+    else if (key === 'pmma') { ctx.fillStyle = '#c62828'; roundRect(ctx, -s * .42, -s * .28, s * .84, s * .56, s * .12); ctx.fill(); ctx.fillStyle = '#ff8a65'; roundRect(ctx, -s * .36, -s * .22, s * .3, s * .44, s * .06); ctx.fill(); ctx.fillStyle = '#eceff1'; roundRect(ctx, s * .0, -s * .22, s * .16, s * .44, s * .05); ctx.fill(); ctx.fillStyle = '#ffb300'; roundRect(ctx, s * .2, -s * .22, s * .16, s * .44, s * .05); ctx.fill(); ctx.fillStyle = alpha('#ffffff', .4); ctx.fillRect(-s * .38, -s * .24, s * .76, s * .06); }
+    else { ctx.fillStyle = '#f5f5f0'; ctx.strokeStyle = C.ink2; roundRect(ctx, -s * .38, -s * .38, s * .76, s * .76, s * .1); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e4e4dc'; ctx.beginPath(); ctx.arc(0, 0, s * .26, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#333'; for (const d of [-1, 1]) { ctx.beginPath(); ctx.arc(d * s * .1, 0, s * .045, 0, 7); ctx.fill(); } ctx.fillStyle = '#b0b0a8'; ctx.fillRect(-s * .03, -s * .26, s * .06, s * .07); ctx.fillRect(-s * .03, s * .19, s * .06, s * .07); }
+    ctx.restore();
+  };
+  // Symbole der Verwertungswege
+  const icon = (ctx, i, x, y, s, t, on) => {
+    ctx.save(); ctx.translate(x, y); ctx.globalAlpha = on ? 1 : .35;
+    if (i === 0) { for (let q = 0; q < 3; q++) { const a = q * 2.094 + t * .6; ctx.strokeStyle = KC; ctx.lineWidth = s * .09; ctx.beginPath(); ctx.arc(0, 0, s * .32, a, a + 1.6); ctx.stroke(); const ex = Math.cos(a + 1.6) * s * .32, ey = Math.sin(a + 1.6) * s * .32, ta = a + 1.6 + Math.PI / 2; ctx.fillStyle = KC; ctx.beginPath(); ctx.moveTo(ex + Math.cos(ta) * s * .14, ey + Math.sin(ta) * s * .14); ctx.lineTo(ex + Math.cos(ta + 2.2) * s * .1, ey + Math.sin(ta + 2.2) * s * .1); ctx.lineTo(ex + Math.cos(ta - 2.2) * s * .1, ey + Math.sin(ta - 2.2) * s * .1); ctx.fill(); } for (let q = 0; q < 4; q++) { ctx.fillStyle = '#4f95cf'; ctx.beginPath(); ctx.ellipse((q % 2 - .5) * s * .14, (Math.floor(q / 2) - .5) * s * .12, s * .06, s * .045, q, 0, 7); ctx.fill(); } }
+    else if (i === 1) { ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.fillStyle = alpha('#9c6ade', .35); ctx.beginPath(); ctx.moveTo(-s * .08, -s * .42); ctx.lineTo(-s * .08, -s * .15); ctx.lineTo(-s * .34, s * .38); ctx.lineTo(s * .34, s * .38); ctx.lineTo(s * .08, -s * .15); ctx.lineTo(s * .08, -s * .42); ctx.closePath(); ctx.fill(); ctx.stroke(); for (let q = 0; q < 3; q++) { const p = (t * .5 + q / 3) % 1; ctx.fillStyle = '#7e57c2'; ctx.beginPath(); ctx.arc((q - 1) * s * .12, s * .3 - p * s * .45, s * .045, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc((q - 1) * s * .12 + s * .07, s * .3 - p * s * .45, s * .045, 0, 7); ctx.fill(); } }
+    else if (i === 2) { flame(ctx, 0, s * .4, s * .8, t, {kind: 'gelb'}); ctx.fillStyle = C.ink2; ctx.fillRect(-s * .35, s * .38, s * .7, s * .08); }
+    else { ctx.fillStyle = '#6d4c33'; ctx.beginPath(); ctx.moveTo(-s * .42, s * .38); ctx.quadraticCurveTo(0, -s * .2, s * .42, s * .38); ctx.closePath(); ctx.fill(); ctx.fillStyle = alpha('#3e2a1c', .5); for (let q = 0; q < 6; q++) { ctx.beginPath(); ctx.arc((q - 2.5) * s * .1, s * .25 - (q % 2) * s * .1, s * .03, 0, 7); ctx.fill(); } ctx.strokeStyle = '#43a047'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(0, s * .08); ctx.lineTo(0, -s * .2); ctx.stroke(); ctx.fillStyle = '#66bb6a'; ctx.beginPath(); ctx.ellipse(-s * .08, -s * .22, s * .09, s * .05, .5, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(s * .08, -s * .26, s * .09, s * .05, -.5, 0, 7); ctx.fill(); for (let q = 0; q < 3; q++) { const p = (t * .4 + q / 3) % 1; ctx.globalAlpha = (1 - p) * .6; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo((q - 1) * s * .2, -s * .05 - p * s * .3); ctx.quadraticCurveTo((q - 1) * s * .2 + 5, -s * .12 - p * s * .3, (q - 1) * s * .2, -s * .2 - p * s * .3); ctx.stroke(); } }
+    ctx.restore();
+  };
+  canvasLoop($('#cv-vw'), 'wege', (ctx, w, h, t, dt) => {
+    tk += dt;
+    const fs = Math.max(11, w * .018), S = I[k][1], wk = wK(), wm = wM(), sc = S.map(s => s ? s[0] * wk + s[1] * wm : null), mx = 3 * (wk + wm) || 1, best = Math.max(...sc.filter(s => s !== null)), bi = sc.indexOf(best);
+    // links: der Gegenstand
+    const ix = w * .13, iy = h * .46, is = Math.min(w * .16, h * .32);
+    ctx.fillStyle = alpha(C.ink2, .08); ctx.beginPath(); ctx.arc(ix, iy, is * .7, 0, 7); ctx.fill();
+    item(ctx, k, ix, iy + Math.sin(t * 1.5) * 3, is, t);
+    wrapText(ctx, I[k][0], ix, iy + is * .8, w * .22, fs * 1.1, {size: fs * .85, weight: 700, align: 'center', color: C.ink});
+    // rechts: vier Wege mit gestapelten Balken (Klima | Machbarkeit)
+    const x0 = w * .3, lh = h * .19, y0 = h * .1, icS = Math.min(lh * .75, w * .07), bx = x0 + icS + w * .14, bw = w * .91 - bx;
     W.forEach((n, i) => {
-      const y = A.Y(3.5 - i), bh = (A.Y(0) - A.Y(1)) * .55, s = sc[i];
-      label(ctx, n, A.X(0) - 8, y, {size: 13, align: 'right'});
-      if (s === null) { label(ctx, 'nicht möglich', A.X(0) + 8, y, {size: 12, align: 'left', color: C.bad, weight: 400}); return; }
-      ctx.fillStyle = s === best ? C.good : alpha(C.ink2, .5); ctx.fillRect(A.X(0), y - bh / 2, Math.max(2, A.X(s) - A.X(0)), bh);
-      label(ctx, String(s), A.X(s) + 6, y, {size: 12, align: 'left', font: MONO});
+      const y = y0 + i * lh + lh / 2, s = S[i], on = s !== null;
+      const tg = on ? [s[0] * wk, s[1] * wm] : [0, 0]; bars[i] = bars[i].map((v, j) => v + (tg[j] - v) * Math.min(1, dt * 6));
+      if (i === bi) { ctx.fillStyle = alpha(C.good, .1); roundRect(ctx, x0 - 8, y - lh * .46, w * .97 - x0 + 8, lh * .92, 10); ctx.fill(); ctx.strokeStyle = alpha(C.good, .7); ctx.lineWidth = 2; ctx.stroke(); }
+      icon(ctx, i, x0 + icS / 2, y, icS, t, on);
+      label(ctx, n, x0 + icS + 8, y, {size: fs * .95, align: 'left', color: on ? C.ink : alpha(C.ink2, .6)});
+      ctx.fillStyle = alpha(C.ink2, .1); roundRect(ctx, bx, y - lh * .17, bw, lh * .34, 5); ctx.fill();
+      if (!on) { label(ctx, 'nicht möglich', bx + 10, y, {size: fs * .85, align: 'left', color: C.bad}); ctx.strokeStyle = alpha(C.bad, .5); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0 + 4, y - icS * .4); ctx.lineTo(x0 + icS - 4, y + icS * .4); ctx.stroke(); return; }
+      const [a, b] = bars[i], wa = bw * a / mx, wb = bw * b / mx;
+      ctx.fillStyle = KC; roundRect(ctx, bx, y - lh * .17, Math.max(0, wa), lh * .34, 5); ctx.fill();
+      ctx.fillStyle = MC; roundRect(ctx, bx + wa, y - lh * .17, Math.max(0, wb), lh * .34, 5); ctx.fill();
+      label(ctx, String(Math.round(a + b)), bx + wa + wb + 8, y, {size: fs * .9, align: 'left', font: MONO});
+      if (i === bi) label(ctx, '★ beste Wahl', bx + bw, y - lh * .32, {size: fs * .75, align: 'right', color: C.good});
     });
+    // Gegenstand fliegt in den besten Weg
+    const p = (tk % 3.2) / 1.6;
+    if (p < 1 && bi >= 0) { const ty = y0 + bi * lh + lh / 2, tx = x0 + icS / 2, u = ease(p), qx = lerp(ix + is * .5, tx, u), qy = lerp(iy, ty, u) - Math.sin(u * Math.PI) * h * .08; ctx.globalAlpha = 1 - u * .6; item(ctx, k, qx, qy, is * (.45 - .25 * u), t); ctx.globalAlpha = 1; }
+    // Legende
+    const ly = h * .95; ctx.fillStyle = KC; ctx.fillRect(bx, ly - 6, 14, 12); label(ctx, 'Klima und Ressourcen', bx + 20, ly, {size: fs * .8, align: 'left', color: C.ink2});
+    ctx.fillStyle = MC; ctx.fillRect(bx + fs * 12, ly - 6, 14, 12); label(ctx, 'Machbarkeit und Kosten', bx + fs * 12 + 20, ly, {size: fs * .8, align: 'left', color: C.ink2});
   });
 })();
 

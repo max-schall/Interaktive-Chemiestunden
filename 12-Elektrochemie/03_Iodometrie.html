@@ -689,7 +689,8 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
     </div>
     <div class="vis">
       <div class="vis-head"><h3>Beispiel: Wasserstoffperoxid</h3></div>
-      <div id="th-out" style="display:flex;flex-direction:column;gap:.45rem;min-height:14rem"></div>
+      <canvas id="cv-th" class="wide" aria-label="Titration von Wasserstoffperoxid mit Thiosulfat: Kolben, Bürette und Teilchenebene"></canvas>
+      <div id="th-out" style="min-height:4.5rem"></div>
       <div id="th-step"></div>
     </div>
   </div>
@@ -2366,39 +2367,66 @@ function seenColor(nm, wd = 40, absMax = .95) {
 /* ================= TITRATION ================= */
 (() => {
   const S = {or: ['Orangensaft', '#f2a43a', [35, 55]], ap: ['Apfelsaft (mit Vit. C)', '#e8cf7a', [15, 35]], al: ['Orangensaft, 1 Woche offen', '#f0b050', [12, 25]]};
-  let k = 'or', mg = 0, V = 0, flash = 0, wob = 0;
-  const VP = 20, CI = .005, M = 176;
+  let k = 'or', mg = 0, V = 0, flash = 0, wob = 0, tap = 0, drops = [], spots = [];
+  const VP = 20, CI = .005, M = 176, IOD = '#8a4a10', BLUE = '#1f2f96';
   const veq = () => mg / 1000 / M / CI * 1000 * VP / 100; // ml Iodlösung für 20 ml Probe
-  const reset = () => { const [lo, hi] = S[k][2]; mg = lo + Math.random() * (hi - lo); V = 0; flash = 0; upd(); };
+  const reset = () => { const [lo, hi] = S[k][2]; mg = lo + Math.random() * (hi - lo); V = 0; flash = 0; drops = []; spots = []; upd(); };
   const upd = () => { const e = veq(), over = V > e + .02; $('#ti-status').innerHTML = `Zugegeben: <b>${numDE(V, 2)} ml</b> Iodlösung. ` + (over ? '<b>Blaufärbung bleibt bestehen – Äquivalenzpunkt erreicht.</b> Berechne den Vitamin-C-Gehalt pro 100 ml.' : flash > 0 ? 'Kurz blau, verschwindet beim Umschwenken – fast geschafft, jetzt tropfenweise!' : 'Das Iod wird sofort entfärbt.'); };
-  const add = v => { const e = veq(); V = Math.min(25, V + v); if (V > e - .3 && V <= e + .02) flash = 1; wob = 1; upd(); };
+  const add = v => { const e = veq(); V = Math.min(25, V + v); if (V > e - .3 && V <= e + .02) flash = 1; wob = 1; tap = v >= 1 ? 1.6 : v >= .1 ? .8 : .4; const n = v >= 1 ? 9 : v >= .1 ? 3 : 1; for (let q = 0; q < n; q++) drops.push({y: -q * .18, near: V > e - .3}); upd(); };
   seg($('#ti-seg'), [['or', 'Orangensaft'], ['ap', 'Apfelsaft'], ['al', 'nach 1 Woche']], v => { k = v; reset(); });
   $('#ti-1').onclick = () => add(1); $('#ti-01').onclick = () => add(.1); $('#ti-d').onclick = () => add(.05); $('#ti-re').onclick = reset;
+  // Ascorbinsäure (Fünfring mit Endiol) bzw. Dehydroascorbinsäure
+  const asc = (ctx, x, y, s, ox) => { ctx.strokeStyle = ox ? C.ink2 : C.good; ctx.lineWidth = 2; ctx.beginPath(); for (let q = 0; q < 5; q++) { const a = -Math.PI / 2 + q * 1.2566; ctx.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s); } ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + Math.cos(-Math.PI / 2 + 1.2566 * 3) * s, y + Math.sin(-Math.PI / 2 + 1.2566 * 3) * s); ctx.lineTo(x - s * 1.4, y + s * 1.2); ctx.stroke(); for (const q of [1, 2]) { const a = -Math.PI / 2 + q * 1.2566; sphere(ctx, x + Math.cos(a) * s * 1.7, y + Math.sin(a) * s * 1.7, s * .32, C.atomo); if (!ox) sphere(ctx, x + Math.cos(a) * s * 2.2, y + Math.sin(a) * s * 2.2, s * .2, C.atomh, '', '', alpha('#000', .3)); } };
+  const i2 = (ctx, x, y, s, a = 0) => { sphere(ctx, x - Math.cos(a) * s * .55, y - Math.sin(a) * s * .55, s * .6, C.atomi); sphere(ctx, x + Math.cos(a) * s * .55, y + Math.sin(a) * s * .55, s * .6, C.atomi); };
   canvasLoop($('#cv-ti'), 'titration', (ctx, w, h, t, dt) => {
-    flash = Math.max(0, flash - dt * .8); wob = Math.max(0, wob - dt * 1.5);
-    const e = veq(), over = V > e + .02, blue = over ? 1 : flash * .7;
-    // Bürette
-    const bx = w * .5, by = h * .04, bh = h * .52, bw = 16;
-    ctx.fillStyle = alpha('#8a4a10', .55); const lv = 1 - V / 25; ctx.fillRect(bx - bw / 2 + 2, by + bh * (1 - lv * .95), bw - 4, bh * lv * .95);
+    flash = Math.max(0, flash - dt * .8); wob = Math.max(0, wob - dt * 1.5); tap = Math.max(0, tap - dt);
+    const fs = Math.max(11, w * .018), e = veq(), over = V > e + .02, blue = over ? 1 : flash * .7;
+    // Stativ
+    const sx = w * .2; ctx.fillStyle = C.ink2; roundRect(ctx, sx - w * .06, h * .95, w * .3, h * .025, 3); ctx.fill(); ctx.fillRect(sx - 3, h * .02, 6, h * .94);
+    // Bürette mit Hahn
+    const bx = w * .34, by = h * .05, bh = h * .5, bw = Math.max(14, w * .022), lv = 1 - V / 25;
+    ctx.fillStyle = C.ink2; ctx.fillRect(sx, by + bh * .3 - 3, bx - sx - bw / 2, 6); roundRect(ctx, bx - bw * .9, by + bh * .3 - 8, bw * 1.8, 16, 4); ctx.fill();
+    ctx.fillStyle = alpha(IOD, .7); ctx.fillRect(bx - bw / 2 + 2, by + bh * .05 + bh * .95 * (V / 25), bw - 4, bh * .95 * lv);
+    ctx.strokeStyle = IOD; ctx.lineWidth = 2; ctx.beginPath(); const my = by + bh * .05 + bh * .95 * (V / 25); ctx.moveTo(bx - bw / 2 + 2, my - 3); ctx.quadraticCurveTo(bx, my + 3, bx + bw / 2 - 2, my - 3); ctx.stroke();
     ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.strokeRect(bx - bw / 2, by, bw, bh);
-    for (let i = 0; i <= 25; i += 5) { const y = by + bh * .05 + bh * .95 * i / 25; ctx.beginPath(); ctx.moveTo(bx + bw / 2, y); ctx.lineTo(bx + bw / 2 + 6, y); ctx.stroke(); label(ctx, String(i), bx + bw / 2 + 16, y, {size: 10, color: C.ink2, font: MONO}); }
-    ctx.beginPath(); ctx.moveTo(bx, by + bh); ctx.lineTo(bx, by + bh + 22); ctx.stroke();
-    if (wob > .3) { ctx.fillStyle = alpha('#8a4a10', .7); ctx.beginPath(); ctx.arc(bx, by + bh + 30 + (1 - wob) * 30, 3, 0, 7); ctx.fill(); }
-    // Erlenmeyerkolben
-    const ex = bx, ey = h * .66, ew = w * .18, eh = h * .3;
-    const juice = mix(S[k][1], '#1a2a8a', blue);
-    ctx.fillStyle = alpha(juice, .8); ctx.beginPath(); ctx.moveTo(ex - ew * .45, ey + eh); ctx.lineTo(ex - ew * .2 + Math.sin(t * 8) * wob * 3, ey + eh * .35); ctx.lineTo(ex + ew * .2 + Math.sin(t * 8) * wob * 3, ey + eh * .35); ctx.lineTo(ex + ew * .45, ey + eh); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ex - ew * .08, ey - eh * .1); ctx.lineTo(ex - ew * .08, ey + eh * .1); ctx.lineTo(ex - ew * .5, ey + eh); ctx.lineTo(ex + ew * .5, ey + eh); ctx.lineTo(ex + ew * .08, ey + eh * .1); ctx.lineTo(ex + ew * .08, ey - eh * .1); ctx.stroke();
-    label(ctx, `${VP} ml ${S[k][0]} + Stärke`, ex, h * .985, {size: 11, color: C.ink2, base: 'bottom'});
-    label(ctx, 'Iodlösung', bx - bw - 6, by + 14, {size: 11, align: 'right', color: C.ink2});
-    // Teilchenbild
-    const zx = w * .82, zy = h * .5, zr = Math.min(w * .15, h * .32);
-    ctx.save(); ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.clip(); ctx.fillStyle = alpha(juice, .25); ctx.fillRect(zx - zr, zy - zr, 2 * zr, 2 * zr);
-    const nC = Math.max(0, Math.round(8 * (1 - V / Math.max(e, .01)))), nI = over ? Math.min(6, Math.round((V - e) * 4) + 1) : 0;
-    for (let i = 0; i < nC; i++) label(ctx, 'Vit C', zx - zr * .6 + (i % 3) * zr * .55, zy - zr * .55 + Math.floor(i / 3) * zr * .45, {size: 10, color: C.good});
-    for (let i = 0; i < 8 - nC; i++) label(ctx, 'I⁻', zx - zr * .6 + (i % 4) * zr * .4, zy + zr * .55 - Math.floor(i / 4) * zr * .3, {size: 11, color: C.atomi});
-    for (let i = 0; i < nI; i++) label(ctx, 'I₂·Stärke', zx - zr * .5 + (i % 2) * zr, zy - zr * .1 + Math.floor(i / 2) * zr * .25, {size: 10, color: '#1a2a8a'});
-    ctx.restore(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(zx, zy, zr, 0, 7); ctx.stroke();
+    for (let i = 0; i <= 25; i++) { const y = by + bh * .05 + bh * .95 * i / 25, L = i % 5 ? 4 : 9; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(bx - bw / 2, y); ctx.lineTo(bx - bw / 2 + L, y); ctx.stroke(); if (i % 5 === 0) label(ctx, String(i), bx + bw / 2 + 4, y, {size: fs * .7, color: C.ink2, font: MONO, align: 'left'}); }
+    ctx.beginPath(); ctx.moveTo(bx - bw / 2, by + bh); ctx.lineTo(bx - 3, by + bh + h * .03); ctx.lineTo(bx - 3, by + bh + h * .08); ctx.moveTo(bx + bw / 2, by + bh); ctx.lineTo(bx + 3, by + bh + h * .03); ctx.lineTo(bx + 3, by + bh + h * .08); ctx.lineWidth = 2; ctx.stroke();
+    const hy = by + bh + h * .045; ctx.fillStyle = '#d8dde2'; ctx.beginPath(); ctx.arc(bx, hy, 7, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.stroke(); ctx.save(); ctx.translate(bx, hy); ctx.rotate(tap > 0 ? 0 : Math.PI / 2); ctx.fillStyle = C.ink2; ctx.fillRect(-16, -2.5, 32, 5); ctx.restore();
+    label(ctx, 'Iodlösung', bx + bw / 2 + w * .045, by + 6, {size: fs * .8, align: 'left', color: C.ink2}); label(ctx, 'c = 0,005 mol/l', bx + bw / 2 + w * .045, by + 6 + fs, {size: fs * .7, align: 'left', color: C.ink2, weight: 400});
+    // Ablese-Lupe
+    const lx = bx + w * .14, lyy = clamp(my, by + h * .15, by + bh - h * .02), lr = h * .07; ctx.strokeStyle = alpha(C.ink2, .5); ctx.setLineDash([3, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(bx + bw / 2, my); ctx.lineTo(lx - lr, lyy); ctx.stroke(); ctx.setLineDash([]); ctx.save(); ctx.beginPath(); ctx.arc(lx, lyy, lr, 0, 7); ctx.fillStyle = C.surface; ctx.fill(); ctx.clip();
+    const sc = 4, off = lyy - (by + bh * .05 + bh * .95 * (V / 25)) * 0;
+    ctx.fillStyle = alpha(IOD, .45); ctx.fillRect(lx - lr, lyy, 2 * lr, lr); ctx.strokeStyle = IOD; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(lx - lr, lyy - 6); ctx.quadraticCurveTo(lx, lyy + 6, lx + lr, lyy - 6); ctx.stroke();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 1; for (let q = -6; q <= 6; q++) { const v = Math.round(V * 10) / 10 + q * .1, y = lyy + (v - V) * bh * .95 / 25 * sc * 3; ctx.beginPath(); ctx.moveTo(lx - lr, y); ctx.lineTo(lx - lr + (Math.round(v * 10) % 5 ? 10 : 18), y); ctx.stroke(); if (Math.round(v * 10) % 5 === 0 && v >= 0) label(ctx, numDE(v, 1), lx - lr + 22, y, {size: fs * .7, align: 'left', color: C.ink2, font: MONO}); }
+    ctx.restore(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(lx, lyy, lr, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(lx + lr * .7, lyy + lr * .7); ctx.lineTo(lx + lr * 1.1, lyy + lr * 1.1); ctx.lineWidth = 4; ctx.stroke();
+    // Magnetrührer und Erlenmeyerkolben
+    const ex = bx, eb = h * .9, eh = h * .27, ew = w * .17;
+    ctx.fillStyle = mix(C.ink2, C.surface, .15); roundRect(ctx, ex - ew * .7, eb, ew * 1.4, h * .05, 5); ctx.fill(); ctx.fillStyle = C.surface; ctx.beginPath(); ctx.arc(ex + ew * .5, eb + h * .025, 5, 0, 7); ctx.fill();
+    const juice = mix(S[k][1], BLUE, blue), top = eb - eh * .55;
+    const xa = y => lerp(ex - ew * .5, ex - ew * .08, (eb - y) / (eh * .8)), xb = y => lerp(ex + ew * .5, ex + ew * .08, (eb - y) / (eh * .8));
+    ctx.save(); ctx.beginPath(); ctx.moveTo(xa(top), top); ctx.quadraticCurveTo(ex, top + 8 + Math.sin(t * 8) * wob * 3, xb(top), top); ctx.lineTo(xb(eb), eb); ctx.lineTo(xa(eb), eb); ctx.closePath(); ctx.fillStyle = alpha(juice, .85); ctx.fill(); ctx.clip();
+    // Tropfenflecken: braun → entfärbt (bzw. blau kurz vor dem Ende)
+    spots = spots.filter(p => (p.a += dt) < (p.near ? 2.5 : .9)); spots.forEach(p => { const f = 1 - p.a / (p.near ? 2.5 : .9); ctx.fillStyle = alpha(p.near ? BLUE : IOD, .6 * f); ctx.beginPath(); ctx.ellipse(ex + Math.cos(p.a * 4 + p.r) * ew * .12 * p.a, top + 6 + p.a * eh * .12, 6 + p.a * 22, 3 + p.a * 8, 0, 0, 7); ctx.fill(); });
+    ctx.strokeStyle = alpha('#ffffff', .35); ctx.lineWidth = 1.5; for (let q = 0; q < 3; q++) { ctx.beginPath(); ctx.ellipse(ex, eb - eh * .12, ew * (.12 + q * .08), eh * .03, 0, t * 6 + q, t * 6 + q + 2); ctx.stroke(); }
+    ctx.restore();
+    ctx.save(); ctx.translate(ex, eb - 5); ctx.scale(1, .35); ctx.rotate(t * 10); ctx.fillStyle = '#f0f0f0'; roundRect(ctx, -ew * .1, -4, ew * .2, 8, 4); ctx.fill(); ctx.restore();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ex - ew * .08, eb - eh); ctx.lineTo(ex - ew * .08, eb - eh * .8); ctx.lineTo(ex - ew * .5, eb); ctx.lineTo(ex + ew * .5, eb); ctx.lineTo(ex + ew * .08, eb - eh * .8); ctx.lineTo(ex + ew * .08, eb - eh); ctx.stroke();
+    label(ctx, `${VP} ml ${S[k][0].split(' (')[0]} + Stärke`, ex + ew * .55, eb - eh * .4, {size: fs * .75, color: C.ink2, align: 'left'});
+    // fallende Tropfen
+    const y0 = by + bh + h * .08; drops.forEach(d => { d.y += dt * 2.2; if (d.y > 0 && d.y < 1) { const y = lerp(y0, top, d.y * d.y); ctx.fillStyle = alpha(IOD, .85); ctx.beginPath(); ctx.arc(bx, y, 3.5, 0, 7); ctx.fill(); } if (d.y >= 1 && !d.done) { d.done = 1; spots.push({a: 0, r: Math.random() * 6, near: d.near}); } }); drops = drops.filter(d => !d.done);
+    if (tap > 0) { ctx.fillStyle = alpha(IOD, .85); ctx.beginPath(); ctx.arc(bx, y0 + 2, 3, 0, 7); ctx.fill(); }
+    // Teilchenebene
+    const px = w * .62, pw = w * .36, py = h * .05, ph = h * .9, s = pw * .045;
+    ctx.fillStyle = mix(C.surface, C.surface2, .55); roundRect(ctx, px, py, pw, ph, 12); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+    label(ctx, 'Teilchenebene im Kolben', px + pw / 2, py + fs, {size: fs * .85, color: C.ink2});
+    const nC = clamp(Math.round(6 * (1 - V / Math.max(e, .01))), 0, 6), nI = over ? Math.min(4, Math.round((V - e) * 6) + 1) : 0;
+    for (let q = 0; q < 6; q++) { const gx = px + pw * (.2 + (q % 3) * .3), gy = py + ph * (.2 + Math.floor(q / 3) * .2) + Math.sin(t + q) * 3; asc(ctx, gx, gy, s, q >= nC); }
+    label(ctx, `Vitamin C: ${nC} | oxidiert: ${6 - nC}`, px + pw / 2, py + ph * .54, {size: fs * .75, color: C.good});
+    for (let q = 0; q < 2 * (6 - nC); q++) { const gx = px + pw * (.12 + (q % 6) * .15), gy = py + ph * (.63 + Math.floor(q / 6) * .08); sphere(ctx, gx, gy, s * .7, C.atomi); label(ctx, '−', gx + s * .8, gy - s * .6, {size: fs * .8, color: C.electron}); }
+    if (2 * (6 - nC)) label(ctx, 'Iodid-Ionen I⁻ (farblos)', px + pw / 2, py + ph * .78, {size: fs * .75, color: C.ink2});
+    for (let q = 0; q < nI; q++) { const gx = px + pw * (.2 + q * .2), gy = py + ph * .87; ctx.strokeStyle = BLUE; ctx.lineWidth = 2.5; ctx.beginPath(); for (let u = 0; u <= 30; u++) ctx.lineTo(gx - s * 1.2 + u / 30 * s * 2.4, gy + Math.sin(u * .9 + t * 2) * s * .6); ctx.stroke(); i2(ctx, gx, gy, s * .8); }
+    if (nI) label(ctx, 'überschüssiges I₂ in der Stärke-Helix: blau', px + pw / 2, py + ph * .96, {size: fs * .72, color: BLUE});
+    const ix = px + pw * .5, iy = py + ph * .1; if (drops.length && !over) { i2(ctx, ix, iy + (t * 30 % 20), s * .8); label(ctx, '+ I₂', ix + s * 1.4, iy, {size: fs * .75, color: C.atomi, align: 'left'}); }
   });
   reset();
 })();
@@ -2416,7 +2444,68 @@ taskSet($('#ts'), i => {
     '<b>Titration:</b> Natriumthiosulfat-Lösung (c = 0,1 mol/l) wird zugetropft, bis die Lösung nur noch hellgelb ist. Dann Stärke zugeben (blau) und weiter titrieren, bis die Farbe verschwindet: Verbrauch 12,4 ml.',
     '<b>Reaktion:</b> I₂ + 2 S₂O₃²⁻ ⟶ 2 I⁻ + S₄O₆²⁻. Also n(I₂) = ½ · n(S₂O₃²⁻).',
     '<b>Rechnung:</b> n(S₂O₃²⁻) = 0,1 mol/l · 0,0124 l = 1,24 mmol ⟹ n(I₂) = n(H₂O₂) = 0,62 mmol ⟹ c(H₂O₂) = 0,62 mmol : 10 ml = <b>0,062 mol/l</b>.'];
-  stepper($('#th-step'), L.length, i => { $('#th-out').innerHTML = L.slice(0, i + 1).map((s, j) => `<p class="obs" style="margin:0;${j === i ? '' : 'opacity:.6'}">${s}</p>`).join(''); });
+  let k = 0, tt = 0;
+  stepper($('#th-step'), L.length, i => { k = i; tt = 0; $('#th-out').innerHTML = `<p class="obs" style="margin:0">${L[i]}</p>`; });
+  const IOD = '#8a4a10', BLUE = '#1f2f96', YEL = '#efe08a';
+  const i2 = (ctx, x, y, s) => { sphere(ctx, x - s * .55, y, s * .6, C.atomi); sphere(ctx, x + s * .55, y, s * .6, C.atomi); };
+  const thio = (ctx, x, y, s, a = 0) => { sphere(ctx, x, y, s * .6, C.atoms); sphere(ctx, x + Math.cos(a) * s * 1.05, y + Math.sin(a) * s * 1.05, s * .55, C.atoms); for (let q = 0; q < 3; q++) { const b = a + Math.PI + (q - 1) * 1.1; sphere(ctx, x + Math.cos(b) * s * .9, y + Math.sin(b) * s * .9, s * .4, C.atomo); } };
+  canvasLoop($('#cv-th'), 'thiosulfat', (ctx, w, h, t, dt) => {
+    tt += dt;
+    const fs = Math.max(11, w * .018), T = tt % 8;
+    // Farbe und Bürettenstand je Schritt
+    let col = '#f2f4f6', V = 0, starch = false, drip = false, add = null;
+    if (k === 0) { add = T < 3 ? ['H₂SO₄', '#f2f4f6'] : ['KI-Lösung', '#f2f4f6']; }
+    if (k === 1) col = mix('#f2f4f6', IOD, clamp(T / 2.5, 0, 1));
+    if (k === 2) { const p = clamp(T / 7, 0, 1); V = 12.4 * p; drip = p < 1; col = p < .55 ? mix(IOD, YEL, p / .55) : p < .62 ? YEL : p < .66 ? mix(YEL, BLUE, (p - .62) / .04) : p < .97 ? BLUE : mix(BLUE, '#f2f4f6', (p - .97) / .03); starch = p > .6; if (p > .58 && p < .62) add = ['Stärke', '#f6f2e6']; }
+    if (k >= 3) { col = '#f2f4f6'; V = 12.4; }
+    // Stativ, Bürette (Thiosulfat), Kolben
+    const sx = w * .08; ctx.fillStyle = C.ink2; roundRect(ctx, sx - w * .04, h * .95, w * .3, h * .025, 3); ctx.fill(); ctx.fillRect(sx - 3, h * .03, 6, h * .93);
+    const bx = w * .24, by = h * .05, bh = h * .48, bw = Math.max(13, w * .02);
+    ctx.fillRect(sx, by + bh * .3 - 3, bx - sx, 6);
+    ctx.fillStyle = alpha('#dfe7ee', .9); ctx.fillRect(bx - bw / 2 + 2, by + bh * .05 + bh * .95 * V / 25, bw - 4, bh * .95 * (1 - V / 25));
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.strokeRect(bx - bw / 2, by, bw, bh); for (let i = 0; i <= 25; i += 5) { const y = by + bh * .05 + bh * .95 * i / 25; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(bx + bw / 2, y); ctx.lineTo(bx + bw / 2 - 7, y); ctx.stroke(); label(ctx, String(i), bx + bw / 2 + 4, y, {size: fs * .65, align: 'left', color: C.ink2, font: MONO}); }
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx, by + bh); ctx.lineTo(bx, by + bh + h * .07); ctx.stroke();
+    label(ctx, 'Na₂S₂O₃', bx - bw, by + 6, {size: fs * .8, align: 'right', color: C.ink2}); label(ctx, '0,1 mol/l', bx - bw, by + 6 + fs, {size: fs * .7, align: 'right', color: C.ink2, weight: 400});
+    if (k >= 2) label(ctx, numDE(V, 1) + ' ml', bx + bw + w * .03, by + bh * .05 + bh * .95 * V / 25, {size: fs * .85, align: 'left', color: C.accent, font: MONO});
+    if (drip) for (let q = 0; q < 2; q++) { const p = (t * 2 + q / 2) % 1; ctx.fillStyle = alpha('#9fb4c8', .9); ctx.beginPath(); ctx.arc(bx, by + bh + h * .07 + p * h * .14, 3, 0, 7); ctx.fill(); }
+    const ex = bx, eb = h * .92, eh = h * .27, ew = w * .17, top = eb - eh * .5;
+    const xa = y => lerp(ex - ew * .5, ex - ew * .08, (eb - y) / (eh * .8)), xb = y => lerp(ex + ew * .5, ex + ew * .08, (eb - y) / (eh * .8));
+    ctx.beginPath(); ctx.moveTo(xa(top), top); ctx.lineTo(xb(top), top); ctx.lineTo(xb(eb), eb); ctx.lineTo(xa(eb), eb); ctx.closePath(); ctx.fillStyle = alpha(col, .9); ctx.fill();
+    ctx.strokeStyle = C.ink2; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ex - ew * .08, eb - eh); ctx.lineTo(ex - ew * .08, eb - eh * .8); ctx.lineTo(ex - ew * .5, eb); ctx.lineTo(ex + ew * .5, eb); ctx.lineTo(ex + ew * .08, eb - eh * .8); ctx.lineTo(ex + ew * .08, eb - eh); ctx.stroke();
+    label(ctx, k === 0 ? '10 ml H₂O₂-Probe' : k === 1 ? 'braun: I₂' : k === 2 ? (starch ? (col === BLUE ? 'blau: I₂ + Stärke' : 'entfärbt') : 'wird heller') : 'farblos', ex, eb + fs * .9, {size: fs * .8, color: C.ink2});
+    if (add) { const p = (T % 3) / 3, px = ex + ew * .5, py = top - h * .16; ctx.save(); ctx.translate(px, py); ctx.rotate(-.5); ctx.fillStyle = alpha(add[1], .8); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; roundRect(ctx, -5, -h * .12, 10, h * .12, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = C.ink2; roundRect(ctx, -8, -h * .17, 16, h * .05, 6); ctx.fill(); ctx.restore(); if (p > .3) { ctx.fillStyle = alpha(C.ink2, .5); ctx.beginPath(); ctx.arc(px - h * .02, py + (p - .3) * h * .25, 3, 0, 7); ctx.fill(); } label(ctx, '+ ' + add[0], px + w * .03, py - h * .05, {size: fs * .8, align: 'left', color: C.accent}); }
+    // rechts: Teilchenebene bzw. Stoffmengen
+    const px = w * .47, pw = w * .51, py = h * .05, ph = h * .9, s = pw * .04, cx = px + pw / 2, cy = py + ph * .5;
+    ctx.fillStyle = mix(C.surface, C.surface2, .55); roundRect(ctx, px, py, pw, ph, 12); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+    const head = ['Im Kolben', 'H₂O₂ oxidiert Iodid', 'Thiosulfat reduziert Iod', 'Stoffmengenverhältnis', 'Rechnung'][k];
+    label(ctx, head, cx, py + fs * 1.1, {size: fs * .9, color: C.ink2});
+    if (k === 0) {
+      [['H₂O₂', .25], ['H₃O⁺', .5], ['I⁻ (Überschuss)', .75]].forEach(([n, u], q) => { const x = px + pw * u, y = cy; if (q === 0) { sphere(ctx, x - s * .5, y, s * .7, C.atomo); sphere(ctx, x + s * .5, y, s * .7, C.atomo); sphere(ctx, x - s * 1.1, y - s * .6, s * .4, C.atomh, '', '', alpha('#000', .3)); sphere(ctx, x + s * 1.1, y + s * .6, s * .4, C.atomh, '', '', alpha('#000', .3)); } else if (q === 1) { sphere(ctx, x, y, s * .7, C.atomo); label(ctx, '+', x + s, y - s, {size: fs * .8, color: C.bad}); } else for (let r = 0; r < 4; r++) { sphere(ctx, x + (r % 2 - .5) * s * 2, y + (Math.floor(r / 2) - .5) * s * 2, s * .7, C.atomi); } label(ctx, n, x, y + s * 2.8, {size: fs * .8, color: C.ink2}); });
+    } else if (k === 1 || k === 3) {
+      const p = clamp((T - .5) / 2.5, 0, 1), e = ease(p);
+      if (k === 1) {
+        const ax = lerp(px + pw * .2, cx - s * 2, e); sphere(ctx, ax - s * .5, cy, s * .7, C.atomo); sphere(ctx, ax + s * .5, cy, s * .7, C.atomo); label(ctx, 'H₂O₂', ax, cy - s * 1.8, {size: fs * .8, color: C.ink2});
+        if (p < 1) for (const sg of [-1, 1]) { const x = lerp(px + pw * .8, cx + s * 1.5, e), y = cy + sg * s * 1.6 * (1 - e * .5); sphere(ctx, x, y, s * .7, C.atomi); label(ctx, '−', x + s * .8, y - s * .6, {size: fs * .8, color: C.electron}); }
+        if (p > .4) { const q = clamp((p - .4) / .6, 0, 1); for (const sg of [-1, 1]) { ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(lerp(cx + s * 1.5, ax, q), cy + sg * s * .8 - Math.sin(q * Math.PI) * s, 4, 0, 7); ctx.fill(); } }
+        if (p >= 1) { i2(ctx, cx + s * 2, cy - s * 3 - clamp(T - 3, 0, 2) * s, s * 1.2); label(ctx, 'I₂ (braun)', cx + s * 4, cy - s * 3 - clamp(T - 3, 0, 2) * s, {size: fs * .8, color: IOD, align: 'left'}); }
+        label(ctx, 'H₂O₂ + 2 I⁻ + 2 H₃O⁺ ⟶ I₂ + 4 H₂O', cx, py + ph * .9, {size: fs * .85, color: C.ink});
+      } else {
+        if (p < 1) { i2(ctx, cx, cy - s * 2, s * 1.2); for (const sg of [-1, 1]) thio(ctx, lerp(cx + sg * pw * .32, cx + sg * s * 3, e), cy + s * 1.6, s, sg < 0 ? 0 : Math.PI); label(ctx, '2 S₂O₃²⁻', cx, cy + s * 4.2, {size: fs * .85, color: C.atoms}); }
+        if (p > .5 && p < 1) { const q = clamp((p - .5) / .5, 0, 1); for (const sg of [-1, 1]) { ctx.fillStyle = C.electron; ctx.beginPath(); ctx.arc(lerp(cx + sg * s * 3, cx + sg * s * .6, q), cy - s * 1 * q, 4, 0, 7); ctx.fill(); } }
+        if (p >= 1) { for (const sg of [-1, 1]) { sphere(ctx, cx + sg * pw * .3, cy - s * 2, s * .75, C.atomi); label(ctx, 'I⁻', cx + sg * pw * .3, cy - s * 3.3, {size: fs * .8, color: C.atomi}); } thio(ctx, cx - s * 1.2, cy + s * 1.6, s, 0); thio(ctx, cx + s * 1.2, cy + s * 1.6, s, Math.PI); label(ctx, 'S₄O₆²⁻ (Tetrathionat)', cx, cy + s * 4.2, {size: fs * .85, color: C.atoms}); }
+        label(ctx, '1 I₂ reagiert mit 2 S₂O₃²⁻', cx, py + ph * .9, {size: fs * .9, color: C.accent});
+      }
+    } else if (k === 2) {
+      label(ctx, 'Iod-Gehalt im Kolben', cx, py + ph * .2, {size: fs * .8, color: C.ink2});
+      const p = clamp(T / 7, 0, 1); ctx.fillStyle = alpha(C.ink2, .12); roundRect(ctx, px + pw * .1, py + ph * .27, pw * .8, ph * .1, 6); ctx.fill(); ctx.fillStyle = IOD; roundRect(ctx, px + pw * .1, py + ph * .27, pw * .8 * (1 - p), ph * .1, 6); ctx.fill();
+      [['braun', 0], ['hellgelb: Stärke zugeben', .58], ['blau', .64], ['farblos: Endpunkt', 1]].forEach(([n, u], q) => { const x = px + pw * (.1 + .8 * u); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, py + ph * .38); ctx.lineTo(x, py + ph * (.45 + q * .08)); ctx.stroke(); label(ctx, n, x, py + ph * (.48 + q * .08), {size: fs * .75, color: q === 3 ? C.accent : C.ink2, align: u === 1 ? 'right' : u === 0 ? 'left' : 'center'}); });
+      label(ctx, 'Stärke erst kurz vor dem Ende zugeben:', cx, py + ph * .84, {size: fs * .78, color: C.ink2}); label(ctx, 'sonst bindet sie viel Iod fest.', cx, py + ph * .9, {size: fs * .78, color: C.ink2});
+    } else {
+      const bars = [['n(S₂O₃²⁻)', 1.24, C.atoms], ['n(I₂)', .62, C.atomi], ['n(H₂O₂)', .62, C.atomo]], p = ease(clamp(T / 1.5, 0, 1));
+      bars.forEach(([n, v, c], q) => { const y = py + ph * (.22 + q * .2), bw2 = pw * .55 * v / 1.24 * clamp(p * 3 - q, 0, 1); label(ctx, n, px + pw * .05, y, {size: fs * .85, align: 'left'}); ctx.fillStyle = c; roundRect(ctx, px + pw * .3, y - ph * .05, bw2, ph * .1, 5); ctx.fill(); if (bw2 > 0) label(ctx, numDE(v, 2) + ' mmol', px + pw * .3 + bw2 + 6, y, {size: fs * .8, align: 'left', font: MONO}); if (q) label(ctx, q === 1 ? '÷ 2' : '1 : 1', px + pw * .23, y - ph * .1, {size: fs * .8, color: C.accent}); });
+      ctx.fillStyle = alpha(C.accent, .15); roundRect(ctx, px + pw * .1, py + ph * .78, pw * .8, ph * .14, 8); ctx.fill(); label(ctx, 'c(H₂O₂) = 0,62 mmol : 10 ml = 0,062 mol/l', cx, py + ph * .85, {size: fs * .9, color: C.ink});
+    }
+  });
 })();
 
 /* ================= ÜBUNGEN ================= */

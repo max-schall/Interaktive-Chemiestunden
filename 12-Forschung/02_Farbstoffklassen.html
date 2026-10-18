@@ -714,7 +714,7 @@ h1,h2,h3{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;min-width:0}
     </div>
     <div class="vis">
       <div class="vis-head"><h3>Fotometer</h3><div id="fo-seg"></div></div>
-      <canvas id="cv-fo" class="wide" aria-label="Fotometer und Kalibriergerade"></canvas>
+      <canvas id="cv-fo" class="tall" aria-label="Fotometer und Kalibriergerade"></canvas>
       <div class="slider"><label for="fo-c">Konzentration der Probe <output id="fo-co"></output></label><input type="range" id="fo-c" min="0" max="10" step=".5" value="4"></div>
       <p class="status" id="fo-status"></p>
     </div>
@@ -2416,17 +2416,49 @@ function seenColor(nm, wd = 40, absMax = .95) {
   const ST = [['Indigo-Pulver wird in Wasser gegeben: Es löst sich nicht, schwimmt als blaue Flocken.', '#2c3e9a', 0, '#f2f4f6'], ['Natronlauge und Natriumdithionit (Reduktionsmittel) werden zugegeben, leicht erwärmt: Indigo wird zu <b>Leukoindigo</b> reduziert. Die Küpe wird gelb-grün und klar.', '#c8d870', 0, '#f2f4f6'], ['Ein weißes Baumwolltuch wird eingetaucht. Der lösliche Leukoindigo dringt in die Fasern ein. Das Tuch ist zunächst gelb-grün.', '#c8d870', .3, '#d8e090'], ['Das Tuch wird herausgenommen und an die Luft gehängt: Sauerstoff <b>oxidiert</b> Leukoindigo zu Indigo. In Sekunden wird es grün, dann blau.', '#c8d870', .45, '#4a68b0'], ['Mehrfach tauchen und lüften: Das Blau wird immer dunkler – Jeans werden bis zu zwölfmal getaucht. Indigo sitzt nun fest in der Faser.', '#c8d870', .9, '#1f2f78']];
   let k = 0, t0 = 0;
   stepper($('#in-step'), ST.length, i => { k = i; t0 = 0; $('#in-status').innerHTML = ST[i][0]; });
+  const BLUE = '#2c3e9a', LEUKO = '#c8d870', WHITE = '#f6f3ea';
+  // Tuch als gewelltes Rechteck; fill(x, y) liefert die Farbe je Ort (Streifen)
+  const cloth = (ctx, x, y, cw, ch, t, col, front) => {
+    const n = 12;
+    for (let i = 0; i < n; i++) { const x1 = x - cw / 2 + i * cw / n, x2 = x1 + cw / n + .6, wv = q => Math.sin(q * .9 + t * 2) * 3; const c = typeof col === 'function' ? col(i / (n - 1)) : col; ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x1, y + wv(i)); ctx.lineTo(x2, y + wv(i + 1)); ctx.lineTo(x2, y + ch + wv(i + 1) * 1.5); ctx.lineTo(x1, y + ch + wv(i) * 1.5); ctx.closePath(); ctx.fill(); }
+    ctx.strokeStyle = alpha('#000', .12); ctx.lineWidth = 1; for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(x - cw / 2 + i * cw / 6, y + 4); ctx.lineTo(x - cw / 2 + i * cw / 6 + 3, y + ch - 4); ctx.stroke(); }
+  };
   canvasLoop($('#cv-in'), 'indigo', (ctx, w, h, t, dt) => {
     t0 += dt;
-    const [, bath, , cloth] = ST[k], bx = w * .1, bw = w * .36, by = h * .3, bh = h * .62;
-    beaker(ctx, bx, by, bw, bh, {fill: bath, level: .75, alpha: .7, marks: false});
-    if (k === 0) for (let i = 0; i < 10; i++) { ctx.fillStyle = '#2c3e9a'; ctx.fillRect(bx + 10 + (i * 37 % 100) / 100 * (bw - 20), by + bh * .3 + Math.sin(t + i) * 4, 5, 3); }
+    const fs = Math.max(11, w * .018), bx = w * .05, bw = w * .32, by = h * .36, bh = h * .5, lvl = .72, ly = by + bh - bh * .92 * lvl;
+    // Küpenfarbe: Schritt 1 wandelt blau → gelb-grün um
+    const red = k === 0 ? 0 : k === 1 ? clamp((t0 - 1.5) / 3, 0, 1) : 1, bath = mix(mix('#e8eef4', BLUE, k === 0 ? .15 : .15 * (1 - red)), LEUKO, red);
+    // Heizplatte
+    ctx.fillStyle = mix(C.ink2, C.surface, .15); roundRect(ctx, bx - w * .02, by + bh, bw + w * .04, h * .06, 5); ctx.fill(); const heat = k >= 1 ? .5 + .5 * Math.sin(t * 3) : 0; ctx.fillStyle = mix('#7a3a2a', C.hot, heat); ctx.fillRect(bx + bw * .1, by + bh + 2, bw * .8, 4);
+    beaker(ctx, bx, by, bw, bh, {fill: bath, level: lvl, alpha: .8, marks: false});
+    if (k >= 1) for (let i = 0; i < 3; i++) { const p = (t * .4 + i / 3) % 1; ctx.strokeStyle = alpha(C.ink2, .35 * (1 - p)); ctx.lineWidth = 2; ctx.beginPath(); const sx = bx + bw * (.3 + i * .2); ctx.moveTo(sx, ly - 6 - p * 30); ctx.quadraticCurveTo(sx + 6, ly - 14 - p * 30, sx, ly - 22 - p * 30); ctx.stroke(); }
+    // Indigo-Flocken (lösen sich in Schritt 1 auf)
+    const fl = k === 0 ? clamp(t0 / 1.5, 0, 1) : k === 1 ? 1 - red : 0;
+    for (let i = 0; i < 18; i++) { const r = rng(i * 7919 + 5); r(); r(); const fx = bx + 8 + r() * (bw - 16), fy = ly + 2 + r() * bh * .25 + Math.sin(t + i) * 2, dropp = k === 0 ? clamp(t0 * 1.2 - r() * .8, 0, 1) : 1; if (fl <= 0) break; ctx.globalAlpha = fl; ctx.fillStyle = BLUE; ctx.save(); ctx.translate(fx, k === 0 ? lerp(by - h * .1, fy, dropp) : fy); ctx.rotate(i); ctx.fillRect(-3, -2, 6, 4); ctx.restore(); ctx.globalAlpha = 1; }
+    if (k === 0 && t0 < 2) { ctx.save(); ctx.translate(bx + bw * .6, by - h * .1); ctx.rotate(.3); ctx.fillStyle = '#b8bec4'; ctx.fillRect(-w * .1, -3, w * .1, 6); ctx.fillStyle = BLUE; ctx.beginPath(); ctx.ellipse(-w * .01, -4, w * .02, 5, 0, Math.PI, 0); ctx.fill(); ctx.restore(); }
+    if (k === 1 && t0 < 1.6) { const p = t0 / 1.6; ctx.fillStyle = alpha('#f2f4f6', .9); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; roundRect(ctx, bx + bw * .55, by - h * .25, 10, h * .15, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = alpha(C.ink2, .6); ctx.beginPath(); ctx.arc(bx + bw * .55 + 5, by - h * .1 + p * (ly - by + h * .1), 3, 0, 7); ctx.fill(); label(ctx, '+ NaOH, Na₂S₂O₄', bx + bw * .55 + 18, by - h * .2, {size: fs * .75, color: C.accent, align: 'left'}); }
     // Tuch
-    const tx = k >= 3 ? w * .7 : bx + bw / 2, ty = k >= 3 ? h * .2 : k === 2 ? by + bh * .3 : h * .05, cw = w * .18, chh = h * .45;
-    let c = k >= 2 ? cloth : '#f8f6f0'; if (k === 3) c = mix('#d8e090', '#4a68b0', clamp(t0 / 3, 0, 1));
-    if (k >= 2 || k === 0 || k === 1) { ctx.fillStyle = c; ctx.save(); ctx.beginPath(); ctx.moveTo(tx - cw / 2, ty); for (let s = 0; s <= 10; s++) ctx.lineTo(tx - cw / 2 + s * cw / 10, ty + Math.sin(s + t * 2) * 3); ctx.lineTo(tx + cw / 2, ty + chh); for (let s = 10; s >= 0; s--) ctx.lineTo(tx - cw / 2 + s * cw / 10, ty + chh + Math.sin(s + t * 2) * 3); ctx.closePath(); ctx.fill(); ctx.strokeStyle = alpha(C.ink2, .5); ctx.stroke(); ctx.restore(); }
-    if (k === 3) for (let i = 0; i < 5; i++) { const p = (t * .3 + i / 5) % 1; atomBall(ctx, lerp(w * .97, tx + cw / 2, p) - 5, h * (.3 + i * .1), 5, 'O'); atomBall(ctx, lerp(w * .97, tx + cw / 2, p) + 5, h * (.3 + i * .1), 5, 'O'); }
-    label(ctx, ['Indigo (unlöslich)', 'Leukoindigo (löslich)', 'Faser saugt Leukoindigo auf', 'O₂ oxidiert zu Indigo', 'fertig gefärbt'][k], w * .5, h * .97, {size: 13, color: C.accent, base: 'bottom'});
+    const cw = w * .14, ch = h * .3;
+    if (k >= 2) {
+      let cx, cy, col;
+      if (k === 2) { const d = ease(clamp(t0 / 1.5, 0, 1)); cx = bx + bw / 2; cy = lerp(h * .02, ly - ch * .15, d); const soak = clamp((t0 - 1.2) / 2, 0, 1); col = u => mix(WHITE, LEUKO, clamp(soak * 1.6 - (1 - u) * .6 + (cy + ch * (1 - u) > ly ? .3 : -.3), 0, 1)); col = mix(WHITE, LEUKO, soak); }
+      else if (k === 3) { const lift = ease(clamp(t0 / 1.2, 0, 1)); cx = lerp(bx + bw / 2, w * .58, lift); cy = lerp(ly - ch * .15, h * .14, lift); const ox = clamp((t0 - 1.2) / 4, 0, 1); col = u => { const e = clamp(ox * 1.6 - Math.abs(u - .5) * -.8 - .2 + (Math.abs(u - .5) * .8), 0, 1); return e < .5 ? mix(LEUKO, '#4a9a70', e * 2) : mix('#4a9a70', '#4a68b0', (e - .5) * 2); }; }
+      else { const cyc = Math.floor(t0 / 3), p = (t0 % 3) / 3, inB = p < .35; cx = inB ? bx + bw / 2 : w * .58; cy = inB ? ly - ch * .15 : h * .14; const n = Math.min(12, cyc + 1); col = mix('#4a68b0', '#141d55', n / 12); if (inB) col = mix(col, LEUKO, .25); label(ctx, `Tauchgang ${n}`, w * .58, h * .1 - fs * .2, {size: fs * .85, color: C.accent}); }
+      if (k >= 3) { ctx.strokeStyle = C.ink2; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(w * .44, h * .14); ctx.lineTo(w * .72, h * .14); ctx.stroke(); }
+      cloth(ctx, cx, cy, cw, ch, t, col);
+      if (k >= 3 && cy < h * .2) for (const dx of [-cw * .35, cw * .35]) { ctx.fillStyle = '#c9a26b'; ctx.fillRect(cx + dx - 3, h * .12, 6, 14); }
+      if (k === 3 && t0 > 1.2) for (let i = 0; i < 6; i++) { const p = (t * .35 + i / 6) % 1, x = lerp(w * .8, cx + cw * .5, p), y = h * (.18 + i * .045) + Math.sin(t * 2 + i) * 4; atomBall(ctx, x - 4, y, 4.5, 'O'); atomBall(ctx, x + 4, y, 4.5, 'O'); }
+      if (k === 3) label(ctx, 'O₂ aus der Luft', w * .8, h * .5, {size: fs * .8, color: C.ink2});
+    }
+    // Molekül-Kasten: Indigo ⇌ Leukoindigo
+    const px = w * .45, pw = w * .52, py = h * .6, ph = h * .36, cxp = px + pw / 2;
+    ctx.fillStyle = mix(C.surface, C.surface2, .55); roundRect(ctx, px, py, pw, ph, 10); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+    const on = k === 0 || k >= 3 ? 0 : 1;
+    const box = (x, n, d, c, act) => { ctx.fillStyle = alpha(c, act ? .35 : .12); roundRect(ctx, x - pw * .2, py + ph * .14, pw * .4, ph * .5, 8); ctx.fill(); if (act) { ctx.strokeStyle = c; ctx.lineWidth = 2.5; ctx.stroke(); } label(ctx, n, x, py + ph * .3, {size: fs * .95, color: C.ink}); label(ctx, d, x, py + ph * .48, {size: fs * .75, color: C.ink2, weight: 400}); };
+    box(px + pw * .23, 'Indigo', 'blau · unlöslich', BLUE, on === 0); box(px + pw * .77, 'Leukoindigo', 'gelb · löslich (Anion)', '#9aa830', on === 1);
+    arrow(ctx, cxp - pw * .05, py + ph * .3, cxp + pw * .05, py + ph * .3, k === 1 || k === 2 ? 'electron' : alpha(C.ink2, .35), 2.5); arrow(ctx, cxp + pw * .05, py + ph * .48, cxp - pw * .05, py + ph * .48, k >= 3 ? 'bad' : alpha(C.ink2, .35), 2.5);
+    label(ctx, '+ 2 e⁻ (Dithionit): Reduktion', cxp, py + ph * .76, {size: fs * .75, color: k === 1 || k === 2 ? C.electron : C.ink2}); label(ctx, '− 2 e⁻ (O₂): Oxidation', cxp, py + ph * .9, {size: fs * .75, color: k >= 3 ? C.bad : C.ink2});
+    label(ctx, ['Indigo (unlöslich)', 'Leukoindigo (löslich)', 'Faser saugt Leukoindigo auf', 'O₂ oxidiert zu Indigo', 'fertig gefärbt'][k], bx + bw / 2, h * .03 + fs * .4, {size: fs * .9, color: C.accent});
   });
 })();
 
@@ -2437,7 +2469,7 @@ sorter($('#so'), [{id: 'n', name: 'natürlich gewonnen'}, {id: 's', name: 'synth
 
 /* ================= FOTOMETER ================= */
 (() => {
-  const F = {e133: ['Brillantblau E 133', 630, 1.3e5, '#2060c0'], e102: ['Tartrazin E 102', 427, 2.7e4, '#e8c820']};
+  const F = {e133: ['Brillantblau E 133', 630, 1.3e5, '#2060c0', 45], e102: ['Tartrazin E 102', 427, 2.7e4, '#e8c820', 40]};
   let k = 'e133';
   const C_ = () => +$('#fo-c').value; // µmol/l
   const E = (c, kk = k) => F[kk][2] * c * 1e-6 * 1;
@@ -2445,22 +2477,47 @@ sorter($('#so'), [{id: 'n', name: 'natürlich gewonnen'}, {id: 's', name: 'synth
   seg($('#fo-seg'), [['e133', 'Brillantblau'], ['e102', 'Tartrazin']], v => { k = v; upd(); });
   $('#fo-c').oninput = upd; upd();
   canvasLoop($('#cv-fo'), 'fotometer', (ctx, w, h, t) => {
-    const c = C_(), e = E(c), T = Math.pow(10, -e), y = h * .3, x0 = w * .04;
-    // Lampe, Filter, Küvette, Detektor
-    ctx.fillStyle = '#ffe080'; ctx.beginPath(); ctx.arc(x0 + 14, y, 12, 0, 7); ctx.fill();
-    ctx.fillStyle = wlColor(F[k][1]); ctx.fillRect(x0 + 40, y - 18, 8, 36);
-    ctx.strokeStyle = wlColor(F[k][1], .9); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x0 + 48, y); ctx.lineTo(x0 + 90, y); ctx.stroke();
-    ctx.fillStyle = alpha(F[k][3], clamp(e * .6, .05, .9)); ctx.fillRect(x0 + 92, y - 22, 26, 44); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.strokeRect(x0 + 92, y - 22, 26, 44);
-    ctx.strokeStyle = wlColor(F[k][1], clamp(T, .05, 1)); ctx.lineWidth = 6 * T + .5; ctx.beginPath(); ctx.moveTo(x0 + 120, y); ctx.lineTo(x0 + 160, y); ctx.stroke();
-    ctx.fillStyle = C.ink2; ctx.fillRect(x0 + 162, y - 14, 12, 28);
-    ctx.fillStyle = '#0f2a1c'; roundRect(ctx, x0 + 60, y + 34, 90, 26, 5); ctx.fill(); label(ctx, 'E = ' + numDE(e, 3), x0 + 105, y + 47, {size: 13, font: MONO, color: '#7CFFB2'});
-    label(ctx, 'Lampe', x0 + 14, y - 26, {size: 10, color: C.ink2}); label(ctx, 'Filter', x0 + 44, y - 26, {size: 10, color: C.ink2}); label(ctx, 'Küvette', x0 + 105, y - 30, {size: 10, color: C.ink2}); label(ctx, 'Detektor', x0 + 168, y - 26, {size: 10, color: C.ink2});
+    const fs = Math.max(11, w * .018), c = C_(), e = E(c), T = Math.pow(10, -e), nm = F[k][1], y = h * .2;
+    // Gehäuse
+    ctx.fillStyle = mix(C.surface2, C.surface, .3); roundRect(ctx, w * .02, h * .03, w * .96, h * .36, 12); ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.stroke();
+    // Lampe mit Glühen
+    const lx = w * .07; const g = ctx.createRadialGradient(lx, y, 2, lx, y, h * .08); g.addColorStop(0, alpha('#fff6c0', .95)); g.addColorStop(1, alpha('#ffe080', 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(lx, y, h * .08, 0, 7); ctx.fill(); ctx.fillStyle = '#ffe9a0'; ctx.beginPath(); ctx.arc(lx, y, h * .03, 0, 7); ctx.fill(); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; ctx.stroke();
+    // weißes Licht zum Gitter
+    const gx = w * .22; ctx.strokeStyle = alpha('#fff3c8', .9); ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(lx + h * .03, y); ctx.lineTo(gx, y); ctx.stroke(); ctx.strokeStyle = alpha(C.ink2, .25); ctx.lineWidth = 1; ctx.stroke();
+    // Gitter und Spektrumfächer
+    ctx.fillStyle = C.ink2; ctx.fillRect(gx - 3, y - h * .07, 6, h * .14); for (let q = 0; q < 8; q++) { ctx.fillStyle = alpha('#fff', .5); ctx.fillRect(gx - 3, y - h * .07 + q * h * .018, 6, 1); }
+    const sx = w * .36, nmY = l => y - h * .12 + (l - 400) / 300 * h * .24;
+    for (let l = 400; l <= 700; l += 5) { ctx.strokeStyle = wlColor(l, .55); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(gx + 3, y); ctx.lineTo(sx, nmY(l)); ctx.stroke(); }
+    // Spalt wählt λ aus
+    ctx.fillStyle = C.ink2; ctx.fillRect(sx, y - h * .14, 6, nmY(nm) - 4 - (y - h * .14)); ctx.fillRect(sx, nmY(nm) + 4, 6, y + h * .14 - nmY(nm) - 4);
+    label(ctx, `${nm} nm`, sx + 3, y + h * .155, {size: fs * .75, color: C.ink2, font: MONO});
+    // monochromatischer Strahl, Küvette, abgeschwächter Strahl
+    const kx = w * .5, kw = w * .07, dx = w * .74, col = wlColor(nm);
+    const photons = (x1, x2, yy, a, n) => { for (let q = 0; q < n; q++) { const p = (t * .8 + q / n) % 1; ctx.fillStyle = wlColor(nm, a); ctx.beginPath(); ctx.arc(lerp(x1, x2, p), yy + Math.sin(p * 30 + q) * 3, 3, 0, 7); ctx.fill(); } };
+    ctx.strokeStyle = wlColor(nm, .8); ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(sx + 6, nmY(nm)); ctx.lineTo(kx - kw / 2, y); ctx.stroke(); photons(sx + 6, kx - kw / 2, y, .95, 4);
+    ctx.fillStyle = alpha('#ffffff', .4); ctx.strokeStyle = C.ink2; ctx.lineWidth = 1.5; roundRect(ctx, kx - kw / 2, y - h * .1, kw, h * .2, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = seenColor(nm, F[k][4], clamp(1 - T, 0, .97)); ctx.globalAlpha = .9; ctx.fillRect(kx - kw / 2 + 3, y - h * .06, kw - 6, h * .155); ctx.globalAlpha = 1;
+    ctx.strokeStyle = wlColor(nm, clamp(T, .06, 1)); ctx.lineWidth = Math.max(1, 7 * T); ctx.beginPath(); ctx.moveTo(kx + kw / 2, y); ctx.lineTo(dx, y); ctx.stroke(); photons(kx + kw / 2, dx, y, clamp(T, .1, 1), Math.max(1, Math.round(4 * T)));
+    // Fotodiode und Anzeige
+    ctx.fillStyle = '#2b2b2b'; roundRect(ctx, dx, y - h * .05, w * .025, h * .1, 3); ctx.fill(); ctx.fillStyle = '#5a6a7a'; ctx.fillRect(dx, y - h * .03, 4, h * .06);
+    ctx.fillStyle = '#0f2a1c'; roundRect(ctx, w * .8, y - h * .07, w * .16, h * .14, 6); ctx.fill(); label(ctx, 'E = ' + numDE(e, 3), w * .88, y - h * .02, {size: fs, font: MONO, color: '#7CFFB2'}); label(ctx, 'T = ' + numDE(T * 100, 0) + ' %', w * .88, y + h * .035, {size: fs * .75, font: MONO, color: '#7CFFB2'});
+    [['Lampe', lx], ['Gitter', gx], ['Spalt', sx], ['Küvette, d = 1 cm', kx], ['Detektor', dx + w * .012]].forEach(([n, x]) => label(ctx, n, x, h * .065, {size: fs * .72, color: C.ink2}));
+    label(ctx, 'I₀', (sx + kx) / 2, y - h * .05, {size: fs * .85, color: C.ink}); label(ctx, 'I', (kx + dx) / 2, y - h * .05, {size: fs * .85, color: C.ink});
+    // Absorptionsspektrum
+    const sp = axes(ctx, w * .46, h, {x: [400, 700], y: [0, 1.5], xt: [400, 500, 600, 700], yt: [0, .5, 1, 1.5], yf: v => numDE(v, 1), xl: 'λ in nm', pad: {l: w * .08, b: h * .1, t: h * .5, r: w * .02}});
+    const bandE = l => e * Math.exp(-((l - nm) ** 2) / (2 * F[k][4] ** 2));
+    ctx.save(); ctx.beginPath(); ctx.rect(sp.X(400), sp.Y(1.5), sp.X(700) - sp.X(400), sp.Y(0) - sp.Y(1.5)); ctx.clip(); for (let l = 400; l < 700; l += 5) { ctx.fillStyle = wlColor(l, .25); ctx.fillRect(sp.X(l), sp.Y(bandE(l + 2.5)), sp.X(l + 5) - sp.X(l) + .5, sp.Y(0) - sp.Y(bandE(l + 2.5))); } ctx.restore();
+    polyline(ctx, [...Array(61)].map((_, i) => { const l = 400 + i * 5; return [sp.X(l), sp.Y(Math.min(1.5, bandE(l)))]; }), C.ink, 2);
+    ctx.strokeStyle = alpha(C.bad, .7); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(sp.X(nm), sp.Y(0)); ctx.lineTo(sp.X(nm), sp.Y(1.5)); ctx.stroke(); ctx.setLineDash([]); label(ctx, 'λmax', sp.X(nm) + 4, sp.Y(1.4), {size: fs * .75, color: C.bad, align: 'left'});
+    label(ctx, 'Absorptionsspektrum', sp.X(550), h * .46, {size: fs * .8, color: C.ink2});
     // Kalibriergerade
-    const A = axes(ctx, w, h, {x: [0, 10], y: [0, 1.4], xt: [0, 2, 4, 6, 8, 10], yt: [0, .4, .8, 1.2], yf: v => numDE(v, 1), xl: 'c in µmol/l', pad: {l: w * .5, b: 42, t: 16}});
-    label(ctx, 'E', A.p.l - 30, A.p.t + 6, {size: 12, color: C.ink2});
+    ctx.save(); ctx.translate(w * .5, 0);
+    const A = axes(ctx, w * .5, h, {x: [0, 10], y: [0, 1.4], xt: [0, 2, 4, 6, 8, 10], yt: [0, .4, .8, 1.2], yf: v => numDE(v, 1), xl: 'c in µmol/l', pad: {l: w * .07, b: h * .1, t: h * .5, r: w * .02}});
     polyline(ctx, [[A.X(0), A.Y(0)], [A.X(Math.min(10, 1.4 / E(1))), A.Y(Math.min(1.4, E(10)))]], C.accent, 2.5);
-    for (let s = 2; s <= 10; s += 2) if (E(s) <= 1.4) dotAt(ctx, A.X(s), A.Y(E(s)), 'ink2', 4);
+    for (let s2 = 2; s2 <= 10; s2 += 2) if (E(s2) <= 1.4) dotAt(ctx, A.X(s2), A.Y(E(s2)), 'ink2', 4);
     if (e <= 1.4) { ctx.strokeStyle = alpha(C.bad, .6); ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(A.X(0), A.Y(e)); ctx.lineTo(A.X(c), A.Y(e)); ctx.lineTo(A.X(c), A.Y(0)); ctx.stroke(); ctx.setLineDash([]); dotAt(ctx, A.X(c), A.Y(e), 'bad', 6); }
+    label(ctx, 'Kalibriergerade (Lambert-Beer)', A.X(5), h * .46, {size: fs * .8, color: C.ink2});
+    ctx.restore();
   });
 })();
 
