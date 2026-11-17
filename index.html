@@ -70,6 +70,14 @@ h2{font-family:var(--f-display);font-weight:700;font-size:1.35rem;margin:0 0 .8e
 .topic .d{color:var(--ink-2);font-size:.88rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .topic .n{margin-top:auto;padding-top:6px;font-family:var(--f-mono);font-size:.78rem;color:var(--ink-2)}
 
+.tools{margin-top:14px}
+.tool{display:flex;align-items:center;gap:18px;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 22px;transition:border-color .15s,transform .15s}
+.tool .tile{flex:none;display:grid;place-items:center;width:3.4rem;height:3.4rem;border:2px solid var(--ink);border-radius:4px;background:#FFF799;color:#000;font-family:var(--f-display);font-weight:800;font-size:1.5rem;position:relative}
+.tool .tile small{position:absolute;top:2px;left:5px;font-family:var(--f-mono);font-weight:600;font-size:.6rem}
+.tool .tt{display:block;font-family:var(--f-display);font-weight:700;font-size:1.1rem;line-height:1.2}
+.tool .td{display:block;color:var(--ink-2);font-size:.88rem}
+.tool .go{margin-left:auto;color:var(--ink-2)}
+.tool:hover,.tool:focus-visible{border-color:var(--accent);transform:translateY(-2px);outline:none}
 .grade:hover,.grade:focus-visible,.topic:hover,.topic:focus-visible,.lesson a:hover,.lesson a:focus-visible{border-color:var(--accent);transform:translateY(-2px);outline:none}
 
 .topic-head{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:1.2em}
@@ -102,6 +110,13 @@ footer a:hover{color:var(--accent)}
   <section id="v-grade" aria-labelledby="h-grade">
     <h2 id="h-grade">Klassenstufe wählen</h2>
     <div class="grades" id="grades"></div>
+    <div class="tools">
+      <a class="tool" href="Periodensystem/">
+        <span class="tile" aria-hidden="true"><small>78</small>Pt</span>
+        <span><span class="tt">Periodensystem der Elemente</span><span class="td">Interaktiv: Kurz- und Langform, Eigenschaften, Elementdetails und Nuklidkarte</span></span>
+        <span class="go" aria-hidden="true">→</span>
+      </a>
+    </div>
   </section>
 
   <section id="v-topic" aria-labelledby="h-topic" hidden>
